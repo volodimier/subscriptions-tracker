@@ -1,0 +1,59 @@
+# Backend
+backend/build/
+backend/.gradle/
+backend/out/
+backend/*.iml
+backend/.idea/
+backend/*.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+.env.dev
+
+# Logs
+*.log
+logs/
+
+# Build outputs
+*.jar
+*.war
+*.class
+
+# Test outputs and coverage reports
+coverage/
+.nyc_output/
+frontend/coverage/
+backend/build/reports/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Markdown files in root (except README.md)
+/*.md
+!README.md
+
+# Other
+process-task.sh

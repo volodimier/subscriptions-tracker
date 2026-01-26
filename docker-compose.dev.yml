@@ -1,0 +1,31 @@
+services:
+  subscription-tracker-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: subscription-tracker-dev
+    env_file:
+      - .env.dev
+    ports:
+      - "8889:80"      # Web application (Nginx)
+      - "5433:5432"    # PostgreSQL exposed for IntelliJ database connection
+      - "5005:5005"    # Java remote debug port
+    environment:
+      - POSTGRES_DB=subscription_tracker_dev
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+      - JWT_SECRET=dev_jwt_secret_for_local_development_32chars
+      - CORS_ALLOWED_ORIGINS=http://localhost:8889
+      - EXPOSE_POSTGRES=true
+      - JAVA_DEBUG=true
+    volumes:
+      - subscription_tracker_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/v1/auth/health"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
+
+volumes:
+  subscription_tracker_dev_data:
