@@ -15,6 +15,7 @@ frontend/*.local
 # IDE
 .idea/
 .vscode/
+.claude/
 *.iml
 *.swp
 *.swo
