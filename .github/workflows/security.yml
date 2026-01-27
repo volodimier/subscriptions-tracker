@@ -35,15 +35,15 @@ jobs:
           distribution: 'temurin'
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -51,6 +51,7 @@ jobs:
     name: Trivy Filesystem Scan
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       security-events: write
 
@@ -68,7 +69,7 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-fs-results.sarif'
@@ -77,6 +78,7 @@ jobs:
     name: Trivy Docker Image Scan
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       security-events: write
 
@@ -96,7 +98,7 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM'
 
       - name: Upload Trivy Docker scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-docker-results.sarif'
