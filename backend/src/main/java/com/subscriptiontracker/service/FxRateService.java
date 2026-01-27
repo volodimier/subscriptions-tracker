@@ -153,8 +153,4 @@ public class FxRateService {
     public Optional<LocalDate> getLastUpdateDate() {
         return fxRateRepository.findLatestRateDate();
     }
-
-    public Optional<LocalDateTime> getLastUpdateDateTime() {
-        return fxRateRepository.findLatestCreatedAt();
-    }
 }

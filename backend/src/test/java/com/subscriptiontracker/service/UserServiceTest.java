@@ -42,6 +42,9 @@ class UserServiceTest {
     @Mock
     private FxRateService fxRateService;
 
+    @Mock
+    private JobRunService jobRunService;
+
     @InjectMocks
     private UserService userService;
 
@@ -70,7 +73,7 @@ class UserServiceTest {
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(fxRateService.getCurrentRates("USD")).thenReturn(rates);
-            when(fxRateService.getLastUpdateDateTime()).thenReturn(Optional.of(LocalDateTime.now()));
+            when(jobRunService.getLatestSuccessfulFxRateRefreshDateTime()).thenReturn(Optional.of(LocalDateTime.now()));
 
             UserSettingsResponse result = userService.getSettings(1L);
 
@@ -86,7 +89,7 @@ class UserServiceTest {
         void shouldHandleMissingFxRateUpdateDate() {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(fxRateService.getCurrentRates("USD")).thenReturn(new HashMap<>());
-            when(fxRateService.getLastUpdateDateTime()).thenReturn(Optional.empty());
+            when(jobRunService.getLatestSuccessfulFxRateRefreshDateTime()).thenReturn(Optional.empty());
 
             UserSettingsResponse result = userService.getSettings(1L);
 
@@ -119,7 +122,7 @@ class UserServiceTest {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
             when(fxRateService.getCurrentRates(anyString())).thenReturn(new HashMap<>());
-            when(fxRateService.getLastUpdateDateTime()).thenReturn(Optional.empty());
+            when(jobRunService.getLatestSuccessfulFxRateRefreshDateTime()).thenReturn(Optional.empty());
 
             userService.updateSettings(1L, request);
 
@@ -138,7 +141,7 @@ class UserServiceTest {
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(any(User.class))).thenReturn(testUser);
             when(fxRateService.getCurrentRates(anyString())).thenReturn(new HashMap<>());
-            when(fxRateService.getLastUpdateDateTime()).thenReturn(Optional.empty());
+            when(jobRunService.getLatestSuccessfulFxRateRefreshDateTime()).thenReturn(Optional.empty());
 
             userService.updateSettings(1L, request);
 

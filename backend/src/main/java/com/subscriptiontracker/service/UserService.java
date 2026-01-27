@@ -24,13 +24,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final FxRateService fxRateService;
+    private final JobRunService jobRunService;
 
     public UserSettingsResponse getSettings(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         Map<String, BigDecimal> currentRates = fxRateService.getCurrentRates(user.getBaseCurrencyCode());
-        LocalDateTime lastUpdate = fxRateService.getLastUpdateDateTime()
+        LocalDateTime lastUpdate = jobRunService.getLatestSuccessfulFxRateRefreshDateTime()
                 .orElse(null);
 
         return UserSettingsResponse.builder()
