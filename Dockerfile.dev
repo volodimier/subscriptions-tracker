@@ -1,0 +1,73 @@
+# ============================================================
+# Subscription Tracker - Development Docker Container
+# Contains: PostgreSQL 15, Spring Boot (with hot reload), Vue.js (Vite dev server)
+# ============================================================
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Add PostgreSQL apt repository and install all development tools
+RUN apt-get update && apt-get install -y \
+    gnupg2 \
+    lsb-release \
+    curl \
+    git \
+    vim \
+    unzip \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y \
+    openjdk-17-jdk \
+    postgresql-15 \
+    nginx \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Gradle 8.5
+RUN curl -L https://services.gradle.org/distributions/gradle-8.5-bin.zip -o gradle.zip \
+    && unzip gradle.zip -d /opt \
+    && ln -s /opt/gradle-8.5/bin/gradle /usr/bin/gradle \
+    && rm gradle.zip
+
+# Set up PostgreSQL
+RUN mkdir -p /run/postgresql /var/lib/postgresql/data && \
+    chown -R postgres:postgres /var/lib/postgresql /run/postgresql
+USER postgres
+RUN /usr/lib/postgresql/15/bin/initdb -D /var/lib/postgresql/data
+USER root
+
+# Create app and workspace directories
+RUN mkdir -p /app /var/log/supervisor /workspace
+
+# Copy configuration files
+COPY docker/nginx.dev.conf /etc/nginx/sites-available/default
+COPY docker/supervisord.dev.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/init-db.sh /app/init-db.sh
+COPY docker/start.sh /app/start.sh
+COPY docker/run-backend.sh /app/run-backend.sh
+COPY docker/run-frontend.sh /app/run-frontend.sh
+
+# Make scripts executable
+RUN chmod +x /app/*.sh
+
+# Environment variables
+ENV POSTGRES_DB=subscription_tracker_dev \
+    POSTGRES_USER=dev_user \
+    SPRING_PROFILES_ACTIVE=docker
+
+# Expose ports
+# 80 - nginx (frontend + API proxy)
+# 5173 - Vite dev server
+# 5432 - PostgreSQL
+# 5005 - Java debug port
+EXPOSE 80 5173 5432 5005
+
+WORKDIR /workspace
+
+CMD ["/app/start.sh"]

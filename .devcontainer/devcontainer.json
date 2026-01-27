@@ -1,0 +1,55 @@
+{
+  "name": "Subscription Tracker Dev",
+  "dockerComposeFile": "../docker-compose.dev.yml",
+  "service": "subscription-tracker-dev",
+  "workspaceFolder": "/workspace",
+
+  "customizations": {
+    "jetbrains": {
+      "backend": "IntelliJIdea",
+      "plugins": [
+        "com.intellij.java",
+        "com.intellij.spring",
+        "com.intellij.spring.boot",
+        "com.intellij.database",
+        "org.jetbrains.plugins.vue",
+        "org.jetbrains.idea.gradle"
+      ]
+    },
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-spring-initializr",
+        "vscjava.vscode-spring-boot-dashboard",
+        "Vue.volar",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+
+  "forwardPorts": [8889, 5173, 5433, 5005],
+  "portsAttributes": {
+    "8889": {
+      "label": "Nginx Proxy",
+      "onAutoForward": "openBrowser"
+    },
+    "5173": {
+      "label": "Vite Dev Server",
+      "onAutoForward": "silent"
+    },
+    "5433": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "5005": {
+      "label": "Java Debug",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "postCreateCommand": "cd /workspace/backend && gradle build -x test && cd /workspace/frontend && npm install",
+
+  "remoteUser": "root",
+  "shutdownAction": "stopCompose"
+}
