@@ -14,26 +14,31 @@ echo -e "${BLUE}║              Project Verification Suite                    �
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-echo -e "${YELLOW}[1/6] Running backend tests with coverage...${NC}"
+echo -e "${YELLOW}[1/7] Running backend tests with coverage...${NC}"
 (cd "$PROJECT_ROOT/backend" && ./gradlew test jacocoTestReport --no-daemon -q)
 echo -e "${GREEN}✓ Backend tests passed${NC}"
 echo -e "${BLUE}  Coverage: backend/build/reports/jacoco/test/html/index.html${NC}"
 echo ""
 
-echo -e "${YELLOW}[2/6] Running frontend tests with coverage...${NC}"
+echo -e "${YELLOW}[2/7] Installing frontend dependencies...${NC}"
+(cd "$PROJECT_ROOT/frontend" && npm ci)
+echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
+echo ""
+
+echo -e "${YELLOW}[3/7] Running frontend tests with coverage...${NC}"
 (cd "$PROJECT_ROOT/frontend" && npm run test:coverage --silent)
 echo -e "${GREEN}✓ Frontend tests passed${NC}"
 echo -e "${BLUE}  Coverage: frontend/coverage/index.html${NC}"
 echo ""
 
-echo -e "${YELLOW}[3/6] Building test container...${NC}"
+echo -e "${YELLOW}[4/7] Building test container...${NC}"
 docker compose -f "$PROJECT_ROOT/docker-compose.test.yml" build -q
 echo -e "${GREEN}✓ Build successful${NC}"
 
-echo -e "${YELLOW}[4/6] Starting test container...${NC}"
+echo -e "${YELLOW}[5/7] Starting test container...${NC}"
 docker compose -f "$PROJECT_ROOT/docker-compose.test.yml" up -d subscription-tracker-test
 
-echo -e "${YELLOW}[5/6] Waiting for healthy status...${NC}"
+echo -e "${YELLOW}[6/7] Waiting for healthy status...${NC}"
 for i in {1..24}; do
   status=$(docker inspect --format='{{.State.Health.Status}}' subscription-tracker-test 2>/dev/null)
   if [ "$status" = "healthy" ]; then
@@ -49,7 +54,7 @@ for i in {1..24}; do
   sleep 5
 done
 
-echo -e "${YELLOW}[6/6] Stopping test container...${NC}"
+echo -e "${YELLOW}[7/7] Stopping test container...${NC}"
 docker compose -f "$PROJECT_ROOT/docker-compose.test.yml" down
 echo -e "${GREEN}✓ Container stopped${NC}"
 
