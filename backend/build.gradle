@@ -42,7 +42,7 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
 
     // Rate Limiting
-    implementation 'com.bucket4j:bucket4j-core:8.7.0'
+    implementation 'com.bucket4j:bucket4j-core:8.10.1'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
