@@ -104,6 +104,9 @@ jobs:
   gitleaks:
     name: Secret Detection
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
