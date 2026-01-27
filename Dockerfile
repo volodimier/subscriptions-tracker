@@ -20,7 +20,7 @@ RUN gradle clean build -x test --no-daemon && \
     mv build/libs/*-SNAPSHOT.jar build/libs/app.jar
 
 # Stage 3: Final Runtime Image
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
