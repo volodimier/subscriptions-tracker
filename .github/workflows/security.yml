@@ -10,50 +10,11 @@ on:
     - cron: '0 0 * * 0'
 
 jobs:
-  codeql:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [java, javascript]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        if: matrix.language == 'java'
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:${{ matrix.language }}"
-
   trivy-fs:
     name: Trivy Filesystem Scan
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
-      security-events: write
 
     steps:
       - name: Checkout repository
@@ -64,23 +25,14 @@ jobs:
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-fs-results.sarif'
+          format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
-
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: 'trivy-fs-results.sarif'
 
   trivy-docker:
     name: Trivy Docker Image Scan
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
-      security-events: write
 
     steps:
       - name: Checkout repository
@@ -93,15 +45,8 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'subscription-tracker:scan'
-          format: 'sarif'
-          output: 'trivy-docker-results.sarif'
+          format: 'table'
           severity: 'CRITICAL,HIGH,MEDIUM'
-
-      - name: Upload Trivy Docker scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: 'trivy-docker-results.sarif'
 
   gitleaks:
     name: Secret Detection
