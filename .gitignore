@@ -38,6 +38,7 @@ logs/
 
 # Build outputs
 *.jar
+!**/gradle-wrapper.jar
 *.war
 *.class
 
