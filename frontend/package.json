@@ -12,6 +12,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:coverage:quiet": "vitest run --coverage --reporter=dot --coverage.reporter=html --coverage.reporter=lcov --coverage.reporter=json-summary",
     "test:report": "vitest run --coverage --reporter=verbose"
   },
   "dependencies": {

@@ -33,7 +33,7 @@ Write-Host ""
 Write-Host "[3/7] Running frontend tests with coverage..." -ForegroundColor Yellow
 Push-Location "$ProjectRoot\frontend"
 try {
-    npm run test:coverage --silent
+    npm run test:coverage:quiet --silent
     if ($LASTEXITCODE -ne 0) { throw "Frontend tests failed" }
 } finally {
     Pop-Location

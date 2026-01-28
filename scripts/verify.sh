@@ -26,7 +26,7 @@ echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
 echo ""
 
 echo -e "${YELLOW}[3/7] Running frontend tests with coverage...${NC}"
-(cd "$PROJECT_ROOT/frontend" && npm run test:coverage --silent)
+(cd "$PROJECT_ROOT/frontend" && npm run test:coverage:quiet --silent)
 echo -e "${GREEN}✓ Frontend tests passed${NC}"
 echo -e "${BLUE}  Coverage: frontend/coverage/index.html${NC}"
 echo ""

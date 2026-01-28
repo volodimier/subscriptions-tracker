@@ -57,6 +57,17 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
+
+    testLogging {
+        if (project.hasProperty('quiet')) {
+            events "failed"
+            exceptionFormat "full"
+            showStandardStreams false
+        } else {
+            events "passed", "skipped", "failed"
+            exceptionFormat "short"
+        }
+    }
 }
 
 jacoco {
