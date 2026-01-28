@@ -1,7 +1,7 @@
 services:
-  subscription-tracker-test:
+  subscription-tracker-verify:
     build: .
-    container_name: subscription-tracker-test
+    container_name: subscription-tracker-verify
     ports:
       - "8888:80"
     environment:
@@ -27,8 +27,8 @@ services:
       - ./e2e:/app
       - ./e2e/test-results:/app/test-results
     environment:
-      - BASE_URL=http://subscription-tracker-test
+      - BASE_URL=http://subscription-tracker-verify
     depends_on:
-      subscription-tracker-test:
+      subscription-tracker-verify:
         condition: service_healthy
     command: ["npx", "playwright", "test"]

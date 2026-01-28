@@ -45,31 +45,31 @@ Write-Host ""
 Push-Location $ProjectRoot
 try {
     Write-Host "[4/7] Building test container..." -ForegroundColor Yellow
-    docker compose -f docker-compose.test.yml build -q
+    docker compose -f docker-compose.verify.yml build -q
     if ($LASTEXITCODE -ne 0) { throw "Docker build failed" }
     Write-Host "✓ Build successful" -ForegroundColor Green
 
     Write-Host "[5/7] Starting test container..." -ForegroundColor Yellow
-    docker compose -f docker-compose.test.yml up -d subscription-tracker-test
+    docker compose -f docker-compose.verify.yml up -d subscription-tracker-verify
 
     Write-Host "[6/7] Waiting for healthy status..." -ForegroundColor Yellow
     for ($i = 1; $i -le 24; $i++) {
-        $status = docker inspect --format='{{.State.Health.Status}}' subscription-tracker-test 2>$null
+        $status = docker inspect --format='{{.State.Health.Status}}' subscription-tracker-verify 2>$null
         if ($status -eq "healthy") {
             Write-Host "✓ Container is healthy" -ForegroundColor Green
             break
         }
         if ($i -eq 24) {
             Write-Host "✗ Container failed to become healthy" -ForegroundColor Red
-            docker logs subscription-tracker-test --tail 20
-            docker compose -f docker-compose.test.yml down
+            docker logs subscription-tracker-verify --tail 20
+            docker compose -f docker-compose.verify.yml down
             throw "Container health check failed"
         }
         Start-Sleep -Seconds 5
     }
 
     Write-Host "[7/7] Stopping test container..." -ForegroundColor Yellow
-    docker compose -f docker-compose.test.yml down -q
+    docker compose -f docker-compose.verify.yml down -q
     Write-Host "✓ Container stopped" -ForegroundColor Green
 } finally {
     Pop-Location

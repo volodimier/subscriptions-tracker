@@ -32,30 +32,30 @@ echo -e "${BLUE}  Coverage: frontend/coverage/index.html${NC}"
 echo ""
 
 echo -e "${YELLOW}[4/7] Building test container...${NC}"
-docker compose -f "$PROJECT_ROOT/docker-compose.test.yml" build -q
+docker compose -f "$PROJECT_ROOT/docker-compose.verify.yml" build -q
 echo -e "${GREEN}✓ Build successful${NC}"
 
 echo -e "${YELLOW}[5/7] Starting test container...${NC}"
-docker compose -f "$PROJECT_ROOT/docker-compose.test.yml" up -d subscription-tracker-test
+docker compose -f "$PROJECT_ROOT/docker-compose.verify.yml" up -d subscription-tracker-verify
 
 echo -e "${YELLOW}[6/7] Waiting for healthy status...${NC}"
 for i in {1..24}; do
-  status=$(docker inspect --format='{{.State.Health.Status}}' subscription-tracker-test 2>/dev/null)
+  status=$(docker inspect --format='{{.State.Health.Status}}' subscription-tracker-verify 2>/dev/null)
   if [ "$status" = "healthy" ]; then
     echo -e "${GREEN}✓ Container is healthy${NC}"
     break
   fi
   if [ $i -eq 24 ]; then
     echo -e "${RED}✗ Container failed to become healthy${NC}"
-    docker logs subscription-tracker-test --tail 20
-    docker compose -f "$PROJECT_ROOT/docker-compose.test.yml" down
+    docker logs subscription-tracker-verify --tail 20
+    docker compose -f "$PROJECT_ROOT/docker-compose.verify.yml" down
     exit 1
   fi
   sleep 5
 done
 
 echo -e "${YELLOW}[7/7] Stopping test container...${NC}"
-docker compose -f "$PROJECT_ROOT/docker-compose.test.yml" down
+docker compose -f "$PROJECT_ROOT/docker-compose.verify.yml" down
 echo -e "${GREEN}✓ Container stopped${NC}"
 
 echo ""
