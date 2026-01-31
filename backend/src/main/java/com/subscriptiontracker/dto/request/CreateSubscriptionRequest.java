@@ -1,6 +1,7 @@
 package com.subscriptiontracker.dto.request;
 
 import com.subscriptiontracker.entity.BillingCycle;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,36 +11,79 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * Request DTO for creating a new subscription.
+ *
+ * @author Generated
+ * @since 1.0
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "Request body for creating a new subscription")
 public class CreateSubscriptionRequest {
 
+    /**
+     * The ID of the service to subscribe to.
+     */
+    @Schema(description = "ID of the service to subscribe to", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Service ID is required")
     private Long serviceId;
 
+    /**
+     * The subscription amount per billing cycle.
+     */
+    @Schema(description = "Subscription amount per billing cycle", example = "9.99", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Amount is required")
     @DecimalMin(value = "0.01", message = "Amount must be greater than 0")
     private BigDecimal amount;
 
+    /**
+     * The ISO 4217 currency code.
+     */
+    @Schema(description = "ISO 4217 currency code (3 characters)", example = "USD", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "Currency code is required")
     @Size(min = 3, max = 3, message = "Currency code must be 3 characters")
     private String currencyCode;
 
+    /**
+     * The billing cycle type.
+     */
+    @Schema(description = "Billing cycle type", example = "MONTHLY", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Billing cycle is required")
     private BillingCycle billingCycle;
 
+    /**
+     * Custom billing cycle length in days (for CUSTOM billing cycle).
+     */
+    @Schema(description = "Custom billing cycle length in days (only for CUSTOM billing cycle)", example = "30")
     @Min(value = 1, message = "Billing cycle days must be at least 1")
     private Integer billingCycleDays;
 
+    /**
+     * The payment method used for this subscription.
+     */
+    @Schema(description = "Payment method (e.g., Credit Card, PayPal)", example = "Credit Card")
     private String paymentMethod;
 
+    /**
+     * The subscription start date.
+     */
+    @Schema(description = "Subscription start date", example = "2024-01-15", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Start date is required")
     private LocalDate startDate;
 
+    /**
+     * The next billing date.
+     */
+    @Schema(description = "Next billing date", example = "2024-02-15", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Next billing date is required")
     private LocalDate nextBillingDate;
 
+    /**
+     * Optional notes about the subscription.
+     */
+    @Schema(description = "Optional notes about the subscription", example = "Family plan, shared with 5 members")
     private String notes;
 }
