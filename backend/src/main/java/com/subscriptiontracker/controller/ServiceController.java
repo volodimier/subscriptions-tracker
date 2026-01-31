@@ -4,9 +4,7 @@ import com.subscriptiontracker.dto.request.CreateServiceRequest;
 import com.subscriptiontracker.dto.request.UpdateServiceRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.ServiceResponse;
-import com.subscriptiontracker.entity.User;
-import com.subscriptiontracker.exception.ResourceNotFoundException;
-import com.subscriptiontracker.repository.UserRepository;
+import com.subscriptiontracker.service.CurrentUserService;
 import com.subscriptiontracker.service.ServiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +22,7 @@ import java.util.List;
 public class ServiceController {
 
     private final ServiceService serviceService;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @GetMapping
     public ResponseEntity<PaginatedResponse<ServiceResponse>> getAllServices(
@@ -33,7 +31,7 @@ public class ServiceController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int limit
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         PaginatedResponse<ServiceResponse> response = serviceService.getAllServices(userId, search, page, limit);
         return ResponseEntity.ok(response);
     }
@@ -42,7 +40,7 @@ public class ServiceController {
     public ResponseEntity<List<ServiceResponse>> getAllServicesForDropdown(
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         List<ServiceResponse> services = serviceService.getAllServicesForUser(userId);
         return ResponseEntity.ok(services);
     }
@@ -52,7 +50,7 @@ public class ServiceController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         ServiceResponse response = serviceService.getService(userId, id);
         return ResponseEntity.ok(response);
     }
@@ -62,7 +60,7 @@ public class ServiceController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CreateServiceRequest request
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         ServiceResponse response = serviceService.createService(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -73,7 +71,7 @@ public class ServiceController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateServiceRequest request
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         ServiceResponse response = serviceService.updateService(userId, id, request);
         return ResponseEntity.ok(response);
     }
@@ -83,7 +81,7 @@ public class ServiceController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         serviceService.deleteService(userId, id);
         return ResponseEntity.noContent().build();
     }
@@ -92,14 +90,8 @@ public class ServiceController {
     public ResponseEntity<List<String>> getCategories(
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         List<String> categories = serviceService.getCategories(userId);
         return ResponseEntity.ok(categories);
-    }
-
-    private Long getUserId(UserDetails userDetails) {
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", userDetails.getUsername()));
-        return user.getId();
     }
 }

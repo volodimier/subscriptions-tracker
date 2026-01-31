@@ -8,9 +8,7 @@ import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.SubscriptionDetailResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.SubscriptionStatus;
-import com.subscriptiontracker.entity.User;
-import com.subscriptiontracker.exception.ResourceNotFoundException;
-import com.subscriptiontracker.repository.UserRepository;
+import com.subscriptiontracker.service.CurrentUserService;
 import com.subscriptiontracker.service.SubscriptionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +26,7 @@ import java.util.List;
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @GetMapping
     public ResponseEntity<PaginatedResponse<SubscriptionResponse>> getSubscriptions(
@@ -41,7 +39,7 @@ public class SubscriptionController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int limit
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         SubscriptionStatus statusEnum = null;
         if (status != null && !status.equals("all")) {
             statusEnum = SubscriptionStatus.valueOf(status);
@@ -58,7 +56,7 @@ public class SubscriptionController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         SubscriptionDetailResponse response = subscriptionService.getSubscriptionDetail(userId, id);
         return ResponseEntity.ok(response);
     }
@@ -68,7 +66,7 @@ public class SubscriptionController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CreateSubscriptionRequest request
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         SubscriptionResponse response = subscriptionService.createSubscription(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -79,7 +77,7 @@ public class SubscriptionController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateSubscriptionRequest request
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         SubscriptionResponse response = subscriptionService.updateSubscription(userId, id, request);
         return ResponseEntity.ok(response);
     }
@@ -90,7 +88,7 @@ public class SubscriptionController {
             @PathVariable Long id,
             @Valid @RequestBody CancelSubscriptionRequest request
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         SubscriptionResponse response = subscriptionService.cancelSubscription(userId, id, request);
         return ResponseEntity.ok(response);
     }
@@ -101,7 +99,7 @@ public class SubscriptionController {
             @PathVariable Long id,
             @Valid @RequestBody ReactivateSubscriptionRequest request
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         SubscriptionResponse response = subscriptionService.reactivateSubscription(userId, id, request);
         return ResponseEntity.ok(response);
     }
@@ -111,7 +109,7 @@ public class SubscriptionController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         subscriptionService.deleteSubscription(userId, id);
         return ResponseEntity.noContent().build();
     }
@@ -120,14 +118,8 @@ public class SubscriptionController {
     public ResponseEntity<List<String>> getCategories(
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         List<String> categories = subscriptionService.getCategories(userId);
         return ResponseEntity.ok(categories);
-    }
-
-    private Long getUserId(UserDetails userDetails) {
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", userDetails.getUsername()));
-        return user.getId();
     }
 }

@@ -5,9 +5,7 @@ import com.subscriptiontracker.dto.request.UpdatePaymentRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.PaymentRecordResponse;
 import com.subscriptiontracker.entity.TriggerType;
-import com.subscriptiontracker.entity.User;
-import com.subscriptiontracker.exception.ResourceNotFoundException;
-import com.subscriptiontracker.repository.UserRepository;
+import com.subscriptiontracker.service.CurrentUserService;
 import com.subscriptiontracker.service.FxRateService;
 import com.subscriptiontracker.service.JobRunService;
 import com.subscriptiontracker.service.PaymentRecordService;
@@ -30,7 +28,7 @@ public class PaymentRecordController {
     private final PaymentRecordService paymentRecordService;
     private final FxRateService fxRateService;
     private final JobRunService jobRunService;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @GetMapping("/subscriptions/{subscriptionId}/payments")
     public ResponseEntity<PaginatedResponse<PaymentRecordResponse>> getPaymentsForSubscription(
@@ -39,7 +37,7 @@ public class PaymentRecordController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int limit
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         PaginatedResponse<PaymentRecordResponse> response = paymentRecordService.getPaymentsForSubscription(
                 userId, subscriptionId, page, limit);
         return ResponseEntity.ok(response);
@@ -50,7 +48,7 @@ public class PaymentRecordController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CreatePaymentRequest request
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         PaymentRecordResponse response = paymentRecordService.createPayment(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -61,7 +59,7 @@ public class PaymentRecordController {
             @PathVariable Long id,
             @Valid @RequestBody UpdatePaymentRequest request
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         PaymentRecordResponse response = paymentRecordService.updatePayment(userId, id, request);
         return ResponseEntity.ok(response);
     }
@@ -71,7 +69,7 @@ public class PaymentRecordController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         paymentRecordService.deletePayment(userId, id);
         return ResponseEntity.noContent().build();
     }
@@ -95,11 +93,5 @@ public class PaymentRecordController {
             jobRunService.recordFailure(JobRunService.JOB_FX_RATE_REFRESH, startTime, finishTime, TriggerType.MANUAL, e.getMessage());
             throw e;
         }
-    }
-
-    private Long getUserId(UserDetails userDetails) {
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", userDetails.getUsername()));
-        return user.getId();
     }
 }

@@ -2,9 +2,7 @@ package com.subscriptiontracker.controller;
 
 import com.subscriptiontracker.dto.response.DashboardSummaryResponse;
 import com.subscriptiontracker.dto.response.ProjectionResponse;
-import com.subscriptiontracker.entity.User;
-import com.subscriptiontracker.exception.ResourceNotFoundException;
-import com.subscriptiontracker.repository.UserRepository;
+import com.subscriptiontracker.service.CurrentUserService;
 import com.subscriptiontracker.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,7 +19,7 @@ import java.time.LocalDate;
 public class DashboardController {
 
     private final DashboardService dashboardService;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @GetMapping("/summary")
     public ResponseEntity<DashboardSummaryResponse> getSummary(
@@ -29,7 +27,7 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
 
         // Default to current month if not specified
         if (startDate == null) {
@@ -47,14 +45,8 @@ public class DashboardController {
     public ResponseEntity<ProjectionResponse> getProjection(
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        Long userId = getUserId(userDetails);
+        Long userId = currentUserService.getCurrentUserId(userDetails);
         ProjectionResponse response = dashboardService.getProjection(userId);
         return ResponseEntity.ok(response);
-    }
-
-    private Long getUserId(UserDetails userDetails) {
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", userDetails.getUsername()));
-        return user.getId();
     }
 }

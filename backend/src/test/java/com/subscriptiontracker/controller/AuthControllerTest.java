@@ -50,7 +50,7 @@ class AuthControllerTest {
     private UserDetailsService userDetailsService;
 
     @MockBean
-    private com.subscriptiontracker.repository.UserRepository userRepository;
+    private com.subscriptiontracker.service.CurrentUserService currentUserService;
 
     private RegisterRequest validRegisterRequest;
     private LoginRequest validLoginRequest;

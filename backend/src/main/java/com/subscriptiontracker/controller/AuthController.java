@@ -5,9 +5,8 @@ import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
 import com.subscriptiontracker.dto.response.UserResponse;
 import com.subscriptiontracker.entity.User;
-import com.subscriptiontracker.exception.ResourceNotFoundException;
-import com.subscriptiontracker.repository.UserRepository;
 import com.subscriptiontracker.service.AuthService;
+import com.subscriptiontracker.service.CurrentUserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -38,9 +37,7 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "email", userDetails.getUsername()));
-
+        User user = currentUserService.getCurrentUser(userDetails);
         return ResponseEntity.ok(UserResponse.fromEntity(user));
     }
 
