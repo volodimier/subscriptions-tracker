@@ -1,6 +1,9 @@
 # Integration test configuration
 # Database properties are set dynamically via @DynamicPropertySource
 
+server:
+  address: 0.0.0.0
+
 spring:
   jpa:
     show-sql: false

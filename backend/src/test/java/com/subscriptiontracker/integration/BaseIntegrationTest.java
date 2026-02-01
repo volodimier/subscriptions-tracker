@@ -83,14 +83,23 @@ public abstract class BaseIntegrationTest {
      */
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
+        // Ensure container is running before configuring properties
+        if (!POSTGRES_CONTAINER.isRunning()) {
+            throw new IllegalStateException("PostgreSQL container is not running");
+        }
         registry.add("spring.datasource.url", POSTGRES_CONTAINER::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES_CONTAINER::getUsername);
         registry.add("spring.datasource.password", POSTGRES_CONTAINER::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
         registry.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        // Flyway configuration - use same connection as datasource
+        registry.add("spring.flyway.url", POSTGRES_CONTAINER::getJdbcUrl);
+        registry.add("spring.flyway.user", POSTGRES_CONTAINER::getUsername);
+        registry.add("spring.flyway.password", POSTGRES_CONTAINER::getPassword);
         registry.add("spring.flyway.enabled", () -> "true");
         registry.add("spring.flyway.baseline-on-migrate", () -> "true");
+        // JWT configuration
         registry.add("jwt.secret", () -> "test-jwt-secret-key-for-integration-tests-only-32chars");
         registry.add("jwt.expiration", () -> "86400000");
         registry.add("cors.allowed-origins", () -> "http://localhost:3000");
