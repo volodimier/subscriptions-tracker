@@ -248,8 +248,9 @@ public class SubscriptionService {
     /**
      * Cancels an active subscription.
      *
-     * <p>Sets the subscription status to cancelled and records the cancellation date.
-     * Cancelled subscriptions can be reactivated later.</p>
+     * <p>Delegates to the subscription entity's cancel method which sets the status
+     * to cancelled and records the cancellation timestamp. Cancelled subscriptions
+     * can be reactivated later.</p>
      *
      * @param userId         the ID of the user who owns the subscription
      * @param subscriptionId the ID of the subscription to cancel
@@ -263,12 +264,7 @@ public class SubscriptionService {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
 
-        if (subscription.getStatus() == SubscriptionStatus.cancelled) {
-            throw new BadRequestException("Subscription is already cancelled");
-        }
-
-        subscription.setStatus(SubscriptionStatus.cancelled);
-        subscription.setCancelledAt(request.getCancelledAt().atStartOfDay());
+        subscription.cancel(request.getCancelledAt().atStartOfDay());
 
         subscription = subscriptionRepository.save(subscription);
         return SubscriptionResponse.fromEntity(subscription);
@@ -277,8 +273,9 @@ public class SubscriptionService {
     /**
      * Reactivates a cancelled subscription.
      *
-     * <p>Sets the subscription status back to active, clears the cancellation
-     * timestamp, and sets a new next billing date.</p>
+     * <p>Delegates to the subscription entity's reactivate method which sets
+     * the status back to active, clears the cancellation timestamp, and sets
+     * a new next billing date.</p>
      *
      * @param userId         the ID of the user who owns the subscription
      * @param subscriptionId the ID of the subscription to reactivate
@@ -292,13 +289,7 @@ public class SubscriptionService {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
 
-        if (subscription.getStatus() == SubscriptionStatus.active) {
-            throw new BadRequestException("Subscription is already active");
-        }
-
-        subscription.setStatus(SubscriptionStatus.active);
-        subscription.setCancelledAt(null);
-        subscription.setNextBillingDate(request.getNextBillingDate());
+        subscription.reactivate(request.getNextBillingDate());
 
         subscription = subscriptionRepository.save(subscription);
         return SubscriptionResponse.fromEntity(subscription);
