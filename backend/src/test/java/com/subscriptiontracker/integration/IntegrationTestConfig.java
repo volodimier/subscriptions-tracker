@@ -4,7 +4,6 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -26,15 +25,15 @@ public class IntegrationTestConfig {
      * Creates a TestRestTemplate that uses Apache HttpClient.
      *
      * <p>Apache HttpClient properly handles 401 responses without attempting
-     * automatic authentication negotiation, unlike Java's HttpURLConnection.</p>
+     * automatic authentication negotiation, unlike Java's HttpURLConnection.
+     * The request factory is set directly on the underlying RestTemplate to ensure
+     * the configuration is properly applied.</p>
      *
-     * @param builder the RestTemplateBuilder injected by Spring
-     * @return configured TestRestTemplate
+     * @return configured TestRestTemplate with Apache HttpClient
      */
     @Bean
     @Primary
-    public TestRestTemplate testRestTemplate(RestTemplateBuilder builder) {
-        // Configure Apache HttpClient with disabled authentication handling and redirect handling
+    public TestRestTemplate testRestTemplate() {
         CloseableHttpClient httpClient = HttpClients.custom()
                 .disableRedirectHandling()
                 .disableAuthCaching()
@@ -42,9 +41,8 @@ public class IntegrationTestConfig {
 
         HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
 
-        // Configure the RestTemplateBuilder to use our custom factory
-        RestTemplateBuilder configuredBuilder = builder.requestFactory(() -> factory);
-
-        return new TestRestTemplate(configuredBuilder);
+        TestRestTemplate template = new TestRestTemplate();
+        template.getRestTemplate().setRequestFactory(factory);
+        return template;
     }
 }
