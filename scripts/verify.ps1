@@ -7,7 +7,7 @@ Write-Host "║              Project Verification Suite                    ║" 
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Blue
 Write-Host ""
 
-Write-Host "[1/8] Running backend tests with coverage..." -ForegroundColor Yellow
+Write-Host "[1/9] Running backend tests with coverage..." -ForegroundColor Yellow
 Push-Location "$ProjectRoot\backend"
 try {
     & .\gradlew.bat test jacocoTestReport --no-daemon -q
@@ -19,7 +19,7 @@ Write-Host "✓ Backend tests passed" -ForegroundColor Green
 Write-Host "  Coverage: backend\build\reports\jacoco\test\html\index.html" -ForegroundColor Blue
 Write-Host ""
 
-Write-Host "[2/8] Installing frontend dependencies..." -ForegroundColor Yellow
+Write-Host "[2/9] Installing frontend dependencies..." -ForegroundColor Yellow
 Push-Location "$ProjectRoot\frontend"
 try {
     npm ci
@@ -30,7 +30,18 @@ try {
 Write-Host "✓ Frontend dependencies installed" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "[3/8] Running frontend lint check..." -ForegroundColor Yellow
+Write-Host "[3/9] Running frontend type check..." -ForegroundColor Yellow
+Push-Location "$ProjectRoot\frontend"
+try {
+    npm run type-check
+    if ($LASTEXITCODE -ne 0) { throw "Frontend type check failed" }
+} finally {
+    Pop-Location
+}
+Write-Host "✓ Frontend type check passed" -ForegroundColor Green
+Write-Host ""
+
+Write-Host "[4/9] Running frontend lint check..." -ForegroundColor Yellow
 Push-Location "$ProjectRoot\frontend"
 try {
     npm run lint:check
@@ -41,7 +52,7 @@ try {
 Write-Host "✓ Frontend lint check passed" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "[4/8] Running frontend tests with coverage..." -ForegroundColor Yellow
+Write-Host "[5/9] Running frontend tests with coverage..." -ForegroundColor Yellow
 Push-Location "$ProjectRoot\frontend"
 try {
     npm run test:coverage:quiet --silent
@@ -55,15 +66,15 @@ Write-Host ""
 
 Push-Location $ProjectRoot
 try {
-    Write-Host "[5/8] Building test container..." -ForegroundColor Yellow
+    Write-Host "[6/9] Building test container..." -ForegroundColor Yellow
     docker compose -f docker-compose.verify.yml build -q
     if ($LASTEXITCODE -ne 0) { throw "Docker build failed" }
     Write-Host "✓ Build successful" -ForegroundColor Green
 
-    Write-Host "[6/8] Starting test container..." -ForegroundColor Yellow
+    Write-Host "[7/9] Starting test container..." -ForegroundColor Yellow
     docker compose -f docker-compose.verify.yml up -d subscription-tracker-verify
 
-    Write-Host "[7/8] Waiting for healthy status..." -ForegroundColor Yellow
+    Write-Host "[8/9] Waiting for healthy status..." -ForegroundColor Yellow
     for ($i = 1; $i -le 24; $i++) {
         $status = docker inspect --format='{{.State.Health.Status}}' subscription-tracker-verify 2>$null
         if ($status -eq "healthy") {
@@ -79,7 +90,7 @@ try {
         Start-Sleep -Seconds 5
     }
 
-    Write-Host "[8/8] Stopping test container..." -ForegroundColor Yellow
+    Write-Host "[9/9] Stopping test container..." -ForegroundColor Yellow
     docker compose -f docker-compose.verify.yml down -q
     Write-Host "✓ Container stopped" -ForegroundColor Green
 } finally {

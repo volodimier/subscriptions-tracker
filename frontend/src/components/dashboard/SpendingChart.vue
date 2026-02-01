@@ -58,8 +58,8 @@ const chartOptions = computed(() => ({
     },
     tooltip: {
       callbacks: {
-        label: (context: { raw: number }) => {
-          return formatCurrency(context.raw, props.currency)
+        label: (context: { raw: unknown }) => {
+          return formatCurrency(context.raw as number, props.currency)
         },
       },
     },
@@ -68,7 +68,7 @@ const chartOptions = computed(() => ({
     y: {
       beginAtZero: true,
       ticks: {
-        callback: (value: number) => formatCurrency(value, props.currency),
+        callback: (value: string | number) => formatCurrency(Number(value), props.currency),
       },
     },
   },
