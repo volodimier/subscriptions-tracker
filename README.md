@@ -109,6 +109,11 @@ After running `verify.sh`, coverage reports are available at:
 | Backend (JaCoCo) | `backend/build/reports/jacoco/test/html/index.html` |
 | Frontend (v8) | `frontend/coverage/index.html` |
 
+## API Documentation
+
+- **Swagger UI**: `http://localhost/api/v1/swagger-ui.html`
+- **OpenAPI Schema**: `http://localhost/api/v1/v3/api-docs` (JSON) or `backend/docs/api-schema.json`
+
 ## API Endpoints
 
 ### Authentication
