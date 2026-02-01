@@ -1,7 +1,6 @@
 package com.subscriptiontracker.integration;
 
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.time.Duration;
 
@@ -14,7 +13,8 @@ import java.time.Duration;
  * compatibility with CI environments like GitHub Actions.</p>
  *
  * <p>The container is started lazily on first access and remains running
- * for the duration of the test suite.</p>
+ * for the duration of the test suite. Uses PostgreSQLContainer's built-in
+ * wait strategy which performs actual JDBC connection tests.</p>
  *
  * @author Generated
  * @since 1.0
@@ -28,10 +28,8 @@ public final class SharedPostgresContainer {
                 .withDatabaseName("subscription_tracker_test")
                 .withUsername("test")
                 .withPassword("test")
-                .waitingFor(
-                        Wait.forLogMessage(".*database system is ready to accept connections.*\\n", 1)
-                                .withStartupTimeout(Duration.ofSeconds(60))
-                );
+                .withStartupTimeout(Duration.ofSeconds(120));
+        // Uses default wait strategy which tests actual JDBC connectivity
         INSTANCE.start();
     }
 
