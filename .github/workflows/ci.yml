@@ -27,11 +27,19 @@ jobs:
 
       - name: Run tests with Gradle
         working-directory: backend
-        run: ./gradlew test jacocoTestReport --stacktrace
+        run: ./gradlew cleanTest test jacocoTestReport
         env:
           TESTCONTAINERS_RYUK_DISABLED: true
-          # Enable verbose logging for Testcontainers
-          TESTCONTAINERS_CHECKS_DISABLE: false
+
+      - name: Check for skipped tests
+        working-directory: backend
+        run: |
+          SKIPPED_COUNT=$(grep -oh 'skipped="[0-9]*"' build/test-results/test/*.xml 2>/dev/null | grep -oh '[0-9]*' | awk '{sum+=$1} END {print sum+0}')
+          if [ "$SKIPPED_COUNT" -gt 0 ]; then
+            echo "::error::$SKIPPED_COUNT test(s) were skipped. This indicates a configuration problem."
+            exit 1
+          fi
+          echo "All tests executed successfully (no skipped tests)"
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v6

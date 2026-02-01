@@ -99,8 +99,8 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
                     ErrorResponse.class
             );
 
-            // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+            // Assert - Returns 400 BAD_REQUEST (not 409 CONFLICT) to prevent user enumeration
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         }
 
         @Test

@@ -1,6 +1,10 @@
 # Integration test configuration
 # Database properties are set dynamically via @DynamicPropertySource
 
+# Disable rate limiting for integration tests
+rate-limiting:
+  enabled: false
+
 server:
   servlet:
     context-path: ""
@@ -17,7 +21,7 @@ spring:
       # Validate connections before use to handle container timing issues
       connection-test-query: SELECT 1
       validation-timeout: 5000
-      # Keep pool small for tests
+      # Keep the pool small for tests
       maximum-pool-size: 5
       minimum-idle: 1
       # Connection timeout - wait longer in CI
@@ -36,7 +40,3 @@ logging:
     org.testcontainers: INFO
     com.github.dockerjava: WARN
     org.springframework.test: INFO
-    org.springframework.boot: INFO
-    org.springframework.web: DEBUG
-    org.hibernate.SQL: WARN
-    com.subscriptiontracker: DEBUG

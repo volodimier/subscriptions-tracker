@@ -13,17 +13,20 @@ import com.subscriptiontracker.repository.RefreshTokenRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.repository.UserRepository;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -54,6 +57,16 @@ import java.util.UUID;
 @EnabledIfDockerAvailable
 @Import(IntegrationTestConfig.class)
 public abstract class BaseIntegrationTest {
+
+    /*
+     * Static initializer to disable Java's built-in HTTP authentication
+     * before any Spring context or HTTP connections are created.
+     * This prevents HttpURLConnection from attempting authentication
+     * negotiation on 401 responses.
+     */
+    static {
+        java.net.Authenticator.setDefault(null);
+    }
 
     /**
      * Shared PostgreSQL container for all integration tests.
@@ -113,10 +126,52 @@ public abstract class BaseIntegrationTest {
     }
 
     /**
-     * Cleans up the database before each test to ensure test isolation.
+     * Configures TestRestTemplate and cleans up the database before each test.
+     *
+     * <p>The TestRestTemplate is configured to use Apache HttpClient which
+     * properly handles 401/403 responses without attempting authentication
+     * negotiation, unlike Java's default HttpURLConnection.</p>
      */
     @BeforeEach
-    void cleanDatabase() {
+    void setUp() {
+        disableJavaAuthenticator();
+        configureRestTemplate();
+        cleanDatabase();
+    }
+
+    /**
+     * Disables Java's built-in HTTP authentication to prevent HttpURLConnection
+     * from attempting authentication negotiation on 401 responses.
+     */
+    private void disableJavaAuthenticator() {
+        java.net.Authenticator.setDefault(null);
+    }
+
+    /**
+     * Configures TestRestTemplate to use Apache HttpClient.
+     *
+     * <p>This is necessary because Spring Boot's TestRestTemplateContextCustomizer
+     * uses registerSingleton() which bypasses BeanPostProcessor, so we must
+     * configure the request factory directly.</p>
+     *
+     * <p>This method is called on every test setup. While this may seem redundant,
+     * it ensures that every TestRestTemplate instance is properly configured,
+     * even when Spring creates new instances for different test contexts.</p>
+     */
+    private void configureRestTemplate() {
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .disableRedirectHandling()
+                .disableAuthCaching()
+                .build();
+        HttpComponentsClientHttpRequestFactory factory =
+                new HttpComponentsClientHttpRequestFactory(httpClient);
+        restTemplate.getRestTemplate().setRequestFactory(factory);
+    }
+
+    /**
+     * Cleans up the database to ensure test isolation.
+     */
+    private void cleanDatabase() {
         paymentRecordRepository.deleteAll();
         subscriptionRepository.deleteAll();
         serviceRepository.deleteAll();
