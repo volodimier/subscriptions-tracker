@@ -36,12 +36,13 @@ function setPreset(preset: string) {
       startDate.value = formatDateISO(new Date(thisYear, today.getMonth(), 1))
       endDate.value = formatDateISO(today)
       break
-    case 'last3Months':
+    case 'last3Months': {
       const threeMonthsAgo = new Date(today)
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
       startDate.value = formatDateISO(threeMonthsAgo)
       endDate.value = formatDateISO(today)
       break
+    }
     case 'thisYear':
       startDate.value = formatDateISO(new Date(thisYear, 0, 1))
       endDate.value = formatDateISO(today)
@@ -75,10 +76,10 @@ function setPreset(preset: string) {
           <input v-model="endDate" type="date" class="input w-auto" />
         </div>
         <div class="flex space-x-2">
-          <button @click="setPreset('thisMonth')" class="btn-secondary text-sm">This Month</button>
-          <button @click="setPreset('last3Months')" class="btn-secondary text-sm">Last 3 Months</button>
-          <button @click="setPreset('thisYear')" class="btn-secondary text-sm">This Year</button>
-          <button @click="setPreset('allTime')" class="btn-secondary text-sm">All Time</button>
+          <button class="btn-secondary text-sm" @click="setPreset('thisMonth')">This Month</button>
+          <button class="btn-secondary text-sm" @click="setPreset('last3Months')">Last 3 Months</button>
+          <button class="btn-secondary text-sm" @click="setPreset('thisYear')">This Year</button>
+          <button class="btn-secondary text-sm" @click="setPreset('allTime')">All Time</button>
         </div>
       </div>
     </div>

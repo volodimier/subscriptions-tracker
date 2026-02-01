@@ -102,7 +102,7 @@ function cancelDelete() {
   <div class="space-y-4">
     <div class="flex justify-between items-center">
       <h3 class="text-lg font-semibold text-gray-900">Payment History</h3>
-      <button @click="openCreateForm" class="btn-primary text-sm">
+      <button class="btn-primary text-sm" @click="openCreateForm">
         + Add Payment
       </button>
     </div>
@@ -146,14 +146,14 @@ function cancelDelete() {
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-right text-sm">
               <button
-                @click="openEditForm(payment)"
                 class="text-primary-600 hover:text-primary-800 mr-3"
+                @click="openEditForm(payment)"
               >
                 Edit
               </button>
               <button
-                @click="confirmDelete(payment)"
                 class="text-red-600 hover:text-red-800"
+                @click="confirmDelete(payment)"
               >
                 Delete
               </button>
@@ -175,7 +175,7 @@ function cancelDelete() {
     <!-- Payment Form Modal -->
     <div v-if="showForm" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="handleCancel"></div>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="handleCancel" />
         <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
           <h2 class="text-xl font-semibold mb-4">
             {{ editingPayment ? 'Edit Payment' : 'Add Manual Payment' }}

@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
-const router = useRouter()
 const authStore = useAuthStore()
 
 const email = ref('')
@@ -45,7 +43,7 @@ async function handleSubmit() {
       <div class="bg-white rounded-2xl shadow-soft p-8 border border-gray-100">
         <h2 class="text-2xl font-semibold text-gray-900 mb-6 tracking-tight">Login to Your Account</h2>
 
-        <form @submit.prevent="handleSubmit" class="space-y-6">
+        <form class="space-y-6" @submit.prevent="handleSubmit">
           <div v-if="error" class="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-xl text-sm">
             {{ error }}
           </div>
@@ -76,8 +74,8 @@ async function handleSubmit() {
               />
               <button
                 type="button"
-                @click="showPassword = !showPassword"
                 class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
+                @click="showPassword = !showPassword"
               >
                 <svg v-if="!showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -115,7 +113,7 @@ async function handleSubmit() {
         <div class="mt-6">
           <div class="relative">
             <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-gray-200"></div>
+              <div class="w-full border-t border-gray-200" />
             </div>
             <div class="relative flex justify-center text-sm">
               <span class="px-3 bg-white text-gray-400">or</span>

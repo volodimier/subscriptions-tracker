@@ -85,23 +85,23 @@ const isActive = props.subscription.status === 'active'
 
     <div class="mt-4 flex justify-end space-x-3" @click.stop>
       <button
-        @click="emit('edit', subscription)"
         class="text-primary-600 hover:text-primary-700 text-sm font-medium transition-colors"
+        @click="emit('edit', subscription)"
       >
         Edit
       </button>
       <template v-if="isActive">
         <button
-          @click="emit('cancel', subscription)"
           class="text-red-600 hover:text-red-700 text-sm font-medium transition-colors"
+          @click="emit('cancel', subscription)"
         >
           Cancel
         </button>
       </template>
       <template v-else>
         <button
-          @click="emit('reactivate', subscription)"
           class="text-green-600 hover:text-green-700 text-sm font-medium transition-colors"
+          @click="emit('reactivate', subscription)"
         >
           Reactivate
         </button>

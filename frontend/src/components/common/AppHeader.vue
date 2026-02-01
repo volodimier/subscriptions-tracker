@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-const router = useRouter()
 const authStore = useAuthStore()
 const showUserMenu = ref(false)
 
@@ -64,8 +62,8 @@ function closeUserMenu() {
         <div class="flex items-center">
           <div class="relative">
             <button
-              @click="toggleUserMenu"
               class="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50"
+              @click="toggleUserMenu"
             >
               <span>{{ authStore.user?.email }}</span>
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,8 +83,8 @@ function closeUserMenu() {
                 Settings
               </router-link>
               <button
-                @click="handleLogout"
                 class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                @click="handleLogout"
               >
                 Logout
               </button>

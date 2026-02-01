@@ -72,7 +72,7 @@ async function handleDelete() {
   if (serviceToDelete.value) {
     try {
       await servicesStore.deleteService(serviceToDelete.value.id)
-    } catch (err) {
+    } catch {
       // Error is handled in store
     }
   }
@@ -93,7 +93,7 @@ function cancelDelete() {
         <h1 class="text-2xl font-bold text-gray-900">My Services</h1>
         <p class="text-gray-600">Manage your subscription services catalog</p>
       </div>
-      <button @click="openCreateForm" class="btn-primary">
+      <button class="btn-primary" @click="openCreateForm">
         + Add Service
       </button>
     </div>
@@ -122,7 +122,7 @@ function cancelDelete() {
         </svg>
         <h3 class="mt-2 text-sm font-medium text-gray-900">No services</h3>
         <p class="mt-1 text-sm text-gray-500">Get started by creating a new service.</p>
-        <button @click="openCreateForm" class="mt-4 btn-primary">
+        <button class="mt-4 btn-primary" @click="openCreateForm">
           + Add Service
         </button>
       </div>
@@ -150,7 +150,7 @@ function cancelDelete() {
     <!-- Service Form Modal -->
     <div v-if="showForm" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="handleCancel"></div>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="handleCancel" />
         <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
           <h2 class="text-xl font-semibold mb-4">
             {{ editingService ? 'Edit Service' : 'Add New Service' }}

@@ -27,10 +27,11 @@ export function calculateNextBillingDate(
     case 'bi_annual':
       next.setMonth(next.getMonth() + 6)
       break
-    case 'custom':
+    case 'custom': {
       const days = customDays || 30
       next.setDate(next.getDate() + days)
       break
+    }
   }
 
   return formatLocalDateISO(next)
@@ -65,10 +66,11 @@ export function calculateStartDate(
     case 'bi_annual':
       start.setMonth(start.getMonth() - 6)
       break
-    case 'custom':
+    case 'custom': {
       const days = customDays || 30
       start.setDate(start.getDate() - days)
       break
+    }
   }
 
   return formatLocalDateISO(start)

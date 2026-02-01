@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useServicesStore } from '@/stores/services'
 import type { Service, CreateServiceRequest } from '@/types'
 import ServiceForm from './ServiceForm.vue'
@@ -68,8 +68,8 @@ function closeDropdown() {
   <div class="relative">
     <button
       type="button"
-      @click="showDropdown = !showDropdown"
       class="input text-left flex justify-between items-center"
+      @click="showDropdown = !showDropdown"
     >
       <span :class="selectedService ? 'text-gray-900' : 'text-gray-500'">
         {{ selectedService?.name || 'Select a service...' }}
@@ -98,8 +98,8 @@ function closeDropdown() {
           v-for="service in filteredServices"
           :key="service.id"
           type="button"
-          @click="selectService(service)"
           class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center space-x-2"
+          @click="selectService(service)"
         >
           <div v-if="service.faviconUrl" class="w-6 h-6 flex-shrink-0">
             <img :src="service.faviconUrl" :alt="service.name" class="w-full h-full object-contain rounded" />
@@ -114,8 +114,8 @@ function closeDropdown() {
       <div class="border-t border-gray-200 p-2">
         <button
           type="button"
-          @click="openCreateForm"
           class="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded text-sm font-medium"
+          @click="openCreateForm"
         >
           + Create New Service
         </button>
@@ -125,7 +125,7 @@ function closeDropdown() {
     <!-- Create Service Modal -->
     <div v-if="showCreateForm" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCreateForm = false"></div>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showCreateForm = false" />
         <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
           <h2 class="text-xl font-semibold mb-4">Create New Service</h2>
           <ServiceForm

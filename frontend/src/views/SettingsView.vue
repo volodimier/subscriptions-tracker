@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
-import { useAuthStore } from '@/stores/auth'
 import { CURRENCIES } from '@/utils/constants'
 import { formatDateTime } from '@/utils/formatters'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
-import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 const settingsStore = useSettingsStore()
-const authStore = useAuthStore()
 
 const selectedCurrency = ref('')
 const showPasswordDialog = ref(false)
@@ -132,7 +129,7 @@ function closeDeleteDialog() {
             <p class="text-sm text-gray-500">(Cannot be changed)</p>
           </div>
           <div>
-            <button @click="showPasswordDialog = true" class="btn-secondary">
+            <button class="btn-secondary" @click="showPasswordDialog = true">
               Change Password
             </button>
           </div>
@@ -158,8 +155,8 @@ function closeDeleteDialog() {
                   ]"
                 >
                   <input
-                    type="radio"
                     v-model="selectedCurrency"
+                    type="radio"
                     :value="currency"
                     class="sr-only"
                   />
@@ -167,9 +164,9 @@ function closeDeleteDialog() {
                 </label>
               </div>
               <button
-                @click="updateCurrency"
                 :disabled="selectedCurrency === settingsStore.settings.baseCurrency"
                 class="btn-primary"
+                @click="updateCurrency"
               >
                 Save
               </button>
@@ -189,7 +186,7 @@ function closeDeleteDialog() {
             <p class="text-sm text-gray-500">
               Last updated: {{ settingsStore.settings.fxRatesLastUpdated ? formatDateTime(settingsStore.settings.fxRatesLastUpdated) : 'Never' }}
             </p>
-            <button @click="handleRefreshFxRates" class="btn-secondary mt-2">
+            <button class="btn-secondary mt-2" @click="handleRefreshFxRates">
               Refresh Rates Now
             </button>
           </div>
@@ -216,7 +213,7 @@ function closeDeleteDialog() {
             <p class="text-sm text-gray-600 mb-2">
               Permanently delete your account and all associated data. This action cannot be undone.
             </p>
-            <button @click="showDeleteDialog = true" class="btn-danger">
+            <button class="btn-danger" @click="showDeleteDialog = true">
               Delete Account
             </button>
           </div>
@@ -227,7 +224,7 @@ function closeDeleteDialog() {
     <!-- Change Password Dialog -->
     <div v-if="showPasswordDialog" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="closePasswordDialog"></div>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="closePasswordDialog" />
         <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
           <h2 class="text-xl font-semibold mb-4">Change Password</h2>
 
@@ -235,7 +232,7 @@ function closeDeleteDialog() {
             {{ passwordError }}
           </div>
 
-          <form @submit.prevent="handleChangePassword" class="space-y-4">
+          <form class="space-y-4" @submit.prevent="handleChangePassword">
             <div>
               <label for="currentPassword" class="label">Current Password</label>
               <input
@@ -267,7 +264,7 @@ function closeDeleteDialog() {
               />
             </div>
             <div class="flex justify-end space-x-3 pt-4">
-              <button type="button" @click="closePasswordDialog" class="btn-secondary">Cancel</button>
+              <button type="button" class="btn-secondary" @click="closePasswordDialog">Cancel</button>
               <button type="submit" class="btn-primary">Change Password</button>
             </div>
           </form>
@@ -278,7 +275,7 @@ function closeDeleteDialog() {
     <!-- Delete Account Dialog -->
     <div v-if="showDeleteDialog" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="closeDeleteDialog"></div>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="closeDeleteDialog" />
         <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
           <h2 class="text-xl font-semibold text-red-600 mb-4">Delete Account</h2>
 
@@ -291,7 +288,7 @@ function closeDeleteDialog() {
             {{ deleteError }}
           </div>
 
-          <form @submit.prevent="handleDeleteAccount" class="space-y-4">
+          <form class="space-y-4" @submit.prevent="handleDeleteAccount">
             <div>
               <label for="deletePassword" class="label">Password</label>
               <input
@@ -314,7 +311,7 @@ function closeDeleteDialog() {
               />
             </div>
             <div class="flex justify-end space-x-3 pt-4">
-              <button type="button" @click="closeDeleteDialog" class="btn-secondary">Cancel</button>
+              <button type="button" class="btn-secondary" @click="closeDeleteDialog">Cancel</button>
               <button type="submit" class="btn-danger">Delete My Account</button>
             </div>
           </form>

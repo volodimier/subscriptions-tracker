@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import type { Subscription, CreateSubscriptionRequest, BillingCycle } from '@/types'
 import { CURRENCIES, BILLING_CYCLES } from '@/utils/constants'
 import { formatDateISO } from '@/utils/formatters'
-import { calculateNextBillingDate, calculateStartDate } from '@/utils/billingCalculations'
+import { calculateStartDate } from '@/utils/billingCalculations'
 import ServiceSelector from '@/components/service/ServiceSelector.vue'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -95,7 +95,7 @@ function handleSubmit() {
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit" class="space-y-6">
+  <form class="space-y-6" @submit.prevent="handleSubmit">
     <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
       {{ error }}
     </div>
@@ -143,8 +143,8 @@ function handleSubmit() {
           ]"
         >
           <input
-            type="radio"
             v-model="billingCycle"
+            type="radio"
             :value="cycle.value"
             class="sr-only"
           />
@@ -209,11 +209,11 @@ function handleSubmit() {
         rows="3"
         class="input"
         placeholder="Optional notes..."
-      ></textarea>
+      />
     </div>
 
     <div class="flex justify-end space-x-3 pt-4">
-      <button type="button" @click="emit('cancel')" class="btn-secondary">
+      <button type="button" class="btn-secondary" @click="emit('cancel')">
         Cancel
       </button>
       <button type="submit" :disabled="!isValid" class="btn-primary">
