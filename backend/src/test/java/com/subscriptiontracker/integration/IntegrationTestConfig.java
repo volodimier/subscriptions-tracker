@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 
 /**
@@ -22,17 +23,28 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 public class IntegrationTestConfig {
 
     /**
-     * Creates a RestTemplateBuilder that uses Apache HttpClient.
+     * Creates a TestRestTemplate that uses Apache HttpClient.
      *
      * <p>Apache HttpClient properly handles 401 responses without attempting
      * automatic authentication negotiation, unlike Java's HttpURLConnection.</p>
      *
-     * @return configured RestTemplateBuilder
+     * @param builder the RestTemplateBuilder injected by Spring
+     * @return configured TestRestTemplate
      */
     @Bean
-    public RestTemplateBuilder restTemplateBuilder() {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
+    @Primary
+    public TestRestTemplate testRestTemplate(RestTemplateBuilder builder) {
+        // Configure Apache HttpClient with disabled authentication handling and redirect handling
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .disableRedirectHandling()
+                .disableAuthCaching()
+                .build();
+
         HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
-        return new RestTemplateBuilder().requestFactory(() -> factory);
+
+        // Configure the RestTemplateBuilder to use our custom factory
+        RestTemplateBuilder configuredBuilder = builder.requestFactory(() -> factory);
+
+        return new TestRestTemplate(configuredBuilder);
     }
 }
