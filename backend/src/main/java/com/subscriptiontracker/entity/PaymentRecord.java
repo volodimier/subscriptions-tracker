@@ -1,11 +1,13 @@
 package com.subscriptiontracker.entity;
 
+import com.subscriptiontracker.domain.valueobject.Money;
 import com.subscriptiontracker.exception.BadRequestException;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.JdbcType;
@@ -14,6 +16,7 @@ import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * Entity representing a payment record for a subscription.
@@ -22,18 +25,22 @@ import java.time.LocalDateTime;
  * including the original amount and currency, the exchange rate used,
  * and the converted amount in the user's base currency.</p>
  *
+ * <p>This entity uses the {@link Money} Value Object for better type safety
+ * when handling monetary amounts with currencies.</p>
+ *
  * <p>Payment records are essential for spending analytics, providing
  * historical data for total spending calculations and trend analysis.</p>
  *
  * @author Generated
  * @since 1.0
  * @see Subscription
+ * @see Money
  * @see FxRate
  */
 @Entity
 @Table(name = "payment_records")
-@Data
-@Builder
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentRecord {
@@ -53,16 +60,14 @@ public class PaymentRecord {
     private Subscription subscription;
 
     /**
-     * The payment amount in the original currency.
+     * The payment amount in the original currency as a Money value object.
      */
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal amount;
-
-    /**
-     * ISO 4217 currency code of the payment (e.g., USD, EUR, GBP).
-     */
-    @Column(name = "currency_code", nullable = false, length = 3)
-    private String currencyCode;
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "amount", column = @Column(name = "amount", nullable = false, precision = 10, scale = 2)),
+            @AttributeOverride(name = "currency.code", column = @Column(name = "currency_code", nullable = false, length = 3))
+    })
+    private Money originalAmount;
 
     /**
      * The scheduled date for the payment.
@@ -77,7 +82,6 @@ public class PaymentRecord {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "payment_status")
     @JdbcType(PostgreSQLEnumJdbcType.class)
-    @Builder.Default
     private PaymentStatus status = PaymentStatus.pending;
 
     /**
@@ -96,7 +100,7 @@ public class PaymentRecord {
 
     /**
      * The payment amount converted to the user's base currency.
-     * Calculated as: amount * fxRateToBase.
+     * Calculated as: originalAmount * fxRateToBase.
      */
     @Column(name = "amount_in_base_currency", nullable = false, precision = 10, scale = 2)
     private BigDecimal amountInBaseCurrency;
@@ -114,6 +118,99 @@ public class PaymentRecord {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * Builder for creating PaymentRecord instances.
+     *
+     * <p>Supports both the new Value Object style and legacy primitive fields
+     * for backward compatibility.</p>
+     */
+    @Builder
+    public PaymentRecord(Long id, Subscription subscription, Money originalAmount,
+                         BigDecimal amount, String currencyCode,
+                         LocalDate paymentDate, PaymentStatus status, LocalDate paidDate,
+                         BigDecimal fxRateToBase, BigDecimal amountInBaseCurrency,
+                         LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.id = id;
+        this.subscription = subscription;
+
+        // Handle Money - prefer originalAmount if provided, otherwise construct from primitives
+        if (originalAmount != null) {
+            this.originalAmount = originalAmount;
+        } else if (amount != null && currencyCode != null) {
+            this.originalAmount = Money.of(amount, currencyCode);
+        }
+
+        this.paymentDate = paymentDate;
+        this.status = status != null ? status : PaymentStatus.pending;
+        this.paidDate = paidDate;
+        this.fxRateToBase = fxRateToBase;
+        this.amountInBaseCurrency = amountInBaseCurrency;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    // =========================================================================
+    // Convenience methods for backward compatibility with primitive types
+    // =========================================================================
+
+    /**
+     * Returns the payment amount in the original currency.
+     *
+     * <p>This is a convenience method for backward compatibility.
+     * Prefer using {@link #getOriginalAmount()} for new code.</p>
+     *
+     * @return the payment amount, or null if original amount is not set
+     */
+    public BigDecimal getAmount() {
+        return originalAmount != null ? originalAmount.getAmount() : null;
+    }
+
+    /**
+     * Sets the payment amount while preserving the currency.
+     *
+     * <p>This is a convenience method for backward compatibility.
+     * Prefer using {@link #setOriginalAmount(Money)} for new code.</p>
+     *
+     * @param amount the new amount
+     */
+    public void setAmount(BigDecimal amount) {
+        if (amount != null) {
+            String currencyCode = this.originalAmount != null ? this.originalAmount.getCurrencyCode() : "USD";
+            this.originalAmount = Money.of(amount, currencyCode);
+        }
+    }
+
+    /**
+     * Returns the currency code.
+     *
+     * <p>This is a convenience method for backward compatibility.
+     * Prefer using {@link #getOriginalAmount()} for new code.</p>
+     *
+     * @return the currency code, or null if original amount is not set
+     */
+    public String getCurrencyCode() {
+        return originalAmount != null ? originalAmount.getCurrencyCode() : null;
+    }
+
+    /**
+     * Sets the currency code while preserving the amount.
+     *
+     * <p>This is a convenience method for backward compatibility.
+     * Prefer using {@link #setOriginalAmount(Money)} for new code.</p>
+     *
+     * @param currencyCode the new currency code
+     */
+    public void setCurrencyCode(String currencyCode) {
+        if (currencyCode != null) {
+            BigDecimal amount = this.originalAmount != null ? this.originalAmount.getAmount() : BigDecimal.ZERO;
+            this.originalAmount = Money.of(amount, currencyCode);
+        }
+    }
+
+    // =========================================================================
+    // Domain methods
+    // =========================================================================
 
     /**
      * Marks this payment as paid with the specified payment date.
@@ -182,5 +279,32 @@ public class PaymentRecord {
      */
     public boolean isSkipped() {
         return this.status == PaymentStatus.skipped;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        PaymentRecord that = (PaymentRecord) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "PaymentRecord{" +
+                "id=" + id +
+                ", originalAmount=" + originalAmount +
+                ", paymentDate=" + paymentDate +
+                ", status=" + status +
+                '}';
     }
 }
