@@ -3,6 +3,8 @@ package com.subscriptiontracker.integration;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
+import java.time.Duration;
+
 /**
  * Shared PostgreSQL container singleton for all integration tests.
  *
@@ -26,7 +28,10 @@ public final class SharedPostgresContainer {
                 .withDatabaseName("subscription_tracker_test")
                 .withUsername("test")
                 .withPassword("test")
-                .waitingFor(Wait.forListeningPort());
+                .waitingFor(
+                        Wait.forLogMessage(".*database system is ready to accept connections.*\\n", 1)
+                                .withStartupTimeout(Duration.ofSeconds(60))
+                );
         INSTANCE.start();
     }
 
