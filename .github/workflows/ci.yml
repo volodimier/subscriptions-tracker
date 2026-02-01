@@ -27,9 +27,11 @@ jobs:
 
       - name: Run tests with Gradle
         working-directory: backend
-        run: ./gradlew test jacocoTestReport
+        run: ./gradlew test jacocoTestReport --stacktrace
         env:
           TESTCONTAINERS_RYUK_DISABLED: true
+          # Enable verbose logging for Testcontainers
+          TESTCONTAINERS_CHECKS_DISABLE: false
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v6
