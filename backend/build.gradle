@@ -57,9 +57,9 @@ dependencies {
     testRuntimeOnly 'com.h2database:h2'
 
     // Testcontainers for PostgreSQL integration tests
-    testImplementation 'org.testcontainers:testcontainers:1.19.3'
-    testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
-    testImplementation 'org.testcontainers:postgresql:1.19.3'
+    testImplementation 'org.testcontainers:testcontainers:1.20.4'
+    testImplementation 'org.testcontainers:junit-jupiter:1.20.4'
+    testImplementation 'org.testcontainers:postgresql:1.20.4'
 
     // Apache HttpClient for TestRestTemplate (fixes 401 response handling)
     testImplementation 'org.apache.httpcomponents.client5:httpclient5'
