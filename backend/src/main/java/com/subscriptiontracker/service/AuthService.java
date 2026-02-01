@@ -1,5 +1,7 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.constant.DomainConstants;
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
@@ -58,13 +60,13 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             // Use generic message to prevent user enumeration
-            throw new BadRequestException("Registration failed. Please try again.");
+            throw new BadRequestException(ErrorMessages.REGISTRATION_FAILED);
         }
 
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .baseCurrencyCode("USD")
+                .baseCurrencyCode(DomainConstants.DEFAULT_CURRENCY)
                 .build();
 
         user = userRepository.save(user);

@@ -1,5 +1,6 @@
 package com.subscriptiontracker.domain.valueobject;
 
+import com.subscriptiontracker.constant.ErrorMessages;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
@@ -94,10 +95,10 @@ public final class Money {
      */
     public static Money of(BigDecimal amount, Currency currency) {
         if (amount == null) {
-            throw new IllegalArgumentException("Amount cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.AMOUNT_CANNOT_BE_NULL);
         }
         if (currency == null) {
-            throw new IllegalArgumentException("Currency cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.CURRENCY_CANNOT_BE_NULL);
         }
         return new Money(amount, currency);
     }
@@ -123,7 +124,7 @@ public final class Money {
      */
     public static Money zero(Currency currency) {
         if (currency == null) {
-            throw new IllegalArgumentException("Currency cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.CURRENCY_CANNOT_BE_NULL);
         }
         return new Money(BigDecimal.ZERO, currency);
     }
@@ -203,7 +204,7 @@ public final class Money {
      */
     public Money multiply(BigDecimal factor) {
         if (factor == null) {
-            throw new IllegalArgumentException("Factor cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.FACTOR_CANNOT_BE_NULL);
         }
         return new Money(this.amount.multiply(factor), this.currency);
     }
@@ -217,10 +218,10 @@ public final class Money {
      */
     public Money divide(BigDecimal divisor) {
         if (divisor == null) {
-            throw new IllegalArgumentException("Divisor cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.DIVISOR_CANNOT_BE_NULL);
         }
         if (divisor.compareTo(BigDecimal.ZERO) == 0) {
-            throw new IllegalArgumentException("Cannot divide by zero");
+            throw new IllegalArgumentException(ErrorMessages.CANNOT_DIVIDE_BY_ZERO);
         }
         return new Money(this.amount.divide(divisor, SCALE, ROUNDING_MODE), this.currency);
     }
@@ -354,11 +355,11 @@ public final class Money {
      */
     private void validateSameCurrency(Money other) {
         if (other == null) {
-            throw new IllegalArgumentException("Money cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.MONEY_CANNOT_BE_NULL);
         }
         if (!this.currency.equals(other.currency)) {
             throw new IllegalArgumentException(
-                    String.format("Currency mismatch: cannot operate on %s and %s",
+                    String.format(ErrorMessages.CURRENCY_MISMATCH_TEMPLATE,
                             this.currency.getCode(), other.currency.getCode()));
         }
     }

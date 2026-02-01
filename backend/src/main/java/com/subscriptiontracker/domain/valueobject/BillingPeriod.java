@@ -1,5 +1,6 @@
 package com.subscriptiontracker.domain.valueobject;
 
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.entity.BillingCycle;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -88,13 +89,13 @@ public final class BillingPeriod {
      */
     public static BillingPeriod of(BillingCycle cycle, Integer customDays) {
         if (cycle == null) {
-            throw new IllegalArgumentException("Billing cycle cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.BILLING_CYCLE_CANNOT_BE_NULL);
         }
 
         if (cycle == BillingCycle.custom) {
             if (customDays == null || customDays <= 0) {
                 throw new IllegalArgumentException(
-                        "Custom billing cycle requires a positive number of days");
+                        ErrorMessages.BILLING_CYCLE_REQUIRES_POSITIVE_DAYS);
             }
             return new BillingPeriod(cycle, customDays);
         }
@@ -140,7 +141,7 @@ public final class BillingPeriod {
     public static BillingPeriod custom(Integer days) {
         if (days == null || days <= 0) {
             throw new IllegalArgumentException(
-                    "Custom billing cycle requires a positive number of days");
+                    ErrorMessages.BILLING_CYCLE_REQUIRES_POSITIVE_DAYS);
         }
         return new BillingPeriod(BillingCycle.custom, days);
     }
@@ -220,7 +221,7 @@ public final class BillingPeriod {
      */
     public LocalDate calculateNextDate(LocalDate fromDate) {
         if (fromDate == null) {
-            throw new IllegalArgumentException("From date cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.FROM_DATE_CANNOT_BE_NULL);
         }
 
         return switch (this.cycle) {
@@ -230,7 +231,7 @@ public final class BillingPeriod {
             case custom -> {
                 if (this.customDays == null || this.customDays <= 0) {
                     throw new IllegalStateException(
-                            "Billing cycle days must be set for custom billing cycle");
+                            ErrorMessages.BILLING_CYCLE_DAYS_MUST_BE_SET);
                 }
                 yield fromDate.plusDays(this.customDays);
             }

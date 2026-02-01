@@ -1,5 +1,7 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.constant.DomainConstants;
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.dto.request.ChangePasswordRequest;
 import com.subscriptiontracker.dto.request.DeleteAccountRequest;
 import com.subscriptiontracker.dto.request.UpdateUserSettingsRequest;
@@ -47,7 +49,8 @@ public class UserService {
      */
     public UserSettingsResponse getSettings(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         Map<String, BigDecimal> currentRates = fxRateService.getCurrentRates(user.getBaseCurrencyCode());
         LocalDateTime lastUpdate = jobRunService.getLatestSuccessfulFxRateRefreshDateTime()
@@ -72,7 +75,8 @@ public class UserService {
     @Transactional
     public UserSettingsResponse updateSettings(Long userId, UpdateUserSettingsRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         if (request.getBaseCurrency() != null) {
             user.setBaseCurrencyCode(request.getBaseCurrency().toUpperCase());
@@ -96,10 +100,11 @@ public class UserService {
     @Transactional
     public void changePassword(Long userId, ChangePasswordRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new BadRequestException("Current password is incorrect");
+            throw new BadRequestException(ErrorMessages.CURRENT_PASSWORD_INCORRECT);
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -120,14 +125,15 @@ public class UserService {
     @Transactional
     public void deleteAccount(Long userId, DeleteAccountRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new BadRequestException("Password is incorrect");
+            throw new BadRequestException(ErrorMessages.PASSWORD_INCORRECT);
         }
 
-        if (!"DELETE".equals(request.getConfirmation())) {
-            throw new BadRequestException("Please type DELETE to confirm account deletion");
+        if (!DomainConstants.DELETE_CONFIRMATION_TEXT.equals(request.getConfirmation())) {
+            throw new BadRequestException(ErrorMessages.DELETE_CONFIRMATION_REQUIRED);
         }
 
         userRepository.delete(user);

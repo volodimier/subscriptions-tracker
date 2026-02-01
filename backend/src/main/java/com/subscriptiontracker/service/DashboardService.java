@@ -1,5 +1,7 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.constant.DomainConstants;
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.dto.response.DashboardSummaryResponse;
 import com.subscriptiontracker.dto.response.ProjectionResponse;
 import com.subscriptiontracker.entity.BillingCycle;
@@ -64,7 +66,8 @@ public class DashboardService {
      */
     public DashboardSummaryResponse getSummary(Long userId, LocalDate startDate, LocalDate endDate) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         String baseCurrency = user.getBaseCurrencyCode();
 
@@ -134,7 +137,8 @@ public class DashboardService {
      */
     public ProjectionResponse getProjection(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         String baseCurrency = user.getBaseCurrencyCode();
         int currentYear = LocalDate.now().getYear();
@@ -208,7 +212,9 @@ public class DashboardService {
             case monthly -> date.plusMonths(1);
             case yearly -> date.plusYears(1);
             case bi_annual -> date.plusMonths(6);
-            case custom -> date.plusDays(subscription.getBillingCycleDays() != null ? subscription.getBillingCycleDays() : 30);
+            case custom -> date.plusDays(subscription.getBillingCycleDays() != null
+                    ? subscription.getBillingCycleDays()
+                    : DomainConstants.DEFAULT_CUSTOM_BILLING_DAYS);
         };
     }
 }

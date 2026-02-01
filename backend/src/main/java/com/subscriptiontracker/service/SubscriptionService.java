@@ -1,5 +1,7 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.constant.DomainConstants;
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.dto.request.CancelSubscriptionRequest;
 import com.subscriptiontracker.dto.request.CreateSubscriptionRequest;
 import com.subscriptiontracker.dto.request.ReactivateSubscriptionRequest;
@@ -116,7 +118,8 @@ public class SubscriptionService {
      */
     public SubscriptionDetailResponse getSubscriptionDetail(Long userId, Long subscriptionId) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, subscriptionId));
 
         SubscriptionDetailResponse.Stats stats = calculateStats(subscription);
         return SubscriptionDetailResponse.fromEntity(subscription, stats);
@@ -159,13 +162,15 @@ public class SubscriptionService {
     @Transactional
     public SubscriptionResponse createSubscription(Long userId, CreateSubscriptionRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         Service service = serviceRepository.findByIdAndUserId(request.getServiceId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Service", "id", request.getServiceId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SERVICE, DomainConstants.FIELD_ID, request.getServiceId()));
 
         if (request.getBillingCycle() == BillingCycle.custom && request.getBillingCycleDays() == null) {
-            throw new BadRequestException("Billing cycle days is required for custom billing cycle");
+            throw new BadRequestException(ErrorMessages.BILLING_CYCLE_DAYS_REQUIRED);
         }
 
         Subscription subscription = Subscription.builder()
@@ -202,11 +207,13 @@ public class SubscriptionService {
     @Transactional
     public SubscriptionResponse updateSubscription(Long userId, Long subscriptionId, UpdateSubscriptionRequest request) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, subscriptionId));
 
         if (request.getServiceId() != null) {
             Service service = serviceRepository.findByIdAndUserId(request.getServiceId(), userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Service", "id", request.getServiceId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            ErrorMessages.RESOURCE_SERVICE, DomainConstants.FIELD_ID, request.getServiceId()));
             subscription.setService(service);
         }
 
@@ -221,7 +228,7 @@ public class SubscriptionService {
         if (request.getBillingCycle() != null) {
             subscription.setBillingCycle(request.getBillingCycle());
             if (request.getBillingCycle() == BillingCycle.custom && request.getBillingCycleDays() == null) {
-                throw new BadRequestException("Billing cycle days is required for custom billing cycle");
+                throw new BadRequestException(ErrorMessages.BILLING_CYCLE_DAYS_REQUIRED);
             }
         }
 
@@ -262,7 +269,8 @@ public class SubscriptionService {
     @Transactional
     public SubscriptionResponse cancelSubscription(Long userId, Long subscriptionId, CancelSubscriptionRequest request) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, subscriptionId));
 
         subscription.cancel(request.getCancelledAt().atStartOfDay());
 
@@ -287,7 +295,8 @@ public class SubscriptionService {
     @Transactional
     public SubscriptionResponse reactivateSubscription(Long userId, Long subscriptionId, ReactivateSubscriptionRequest request) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, subscriptionId));
 
         subscription.reactivate(request.getNextBillingDate());
 
@@ -305,7 +314,8 @@ public class SubscriptionService {
     @Transactional
     public void deleteSubscription(Long userId, Long subscriptionId) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, subscriptionId));
 
         subscriptionRepository.delete(subscription);
     }

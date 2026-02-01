@@ -1,5 +1,7 @@
 package com.subscriptiontracker.entity;
 
+import com.subscriptiontracker.constant.DomainConstants;
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.domain.valueobject.BillingPeriod;
 import com.subscriptiontracker.domain.valueobject.Money;
 import com.subscriptiontracker.exception.BadRequestException;
@@ -258,7 +260,7 @@ public class Subscription {
      */
     public void setAmount(BigDecimal amount) {
         if (amount != null) {
-            String currencyCode = this.price != null ? this.price.getCurrencyCode() : "USD";
+            String currencyCode = this.price != null ? this.price.getCurrencyCode() : DomainConstants.DEFAULT_CURRENCY;
             this.price = Money.of(amount, currencyCode);
         }
     }
@@ -424,7 +426,7 @@ public class Subscription {
      */
     public void addPaymentRecord(PaymentRecord paymentRecord) {
         if (paymentRecord == null) {
-            throw new IllegalArgumentException("Payment record cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.PAYMENT_RECORD_CANNOT_BE_NULL);
         }
         paymentRecords.add(paymentRecord);
         paymentRecord.setSubscription(this);
@@ -444,10 +446,10 @@ public class Subscription {
      */
     public void cancel(LocalDateTime cancelledAt) {
         if (cancelledAt == null) {
-            throw new IllegalArgumentException("Cancellation date cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.CANCELLATION_DATE_CANNOT_BE_NULL);
         }
         if (this.status == SubscriptionStatus.cancelled) {
-            throw new BadRequestException("Subscription is already cancelled");
+            throw new BadRequestException(ErrorMessages.SUBSCRIPTION_ALREADY_CANCELLED);
         }
         this.status = SubscriptionStatus.cancelled;
         this.cancelledAt = cancelledAt;
@@ -467,10 +469,10 @@ public class Subscription {
      */
     public void reactivate(LocalDate nextBillingDate) {
         if (nextBillingDate == null) {
-            throw new IllegalArgumentException("Next billing date cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.NEXT_BILLING_DATE_CANNOT_BE_NULL);
         }
         if (this.status == SubscriptionStatus.active) {
-            throw new BadRequestException("Subscription is already active");
+            throw new BadRequestException(ErrorMessages.SUBSCRIPTION_ALREADY_ACTIVE);
         }
         this.status = SubscriptionStatus.active;
         this.cancelledAt = null;
@@ -491,18 +493,18 @@ public class Subscription {
      */
     public LocalDate calculateNextBillingDate() {
         if (this.nextBillingDate == null) {
-            throw new IllegalStateException("Current next billing date is not set");
+            throw new IllegalStateException(ErrorMessages.NEXT_BILLING_DATE_NOT_SET);
         }
 
         // Check for invalid pending state (custom cycle without valid days)
         if (hasPendingBillingState && pendingBillingCycle == BillingCycle.custom) {
             if (pendingCustomDays == null || pendingCustomDays <= 0) {
-                throw new IllegalStateException("Billing cycle days must be set for custom billing cycle");
+                throw new IllegalStateException(ErrorMessages.BILLING_CYCLE_DAYS_MUST_BE_SET);
             }
         }
 
         if (this.billingPeriod == null) {
-            throw new IllegalStateException("Billing period is not set");
+            throw new IllegalStateException(ErrorMessages.BILLING_PERIOD_NOT_SET);
         }
 
         return this.billingPeriod.calculateNextDate(this.nextBillingDate);

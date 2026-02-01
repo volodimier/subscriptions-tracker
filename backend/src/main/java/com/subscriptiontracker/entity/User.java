@@ -1,5 +1,6 @@
 package com.subscriptiontracker.entity;
 
+import com.subscriptiontracker.constant.DomainConstants;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -63,7 +64,7 @@ public class User {
      */
     @Column(name = "base_currency_code", nullable = false)
     @Builder.Default
-    private String baseCurrencyCode = "USD";
+    private String baseCurrencyCode = DomainConstants.DEFAULT_CURRENCY;
 
     /**
      * Timestamp when the user account was created.

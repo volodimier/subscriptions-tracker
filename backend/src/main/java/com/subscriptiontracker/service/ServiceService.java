@@ -1,5 +1,7 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.constant.DomainConstants;
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.dto.request.CreateServiceRequest;
 import com.subscriptiontracker.dto.request.UpdateServiceRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
@@ -105,7 +107,8 @@ public class ServiceService {
      */
     public ServiceResponse getService(Long userId, Long serviceId) {
         Service service = serviceRepository.findByIdAndUserId(serviceId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Service", "id", serviceId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SERVICE, DomainConstants.FIELD_ID, serviceId));
 
         long subscriptionCount = serviceRepository.countSubscriptionsByServiceId(serviceId);
         return ServiceResponse.fromEntity(service, subscriptionCount);
@@ -126,10 +129,11 @@ public class ServiceService {
     @Transactional
     public ServiceResponse createService(Long userId, CreateServiceRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         if (serviceRepository.existsByUserIdAndName(userId, request.getName())) {
-            throw new DuplicateResourceException("Service with this name already exists");
+            throw new DuplicateResourceException(ErrorMessages.SERVICE_NAME_ALREADY_EXISTS);
         }
 
         Service service = Service.builder()
@@ -168,11 +172,12 @@ public class ServiceService {
     @Transactional
     public ServiceResponse updateService(Long userId, Long serviceId, UpdateServiceRequest request) {
         Service service = serviceRepository.findByIdAndUserId(serviceId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Service", "id", serviceId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SERVICE, DomainConstants.FIELD_ID, serviceId));
 
         if (request.getName() != null && !request.getName().equals(service.getName())) {
             if (serviceRepository.existsByUserIdAndName(userId, request.getName())) {
-                throw new DuplicateResourceException("Service with this name already exists");
+                throw new DuplicateResourceException(ErrorMessages.SERVICE_NAME_ALREADY_EXISTS);
             }
             service.setName(request.getName());
         }
@@ -219,12 +224,13 @@ public class ServiceService {
     @Transactional
     public void deleteService(Long userId, Long serviceId) {
         Service service = serviceRepository.findByIdAndUserId(serviceId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Service", "id", serviceId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SERVICE, DomainConstants.FIELD_ID, serviceId));
 
         long subscriptionCount = serviceRepository.countSubscriptionsByServiceId(serviceId);
         if (subscriptionCount > 0) {
             throw new BadRequestException(
-                    String.format("Cannot delete service. It is used in %d subscription(s).", subscriptionCount)
+                    String.format(ErrorMessages.SERVICE_HAS_SUBSCRIPTIONS_TEMPLATE, subscriptionCount)
             );
         }
 

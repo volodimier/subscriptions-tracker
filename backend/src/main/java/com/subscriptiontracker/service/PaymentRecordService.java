@@ -1,5 +1,7 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.constant.DomainConstants;
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.dto.request.CreatePaymentRequest;
 import com.subscriptiontracker.dto.request.UpdatePaymentRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
@@ -62,7 +64,8 @@ public class PaymentRecordService {
             Long userId, Long subscriptionId, int page, int limit) {
 
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, subscriptionId));
 
         PageRequest pageRequest = PageRequest.of(page - 1, limit, Sort.by("paymentDate").descending());
         Page<PaymentRecord> paymentPage = paymentRecordRepository.findBySubscriptionIdOrderByPaymentDateDesc(
@@ -90,10 +93,12 @@ public class PaymentRecordService {
     @Transactional
     public PaymentRecordResponse createPayment(Long userId, CreatePaymentRequest request) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(request.getSubscriptionId(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", request.getSubscriptionId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, request.getSubscriptionId()));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         BigDecimal fxRate = request.getFxRateToBase();
         if (fxRate == null) {
@@ -137,10 +142,12 @@ public class PaymentRecordService {
     @Transactional
     public PaymentRecordResponse updatePayment(Long userId, Long paymentId, UpdatePaymentRequest request) {
         PaymentRecord payment = paymentRecordRepository.findByIdAndSubscriptionUserId(paymentId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("PaymentRecord", "id", paymentId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_PAYMENT_RECORD, DomainConstants.FIELD_ID, paymentId));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_USER, DomainConstants.FIELD_ID, userId));
 
         boolean recalculateBase = false;
 
@@ -184,7 +191,8 @@ public class PaymentRecordService {
     @Transactional
     public void deletePayment(Long userId, Long paymentId) {
         PaymentRecord payment = paymentRecordRepository.findByIdAndSubscriptionUserId(paymentId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("PaymentRecord", "id", paymentId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_PAYMENT_RECORD, DomainConstants.FIELD_ID, paymentId));
 
         paymentRecordRepository.delete(payment);
     }

@@ -1,5 +1,6 @@
 package com.subscriptiontracker.domain.valueobject;
 
+import com.subscriptiontracker.constant.ErrorMessages;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
@@ -91,19 +92,19 @@ public final class Currency {
      */
     public static Currency of(String code) {
         if (code == null) {
-            throw new IllegalArgumentException("Currency code cannot be null");
+            throw new IllegalArgumentException(ErrorMessages.CURRENCY_CODE_CANNOT_BE_NULL);
         }
 
         String normalizedCode = code.trim().toUpperCase();
 
         if (normalizedCode.length() != 3) {
             throw new IllegalArgumentException(
-                    String.format("Currency code must be exactly 3 characters, got: '%s'", code));
+                    String.format(ErrorMessages.CURRENCY_CODE_INVALID_LENGTH_TEMPLATE, code));
         }
 
         if (!VALID_CURRENCY_CODES.contains(normalizedCode)) {
             throw new IllegalArgumentException(
-                    String.format("Invalid ISO 4217 currency code: '%s'", normalizedCode));
+                    String.format(ErrorMessages.INVALID_CURRENCY_CODE_TEMPLATE, normalizedCode));
         }
 
         return new Currency(normalizedCode);
