@@ -114,12 +114,6 @@ public abstract class BaseIntegrationTest {
     }
 
     /**
-     * Flag to track if TestRestTemplate has been configured.
-     * Uses volatile for thread-safe visibility across test threads.
-     */
-    private static volatile boolean restTemplateConfigured = false;
-
-    /**
      * Configures TestRestTemplate and cleans up the database before each test.
      *
      * <p>The TestRestTemplate is configured to use Apache HttpClient which
@@ -138,22 +132,19 @@ public abstract class BaseIntegrationTest {
      * <p>This is necessary because Spring Boot's TestRestTemplateContextCustomizer
      * uses registerSingleton() which bypasses BeanPostProcessor, so we must
      * configure the request factory directly.</p>
+     *
+     * <p>This method is called on every test setup. While this may seem redundant,
+     * it ensures that every TestRestTemplate instance is properly configured,
+     * even when Spring creates new instances for different test contexts.</p>
      */
     private void configureRestTemplate() {
-        if (!restTemplateConfigured) {
-            synchronized (BaseIntegrationTest.class) {
-                if (!restTemplateConfigured) {
-                    CloseableHttpClient httpClient = HttpClients.custom()
-                            .disableRedirectHandling()
-                            .disableAuthCaching()
-                            .build();
-                    HttpComponentsClientHttpRequestFactory factory =
-                            new HttpComponentsClientHttpRequestFactory(httpClient);
-                    restTemplate.getRestTemplate().setRequestFactory(factory);
-                    restTemplateConfigured = true;
-                }
-            }
-        }
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .disableRedirectHandling()
+                .disableAuthCaching()
+                .build();
+        HttpComponentsClientHttpRequestFactory factory =
+                new HttpComponentsClientHttpRequestFactory(httpClient);
+        restTemplate.getRestTemplate().setRequestFactory(factory);
     }
 
     /**
