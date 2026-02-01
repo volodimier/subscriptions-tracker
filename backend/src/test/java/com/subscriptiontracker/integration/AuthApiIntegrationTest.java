@@ -252,16 +252,13 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
         @DisplayName("should reject access to protected endpoint without token")
         void shouldRejectAccess_WhenNoTokenProvided() {
             // Act
-            ResponseEntity<String> response = restTemplate.getForEntity(
+            ResponseEntity<ErrorResponse> response = restTemplate.getForEntity(
                     getBaseUrl("/auth/me"),
-                    String.class
+                    ErrorResponse.class
             );
 
             // Assert
-            assertThat(response.getStatusCode())
-                    .as("Expected 401 UNAUTHORIZED but got %s with body: %s",
-                            response.getStatusCode(), response.getBody())
-                    .isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         }
 
         @Test
@@ -271,17 +268,14 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
             String invalidToken = "invalid.jwt.token";
 
             // Act
-            ResponseEntity<String> response = authenticatedGet(
+            ResponseEntity<ErrorResponse> response = authenticatedGet(
                     "/auth/me",
                     invalidToken,
-                    String.class
+                    ErrorResponse.class
             );
 
             // Assert
-            assertThat(response.getStatusCode())
-                    .as("Expected 401 UNAUTHORIZED but got %s with body: %s",
-                            response.getStatusCode(), response.getBody())
-                    .isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         }
 
         @Test
@@ -294,18 +288,15 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             // Act
-            ResponseEntity<String> response = restTemplate.exchange(
+            ResponseEntity<ErrorResponse> response = restTemplate.exchange(
                     getBaseUrl("/auth/me"),
                     HttpMethod.GET,
                     entity,
-                    String.class
+                    ErrorResponse.class
             );
 
             // Assert
-            assertThat(response.getStatusCode())
-                    .as("Expected 401 UNAUTHORIZED but got %s with body: %s",
-                            response.getStatusCode(), response.getBody())
-                    .isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         }
     }
 

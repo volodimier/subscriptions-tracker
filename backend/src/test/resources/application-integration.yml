@@ -9,6 +9,9 @@ server:
   servlet:
     context-path: ""
 
+server:
+  address: 0.0.0.0
+
 spring:
   jpa:
     show-sql: false
@@ -40,7 +43,3 @@ logging:
     org.testcontainers: INFO
     com.github.dockerjava: WARN
     org.springframework.test: INFO
-    org.springframework.boot: INFO
-    org.springframework.web: DEBUG
-    org.hibernate.SQL: WARN
-    com.subscriptiontracker: DEBUG
