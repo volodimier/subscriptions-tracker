@@ -69,9 +69,14 @@ public class CreateSubscriptionRequest {
 
     /**
      * The subscription start date.
+     *
+     * <p>This field is optional and will be ignored if provided. The start date
+     * is automatically calculated by the backend as {@code nextBillingDate - 1 billing cycle}.</p>
      */
-    @Schema(description = "Subscription start date", example = "2024-01-15", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull(message = "Start date is required")
+    @Schema(description = "Subscription start date (ignored - auto-calculated from nextBillingDate and billingCycle)",
+            example = "2024-01-15",
+            requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+            accessMode = Schema.AccessMode.READ_ONLY)
     private LocalDate startDate;
 
     /**

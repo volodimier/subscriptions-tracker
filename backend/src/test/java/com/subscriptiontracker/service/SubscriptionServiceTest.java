@@ -322,6 +322,155 @@ class SubscriptionServiceTest {
             assertEquals(BillingCycle.custom, result.getBillingCycle());
             assertEquals(14, result.getBillingCycleDays());
         }
+
+        @Test
+        @DisplayName("should auto-calculate startDate from nextBillingDate for monthly billing")
+        void shouldAutoCalculateStartDateForMonthlyBilling() {
+            LocalDate nextBillingDate = LocalDate.of(2024, 3, 15);
+            LocalDate expectedStartDate = LocalDate.of(2024, 2, 15);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .nextBillingDate(nextBillingDate)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
+                Subscription sub = invocation.getArgument(0);
+                sub.setId(1L);
+                return sub;
+            });
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+        }
+
+        @Test
+        @DisplayName("should ignore client-provided startDate and calculate automatically")
+        void shouldIgnoreClientProvidedStartDate() {
+            LocalDate clientProvidedStartDate = LocalDate.of(2020, 1, 1);
+            LocalDate nextBillingDate = LocalDate.of(2024, 3, 15);
+            LocalDate expectedStartDate = LocalDate.of(2024, 2, 15);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .startDate(clientProvidedStartDate)
+                    .nextBillingDate(nextBillingDate)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
+                Subscription sub = invocation.getArgument(0);
+                sub.setId(1L);
+                return sub;
+            });
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+            assertNotEquals(clientProvidedStartDate, captor.getValue().getStartDate());
+        }
+
+        @Test
+        @DisplayName("should auto-calculate startDate for yearly billing")
+        void shouldAutoCalculateStartDateForYearlyBilling() {
+            LocalDate nextBillingDate = LocalDate.of(2025, 1, 15);
+            LocalDate expectedStartDate = LocalDate.of(2024, 1, 15);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("99.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.yearly)
+                    .nextBillingDate(nextBillingDate)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
+                Subscription sub = invocation.getArgument(0);
+                sub.setId(1L);
+                return sub;
+            });
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+        }
+
+        @Test
+        @DisplayName("should auto-calculate startDate for bi-annual billing")
+        void shouldAutoCalculateStartDateForBiAnnualBilling() {
+            LocalDate nextBillingDate = LocalDate.of(2024, 7, 15);
+            LocalDate expectedStartDate = LocalDate.of(2024, 1, 15);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("49.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.bi_annual)
+                    .nextBillingDate(nextBillingDate)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
+                Subscription sub = invocation.getArgument(0);
+                sub.setId(1L);
+                return sub;
+            });
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+        }
+
+        @Test
+        @DisplayName("should auto-calculate startDate for custom billing cycle")
+        void shouldAutoCalculateStartDateForCustomBillingCycle() {
+            LocalDate nextBillingDate = LocalDate.of(2024, 2, 14);
+            LocalDate expectedStartDate = LocalDate.of(2024, 1, 15);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.custom)
+                    .billingCycleDays(30)
+                    .nextBillingDate(nextBillingDate)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
+                Subscription sub = invocation.getArgument(0);
+                sub.setId(1L);
+                return sub;
+            });
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+        }
     }
 
     @Nested
@@ -374,6 +523,100 @@ class SubscriptionServiceTest {
             );
 
             assertEquals("Billing cycle days is required for custom billing cycle", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("should recalculate startDate when nextBillingDate changes")
+        void shouldRecalculateStartDateWhenNextBillingDateChanges() {
+            LocalDate newNextBillingDate = LocalDate.of(2024, 5, 1);
+            LocalDate expectedStartDate = LocalDate.of(2024, 4, 1);
+
+            UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
+                    .nextBillingDate(newNextBillingDate)
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            subscriptionService.updateSubscription(1L, 1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+        }
+
+        @Test
+        @DisplayName("should recalculate startDate when billingCycle changes")
+        void shouldRecalculateStartDateWhenBillingCycleChanges() {
+            // Original subscription has monthly cycle and next billing date 2024-02-01
+            LocalDate expectedStartDate = LocalDate.of(2023, 2, 1); // yearly: subtract 1 year
+
+            UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
+                    .billingCycle(BillingCycle.yearly)
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            subscriptionService.updateSubscription(1L, 1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+        }
+
+        @Test
+        @DisplayName("should not recalculate startDate when only amount changes")
+        void shouldNotRecalculateStartDateWhenOnlyAmountChanges() {
+            LocalDate originalStartDate = testSubscription.getStartDate();
+
+            UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
+                    .amount(new BigDecimal("29.99"))
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            subscriptionService.updateSubscription(1L, 1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(originalStartDate, captor.getValue().getStartDate());
+        }
+
+        @Test
+        @DisplayName("should recalculate startDate when billingCycleDays changes for custom cycle")
+        void shouldRecalculateStartDateWhenBillingCycleDaysChanges() {
+            // Create a subscription with custom billing cycle
+            Subscription customSubscription = Subscription.builder()
+                    .id(1L)
+                    .user(testUser)
+                    .service(testService)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.custom)
+                    .billingCycleDays(14)
+                    .startDate(LocalDate.of(2024, 1, 1))
+                    .nextBillingDate(LocalDate.of(2024, 1, 15))
+                    .status(SubscriptionStatus.active)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+
+            LocalDate expectedStartDate = LocalDate.of(2023, 12, 16); // 30 days before 2024-01-15
+
+            UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
+                    .billingCycleDays(30)
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(customSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            subscriptionService.updateSubscription(1L, 1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
         }
     }
 
@@ -518,6 +761,30 @@ class SubscriptionServiceTest {
             );
 
             assertEquals("Subscription is already active", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("should recalculate startDate when reactivating subscription")
+        void shouldRecalculateStartDateWhenReactivating() {
+            testSubscription.setStatus(SubscriptionStatus.cancelled);
+            testSubscription.setCancelledAt(LocalDateTime.now());
+
+            LocalDate newNextBillingDate = LocalDate.of(2024, 6, 15);
+            LocalDate expectedStartDate = LocalDate.of(2024, 5, 15); // monthly: subtract 1 month
+
+            ReactivateSubscriptionRequest request = ReactivateSubscriptionRequest.builder()
+                    .nextBillingDate(newNextBillingDate)
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            subscriptionService.reactivateSubscription(1L, 1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+            assertEquals(newNextBillingDate, captor.getValue().getNextBillingDate());
         }
     }
 
