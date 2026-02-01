@@ -16,6 +16,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
+/**
+ * Service for managing foreign exchange rates.
+ *
+ * <p>Provides functionality to retrieve and refresh exchange rates
+ * for currency conversions. Rates are fetched from an external API
+ * and cached in the database for performance and offline access.</p>
+ *
+ * <p>Supported currencies: USD, EUR, GBP, PLN.</p>
+ *
+ * @author Generated
+ * @since 1.0
+ * @see FxRate
+ * @see FxRateRepository
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -31,6 +45,18 @@ public class FxRateService {
 
     private static final List<String> SUPPORTED_CURRENCIES = List.of("USD", "EUR", "GBP", "PLN");
 
+    /**
+     * Retrieves the exchange rate between two currencies for a given date.
+     *
+     * <p>Returns the most recent rate on or before the specified date.
+     * If no direct rate is found, attempts to calculate using the inverse rate.
+     * Returns 1.0 as a fallback if no rate is available.</p>
+     *
+     * @param fromCurrency the source currency code
+     * @param toCurrency   the target currency code
+     * @param date         the date for which to retrieve the rate
+     * @return the exchange rate, or 1.0 if no rate is found
+     */
     public BigDecimal getRate(String fromCurrency, String toCurrency, LocalDate date) {
         if (fromCurrency.equals(toCurrency)) {
             return BigDecimal.ONE;
@@ -53,6 +79,12 @@ public class FxRateService {
         return BigDecimal.ONE;
     }
 
+    /**
+     * Retrieves current exchange rates to a base currency.
+     *
+     * @param baseCurrency the target currency code
+     * @return map of currency codes to their exchange rates
+     */
     public Map<String, BigDecimal> getCurrentRates(String baseCurrency) {
         Map<String, BigDecimal> rates = new HashMap<>();
 
@@ -66,6 +98,18 @@ public class FxRateService {
         return rates;
     }
 
+    /**
+     * Refreshes exchange rates from the external API.
+     *
+     * <p>Fetches latest rates from the configured API and stores them
+     * in the database. Also calculates and stores cross-rates between
+     * all supported currencies.</p>
+     *
+     * <p>Falls back to default rates if the API key is not configured
+     * or if the API call fails.</p>
+     *
+     * @return map of currency codes to their updated exchange rates
+     */
     @Transactional
     public Map<String, BigDecimal> refreshRates() {
         if (apiKey == null || apiKey.isEmpty()) {
@@ -150,6 +194,11 @@ public class FxRateService {
         return rates;
     }
 
+    /**
+     * Retrieves the most recent date for which exchange rates are available.
+     *
+     * @return optional containing the date, or empty if no rates exist
+     */
     public Optional<LocalDate> getLastUpdateDate() {
         return fxRateRepository.findLatestRateDate();
     }

@@ -17,6 +17,18 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+/**
+ * Service handling user account and settings management.
+ *
+ * <p>Provides functionality for managing user preferences, changing
+ * passwords, and deleting accounts. Includes security measures
+ * such as password verification for sensitive operations.</p>
+ *
+ * @author Generated
+ * @since 1.0
+ * @see User
+ * @see UserSettingsResponse
+ */
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -26,6 +38,13 @@ public class UserService {
     private final FxRateService fxRateService;
     private final JobRunService jobRunService;
 
+    /**
+     * Retrieves user settings including preferences and FX rate information.
+     *
+     * @param userId the ID of the user
+     * @return user settings response with current FX rates
+     * @throws ResourceNotFoundException if the user is not found
+     */
     public UserSettingsResponse getSettings(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
@@ -42,6 +61,14 @@ public class UserService {
                 .build();
     }
 
+    /**
+     * Updates user settings.
+     *
+     * @param userId  the ID of the user
+     * @param request the settings update request
+     * @return updated user settings response
+     * @throws ResourceNotFoundException if the user is not found
+     */
     @Transactional
     public UserSettingsResponse updateSettings(Long userId, UpdateUserSettingsRequest request) {
         User user = userRepository.findById(userId)
@@ -55,6 +82,17 @@ public class UserService {
         return getSettings(userId);
     }
 
+    /**
+     * Changes the user's password.
+     *
+     * <p>Requires the current password for verification before
+     * updating to the new password.</p>
+     *
+     * @param userId  the ID of the user
+     * @param request the password change request containing current and new passwords
+     * @throws ResourceNotFoundException if the user is not found
+     * @throws BadRequestException       if the current password is incorrect
+     */
     @Transactional
     public void changePassword(Long userId, ChangePasswordRequest request) {
         User user = userRepository.findById(userId)
@@ -68,6 +106,17 @@ public class UserService {
         userRepository.save(user);
     }
 
+    /**
+     * Permanently deletes a user account and all associated data.
+     *
+     * <p>Requires password verification and explicit confirmation (typing "DELETE")
+     * to prevent accidental deletions. This action cannot be undone.</p>
+     *
+     * @param userId  the ID of the user
+     * @param request the deletion request with password and confirmation
+     * @throws ResourceNotFoundException if the user is not found
+     * @throws BadRequestException       if the password is incorrect or confirmation is invalid
+     */
     @Transactional
     public void deleteAccount(Long userId, DeleteAccountRequest request) {
         User user = userRepository.findById(userId)

@@ -9,6 +9,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Request DTO for changing the user's password.
+ *
+ * <p>The current password is required for verification. The new password
+ * must meet complexity requirements and match the confirmation.</p>
+ *
+ * @author Generated
+ * @since 1.0
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -16,9 +25,11 @@ import lombok.NoArgsConstructor;
 @PasswordMatch
 public class ChangePasswordRequest {
 
+    /** The user's current password for verification. */
     @NotBlank(message = "Current password is required")
     private String currentPassword;
 
+    /** The new password (min 8 chars, must contain uppercase and number). */
     @NotBlank(message = "New password is required")
     @Size(min = 8, message = "New password must be at least 8 characters")
     @Pattern(
@@ -27,6 +38,7 @@ public class ChangePasswordRequest {
     )
     private String newPassword;
 
+    /** Confirmation of the new password (must match newPassword). */
     @NotBlank(message = "Password confirmation is required")
     private String confirmNewPassword;
 }

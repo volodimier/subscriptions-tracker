@@ -29,6 +29,23 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Service handling subscription management operations.
+ *
+ * <p>Provides comprehensive CRUD functionality for subscriptions including:</p>
+ * <ul>
+ *   <li>Creating new subscriptions with validation</li>
+ *   <li>Listing subscriptions with filtering, sorting, and pagination</li>
+ *   <li>Updating subscription details</li>
+ *   <li>Cancelling and reactivating subscriptions</li>
+ *   <li>Calculating subscription statistics</li>
+ * </ul>
+ *
+ * @author Generated
+ * @since 1.0
+ * @see Subscription
+ * @see SubscriptionRepository
+ */
 @org.springframework.stereotype.Service
 @RequiredArgsConstructor
 public class SubscriptionService {
@@ -38,6 +55,19 @@ public class SubscriptionService {
     private final UserRepository userRepository;
     private final PaymentRecordRepository paymentRecordRepository;
 
+    /**
+     * Retrieves a paginated list of subscriptions for a user with optional filters.
+     *
+     * @param userId   the ID of the user whose subscriptions to retrieve
+     * @param status   optional filter by subscription status
+     * @param category optional filter by service category
+     * @param search   optional search term for service name
+     * @param sortBy   field to sort by (amount, name, or nextBillingDate)
+     * @param order    sort order (asc or desc)
+     * @param page     page number (1-based)
+     * @param limit    number of items per page
+     * @return paginated response containing subscription data
+     */
     public PaginatedResponse<SubscriptionResponse> getSubscriptions(
             Long userId,
             SubscriptionStatus status,
@@ -73,6 +103,17 @@ public class SubscriptionService {
         };
     }
 
+    /**
+     * Retrieves detailed information about a specific subscription.
+     *
+     * <p>Includes subscription statistics such as total paid, number of payments,
+     * and average monthly spending.</p>
+     *
+     * @param userId         the ID of the user who owns the subscription
+     * @param subscriptionId the ID of the subscription to retrieve
+     * @return detailed subscription response with statistics
+     * @throws ResourceNotFoundException if the subscription is not found
+     */
     public SubscriptionDetailResponse getSubscriptionDetail(Long userId, Long subscriptionId) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription", "id", subscriptionId));
@@ -103,6 +144,18 @@ public class SubscriptionService {
                 .build();
     }
 
+    /**
+     * Creates a new subscription for a user.
+     *
+     * <p>Validates that the referenced service exists and belongs to the user.
+     * For custom billing cycles, the billingCycleDays field must be provided.</p>
+     *
+     * @param userId  the ID of the user creating the subscription
+     * @param request the subscription creation request
+     * @return the created subscription response
+     * @throws ResourceNotFoundException if the user or service is not found
+     * @throws BadRequestException       if custom billing cycle is selected without days specified
+     */
     @Transactional
     public SubscriptionResponse createSubscription(Long userId, CreateSubscriptionRequest request) {
         User user = userRepository.findById(userId)
@@ -133,6 +186,19 @@ public class SubscriptionService {
         return SubscriptionResponse.fromEntity(subscription);
     }
 
+    /**
+     * Updates an existing subscription.
+     *
+     * <p>Only non-null fields in the request are updated. The subscription
+     * must belong to the specified user.</p>
+     *
+     * @param userId         the ID of the user who owns the subscription
+     * @param subscriptionId the ID of the subscription to update
+     * @param request        the update request with fields to modify
+     * @return the updated subscription response
+     * @throws ResourceNotFoundException if the subscription or service is not found
+     * @throws BadRequestException       if custom billing cycle is selected without days specified
+     */
     @Transactional
     public SubscriptionResponse updateSubscription(Long userId, Long subscriptionId, UpdateSubscriptionRequest request) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
@@ -179,6 +245,19 @@ public class SubscriptionService {
         return SubscriptionResponse.fromEntity(subscription);
     }
 
+    /**
+     * Cancels an active subscription.
+     *
+     * <p>Sets the subscription status to cancelled and records the cancellation date.
+     * Cancelled subscriptions can be reactivated later.</p>
+     *
+     * @param userId         the ID of the user who owns the subscription
+     * @param subscriptionId the ID of the subscription to cancel
+     * @param request        the cancellation request with the cancellation date
+     * @return the cancelled subscription response
+     * @throws ResourceNotFoundException if the subscription is not found
+     * @throws BadRequestException       if the subscription is already cancelled
+     */
     @Transactional
     public SubscriptionResponse cancelSubscription(Long userId, Long subscriptionId, CancelSubscriptionRequest request) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
@@ -195,6 +274,19 @@ public class SubscriptionService {
         return SubscriptionResponse.fromEntity(subscription);
     }
 
+    /**
+     * Reactivates a cancelled subscription.
+     *
+     * <p>Sets the subscription status back to active, clears the cancellation
+     * timestamp, and sets a new next billing date.</p>
+     *
+     * @param userId         the ID of the user who owns the subscription
+     * @param subscriptionId the ID of the subscription to reactivate
+     * @param request        the reactivation request with the new billing date
+     * @return the reactivated subscription response
+     * @throws ResourceNotFoundException if the subscription is not found
+     * @throws BadRequestException       if the subscription is already active
+     */
     @Transactional
     public SubscriptionResponse reactivateSubscription(Long userId, Long subscriptionId, ReactivateSubscriptionRequest request) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
@@ -212,6 +304,13 @@ public class SubscriptionService {
         return SubscriptionResponse.fromEntity(subscription);
     }
 
+    /**
+     * Permanently deletes a subscription and all associated payment records.
+     *
+     * @param userId         the ID of the user who owns the subscription
+     * @param subscriptionId the ID of the subscription to delete
+     * @throws ResourceNotFoundException if the subscription is not found
+     */
     @Transactional
     public void deleteSubscription(Long userId, Long subscriptionId) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
@@ -220,6 +319,12 @@ public class SubscriptionService {
         subscriptionRepository.delete(subscription);
     }
 
+    /**
+     * Retrieves all unique categories from the user's subscriptions.
+     *
+     * @param userId the ID of the user
+     * @return list of distinct category names
+     */
     public List<String> getCategories(Long userId) {
         return subscriptionRepository.findDistinctCategoriesByUserId(userId);
     }

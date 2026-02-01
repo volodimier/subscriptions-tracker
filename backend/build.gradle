@@ -97,7 +97,14 @@ jacocoTestCoverageVerification {
     violationRules {
         rule {
             limit {
-                minimum = 0.5
+                minimum = 0.70
+            }
+        }
+        rule {
+            element = 'PACKAGE'
+            includes = ['com.subscriptiontracker.service.*']
+            limit {
+                minimum = 0.80
             }
         }
     }

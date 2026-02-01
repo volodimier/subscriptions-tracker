@@ -18,6 +18,24 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.Optional;
 
+/**
+ * Service for fetching and processing website favicons.
+ *
+ * <p>Fetches favicons using Google's favicon service for security,
+ * then sanitizes the images by re-encoding them to prevent
+ * image-based exploits.</p>
+ *
+ * <p>Features:</p>
+ * <ul>
+ *   <li>URL normalization (adds https:// if missing)</li>
+ *   <li>Size limits to prevent memory attacks</li>
+ *   <li>Image re-encoding for security</li>
+ *   <li>Base64 data URL conversion for frontend use</li>
+ * </ul>
+ *
+ * @author Generated
+ * @since 1.0
+ */
 @Service
 @Slf4j
 public class FaviconService {

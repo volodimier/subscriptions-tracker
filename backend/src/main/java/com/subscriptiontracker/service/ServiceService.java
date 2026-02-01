@@ -20,6 +20,27 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Service handling service catalog management operations.
+ *
+ * <p>Manages the catalog of subscription services that users can subscribe to
+ * (e.g., Netflix, Spotify, gym memberships). Each user has their own set of
+ * services with unique names.</p>
+ *
+ * <p>Features include:</p>
+ * <ul>
+ *   <li>Creating services with automatic favicon fetching</li>
+ *   <li>Updating service details with favicon refresh on URL change</li>
+ *   <li>Preventing deletion of services with active subscriptions</li>
+ *   <li>Category management for organizing services</li>
+ * </ul>
+ *
+ * @author Generated
+ * @since 1.0
+ * @see Service
+ * @see ServiceRepository
+ * @see FaviconService
+ */
 @org.springframework.stereotype.Service
 @RequiredArgsConstructor
 public class ServiceService {
@@ -28,6 +49,15 @@ public class ServiceService {
     private final UserRepository userRepository;
     private final FaviconService faviconService;
 
+    /**
+     * Retrieves a paginated list of services for a user.
+     *
+     * @param userId the ID of the user whose services to retrieve
+     * @param search optional search term for filtering by service name
+     * @param page   page number (1-based)
+     * @param limit  number of items per page
+     * @return paginated response containing service data with subscription counts
+     */
     public PaginatedResponse<ServiceResponse> getAllServices(Long userId, String search, int page, int limit) {
         PageRequest pageRequest = PageRequest.of(page - 1, limit, Sort.by("name").ascending());
 
@@ -48,6 +78,14 @@ public class ServiceService {
         return PaginatedResponse.of(services, page, limit, servicePage.getTotalElements());
     }
 
+    /**
+     * Retrieves all services for a user without pagination.
+     *
+     * <p>Intended for dropdown menus where all services need to be displayed.</p>
+     *
+     * @param userId the ID of the user whose services to retrieve
+     * @return list of all services sorted by name
+     */
     public List<ServiceResponse> getAllServicesForUser(Long userId) {
         return serviceRepository.findByUserIdOrderByNameAsc(userId).stream()
                 .map(service -> {
@@ -57,6 +95,14 @@ public class ServiceService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieves a specific service by ID.
+     *
+     * @param userId    the ID of the user who owns the service
+     * @param serviceId the ID of the service to retrieve
+     * @return the service response with subscription count
+     * @throws ResourceNotFoundException if the service is not found
+     */
     public ServiceResponse getService(Long userId, Long serviceId) {
         Service service = serviceRepository.findByIdAndUserId(serviceId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service", "id", serviceId));
@@ -65,6 +111,18 @@ public class ServiceService {
         return ServiceResponse.fromEntity(service, subscriptionCount);
     }
 
+    /**
+     * Creates a new service for a user.
+     *
+     * <p>If a website URL is provided, automatically attempts to fetch the
+     * favicon for visual identification in the UI.</p>
+     *
+     * @param userId  the ID of the user creating the service
+     * @param request the service creation request
+     * @return the created service response
+     * @throws ResourceNotFoundException   if the user is not found
+     * @throws DuplicateResourceException if a service with the same name already exists
+     */
     @Transactional
     public ServiceResponse createService(Long userId, CreateServiceRequest request) {
         User user = userRepository.findById(userId)
@@ -94,6 +152,19 @@ public class ServiceService {
         return ServiceResponse.fromEntity(savedService, 0);
     }
 
+    /**
+     * Updates an existing service.
+     *
+     * <p>Only non-null fields in the request are updated. If the website URL
+     * changes, the favicon is automatically re-fetched.</p>
+     *
+     * @param userId    the ID of the user who owns the service
+     * @param serviceId the ID of the service to update
+     * @param request   the update request with fields to modify
+     * @return the updated service response
+     * @throws ResourceNotFoundException   if the service is not found
+     * @throws DuplicateResourceException if the new name already exists for another service
+     */
     @Transactional
     public ServiceResponse updateService(Long userId, Long serviceId, UpdateServiceRequest request) {
         Service service = serviceRepository.findByIdAndUserId(serviceId, userId)
@@ -134,6 +205,17 @@ public class ServiceService {
         return ServiceResponse.fromEntity(savedService, subscriptionCount);
     }
 
+    /**
+     * Deletes a service.
+     *
+     * <p>A service cannot be deleted if it has any associated subscriptions.
+     * Users must first delete or reassign all subscriptions using this service.</p>
+     *
+     * @param userId    the ID of the user who owns the service
+     * @param serviceId the ID of the service to delete
+     * @throws ResourceNotFoundException if the service is not found
+     * @throws BadRequestException       if the service has associated subscriptions
+     */
     @Transactional
     public void deleteService(Long userId, Long serviceId) {
         Service service = serviceRepository.findByIdAndUserId(serviceId, userId)
@@ -149,6 +231,12 @@ public class ServiceService {
         serviceRepository.delete(service);
     }
 
+    /**
+     * Retrieves all unique categories from the user's services.
+     *
+     * @param userId the ID of the user
+     * @return list of distinct category names sorted alphabetically
+     */
     public List<String> getCategories(Long userId) {
         return serviceRepository.findDistinctCategoriesByUserId(userId);
     }

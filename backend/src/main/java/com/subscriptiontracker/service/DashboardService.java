@@ -21,6 +21,25 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Service providing dashboard analytics and spending projections.
+ *
+ * <p>Calculates comprehensive spending summaries and future projections
+ * based on the user's subscription data and payment history.</p>
+ *
+ * <p>Analytics include:</p>
+ * <ul>
+ *   <li>Total spending for a specified period</li>
+ *   <li>Spending breakdown by category</li>
+ *   <li>Monthly average spending</li>
+ *   <li>Yearly spending projections based on active subscriptions</li>
+ * </ul>
+ *
+ * @author Generated
+ * @since 1.0
+ * @see DashboardSummaryResponse
+ * @see ProjectionResponse
+ */
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
@@ -30,6 +49,19 @@ public class DashboardService {
     private final UserRepository userRepository;
     private final FxRateService fxRateService;
 
+    /**
+     * Generates a spending summary for a specified date range.
+     *
+     * <p>Calculates total spending, subscription counts, monthly averages,
+     * and spending breakdown by category. All amounts are converted to
+     * the user's base currency.</p>
+     *
+     * @param userId    the ID of the user
+     * @param startDate the start date of the period (inclusive)
+     * @param endDate   the end date of the period (inclusive)
+     * @return comprehensive spending summary response
+     * @throws ResourceNotFoundException if the user is not found
+     */
     public DashboardSummaryResponse getSummary(Long userId, LocalDate startDate, LocalDate endDate) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
@@ -89,6 +121,17 @@ public class DashboardService {
                 .build();
     }
 
+    /**
+     * Generates spending projections for the current year.
+     *
+     * <p>Calculates expected monthly spending based on active subscriptions
+     * and their billing cycles. All amounts are converted to the user's
+     * base currency using current exchange rates.</p>
+     *
+     * @param userId the ID of the user
+     * @return yearly projection with monthly breakdown
+     * @throws ResourceNotFoundException if the user is not found
+     */
     public ProjectionResponse getProjection(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));

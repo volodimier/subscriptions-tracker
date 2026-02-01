@@ -16,6 +16,23 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service handling user authentication operations.
+ *
+ * <p>Provides functionality for user registration and login, including
+ * password hashing, credential validation, and JWT token generation.</p>
+ *
+ * <p>Security measures include:</p>
+ * <ul>
+ *   <li>BCrypt password hashing</li>
+ *   <li>Generic error messages to prevent user enumeration</li>
+ *   <li>JWT token-based authentication</li>
+ * </ul>
+ *
+ * @author Generated
+ * @since 1.0
+ * @see JwtService
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -26,6 +43,17 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
 
+    /**
+     * Registers a new user account.
+     *
+     * <p>Creates a new user with the provided email and password, hashes
+     * the password using BCrypt, and returns a JWT token for immediate
+     * authentication.</p>
+     *
+     * @param request the registration request containing email and password
+     * @return authentication response with user details and JWT token
+     * @throws BadRequestException if the email is already registered
+     */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -50,6 +78,16 @@ public class AuthService {
                 .build();
     }
 
+    /**
+     * Authenticates a user and generates a JWT token.
+     *
+     * <p>Validates the user's credentials against the stored password hash
+     * and returns a JWT token for subsequent authenticated requests.</p>
+     *
+     * @param request the login request containing email and password
+     * @return authentication response with user details and JWT token
+     * @throws org.springframework.security.authentication.BadCredentialsException if credentials are invalid
+     */
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
