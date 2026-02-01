@@ -26,8 +26,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -50,21 +48,15 @@ import java.util.UUID;
  * @since 1.0
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
 @ActiveProfiles("integration")
 @EnabledIfDockerAvailable
 public abstract class BaseIntegrationTest {
 
     /**
      * Shared PostgreSQL container for all integration tests.
-     * The container is started once and reused across all test classes.
+     * Uses singleton pattern for better CI compatibility.
      */
-    @Container
-    protected static final PostgreSQLContainer<?> POSTGRES_CONTAINER =
-            new PostgreSQLContainer<>("postgres:15-alpine")
-                    .withDatabaseName("subscription_tracker_test")
-                    .withUsername("test")
-                    .withPassword("test");
+    protected static final PostgreSQLContainer<?> POSTGRES_CONTAINER = SharedPostgresContainer.getInstance();
 
     @LocalServerPort
     protected int port;

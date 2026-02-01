@@ -22,9 +22,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import com.subscriptiontracker.integration.SharedPostgresContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -46,20 +45,17 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @since 1.0
  */
 @DataJpaTest
-@Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("integration")
 @EnabledIfDockerAvailable
 @DisplayName("Subscription Repository Integration Tests")
 class SubscriptionRepositoryIntegrationTest {
 
-    @Container
-    static final PostgreSQLContainer<?> POSTGRES_CONTAINER =
-            new PostgreSQLContainer<>("postgres:15-alpine")
-                    .withDatabaseName("subscription_tracker_test")
-                    .withUsername("test")
-                    .withPassword("test")
-                    .withReuse(true);
+    /**
+     * Shared PostgreSQL container for all integration tests.
+     * Uses singleton pattern for better CI compatibility.
+     */
+    static final PostgreSQLContainer<?> POSTGRES_CONTAINER = SharedPostgresContainer.getInstance();
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
