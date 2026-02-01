@@ -7,6 +7,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
@@ -25,12 +26,21 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     // Rate limit: 10 requests per minute for auth endpoints
     private static final int AUTH_REQUESTS_PER_MINUTE = 10;
 
+    @Value("${rate-limiting.enabled:true}")
+    private boolean rateLimitingEnabled;
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
+        // Skip rate limiting if disabled (e.g., for integration tests)
+        if (!rateLimitingEnabled) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String path = request.getRequestURI();
 
         // Only rate limit auth endpoints

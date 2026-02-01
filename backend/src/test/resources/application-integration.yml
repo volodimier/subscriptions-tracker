@@ -1,6 +1,10 @@
 # Integration test configuration
 # Database properties are set dynamically via @DynamicPropertySource
 
+# Disable rate limiting for integration tests
+rate-limiting:
+  enabled: false
+
 server:
   servlet:
     context-path: ""
