@@ -1,8 +1,11 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.config.JwtConfig;
 import com.subscriptiontracker.dto.request.LoginRequest;
+import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
+import com.subscriptiontracker.entity.RefreshToken;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.repository.UserRepository;
@@ -22,10 +25,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -43,10 +49,16 @@ class AuthServiceTest {
     private JwtService jwtService;
 
     @Mock
+    private JwtConfig jwtConfig;
+
+    @Mock
     private AuthenticationManager authenticationManager;
 
     @Mock
     private UserDetailsService userDetailsService;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     @InjectMocks
     private AuthService authService;
@@ -55,6 +67,9 @@ class AuthServiceTest {
     private LoginRequest loginRequest;
     private User testUser;
     private UserDetails userDetails;
+    private RefreshToken refreshToken;
+
+    private static final long ACCESS_TOKEN_EXPIRATION = 86400000L;
 
     @BeforeEach
     void setUp() {
@@ -80,6 +95,14 @@ class AuthServiceTest {
                 .password("encodedPassword")
                 .authorities("ROLE_USER")
                 .build();
+
+        refreshToken = RefreshToken.builder()
+                .id(1L)
+                .token("refresh-token-uuid")
+                .user(testUser)
+                .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS))
+                .revoked(false)
+                .build();
     }
 
     @Nested
@@ -94,6 +117,8 @@ class AuthServiceTest {
             when(userRepository.save(any(User.class))).thenReturn(testUser);
             when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
             when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
 
             AuthResponse response = authService.register(registerRequest);
 
@@ -102,6 +127,9 @@ class AuthServiceTest {
             assertEquals("test@example.com", response.getUser().getEmail());
             assertEquals("USD", response.getUser().getBaseCurrencyCode());
             assertEquals("jwt-token", response.getToken());
+            assertEquals("refresh-token-uuid", response.getRefreshToken());
+            assertEquals("Bearer", response.getTokenType());
+            assertEquals(ACCESS_TOKEN_EXPIRATION / 1000, response.getExpiresIn());
 
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(userCaptor.capture());
@@ -131,6 +159,8 @@ class AuthServiceTest {
             when(userRepository.save(any(User.class))).thenReturn(testUser);
             when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
             when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
 
             authService.register(registerRequest);
 
@@ -148,6 +178,8 @@ class AuthServiceTest {
             when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
             when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
             when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
 
             AuthResponse response = authService.login(loginRequest);
 
@@ -155,6 +187,8 @@ class AuthServiceTest {
             assertNotNull(response.getUser());
             assertEquals("test@example.com", response.getUser().getEmail());
             assertEquals("jwt-token", response.getToken());
+            assertEquals("refresh-token-uuid", response.getRefreshToken());
+            assertEquals("Bearer", response.getTokenType());
 
             verify(authenticationManager).authenticate(
                     any(UsernamePasswordAuthenticationToken.class)
@@ -176,6 +210,8 @@ class AuthServiceTest {
             when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
             when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
             when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
 
             authService.login(loginRequest);
 
@@ -186,6 +222,88 @@ class AuthServiceTest {
             UsernamePasswordAuthenticationToken authToken = authCaptor.getValue();
             assertEquals("test@example.com", authToken.getPrincipal());
             assertEquals("Password123", authToken.getCredentials());
+        }
+    }
+
+    @Nested
+    @DisplayName("refreshToken")
+    class RefreshTokenTest {
+
+        @Test
+        @DisplayName("should return new tokens when refresh token is valid")
+        void shouldReturnNewTokensWhenRefreshTokenIsValid() {
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken("valid-refresh-token")
+                    .build();
+            RefreshToken newRefreshToken = RefreshToken.builder()
+                    .id(2L)
+                    .token("new-refresh-token-uuid")
+                    .user(testUser)
+                    .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS))
+                    .revoked(false)
+                    .build();
+
+            when(refreshTokenService.findByToken("valid-refresh-token")).thenReturn(refreshToken);
+            when(refreshTokenService.verifyExpiration(refreshToken)).thenReturn(refreshToken);
+            when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
+            when(jwtService.generateToken(any(UserDetails.class))).thenReturn("new-jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(newRefreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
+
+            AuthResponse response = authService.refreshToken(request);
+
+            assertNotNull(response);
+            assertEquals("new-jwt-token", response.getToken());
+            assertEquals("new-refresh-token-uuid", response.getRefreshToken());
+            assertEquals("Bearer", response.getTokenType());
+            verify(refreshTokenService).revokeToken("valid-refresh-token");
+        }
+
+        @Test
+        @DisplayName("should throw exception when refresh token is not found")
+        void shouldThrowExceptionWhenRefreshTokenNotFound() {
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken("invalid-refresh-token")
+                    .build();
+
+            when(refreshTokenService.findByToken("invalid-refresh-token"))
+                    .thenThrow(new RefreshTokenService.TokenRefreshException("Token not found"));
+
+            assertThrows(RefreshTokenService.TokenRefreshException.class,
+                    () -> authService.refreshToken(request));
+        }
+    }
+
+    @Nested
+    @DisplayName("logout")
+    class LogoutTest {
+
+        @Test
+        @DisplayName("should revoke refresh token on logout")
+        void shouldRevokeRefreshTokenOnLogout() {
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken("token-to-revoke")
+                    .build();
+
+            authService.logout(request);
+
+            verify(refreshTokenService).revokeToken("token-to-revoke");
+        }
+    }
+
+    @Nested
+    @DisplayName("logoutAllDevices")
+    class LogoutAllDevicesTest {
+
+        @Test
+        @DisplayName("should revoke all user tokens")
+        void shouldRevokeAllUserTokens() {
+            when(refreshTokenService.revokeAllUserTokens(1L)).thenReturn(3);
+
+            int revokedCount = authService.logoutAllDevices(1L);
+
+            assertEquals(3, revokedCount);
+            verify(refreshTokenService).revokeAllUserTokens(1L);
         }
     }
 }

@@ -9,6 +9,7 @@ import com.subscriptiontracker.dto.response.ServiceResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.BillingCycle;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
+import com.subscriptiontracker.repository.RefreshTokenRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.repository.UserRepository;
@@ -78,6 +79,9 @@ public abstract class BaseIntegrationTest {
     @Autowired
     protected PaymentRecordRepository paymentRecordRepository;
 
+    @Autowired
+    protected RefreshTokenRepository refreshTokenRepository;
+
     /**
      * Configures the Spring datasource to use the Testcontainers PostgreSQL instance.
      *
@@ -104,6 +108,7 @@ public abstract class BaseIntegrationTest {
         // JWT configuration
         registry.add("jwt.secret", () -> "test-jwt-secret-key-for-integration-tests-only-32chars");
         registry.add("jwt.expiration", () -> "86400000");
+        registry.add("jwt.refresh-expiration", () -> "604800000");
         registry.add("cors.allowed-origins", () -> "http://localhost:3000");
     }
 
@@ -115,6 +120,7 @@ public abstract class BaseIntegrationTest {
         paymentRecordRepository.deleteAll();
         subscriptionRepository.deleteAll();
         serviceRepository.deleteAll();
+        refreshTokenRepository.deleteAll();
         userRepository.deleteAll();
     }
 

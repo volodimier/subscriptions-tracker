@@ -1,10 +1,12 @@
 package com.subscriptiontracker.integration;
 
 import com.subscriptiontracker.dto.request.LoginRequest;
+import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
 import com.subscriptiontracker.dto.response.ErrorResponse;
 import com.subscriptiontracker.dto.response.UserResponse;
+import com.subscriptiontracker.entity.RefreshToken;
 import com.subscriptiontracker.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -37,7 +39,7 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
     class UserRegistrationTests {
 
         @Test
-        @DisplayName("should register new user and persist to database")
+        @DisplayName("should register new user and persist to database with refresh token")
         void shouldRegisterNewUser_AndPersistToDatabase() {
             // Arrange
             String email = "newuser@example.com";
@@ -58,6 +60,9 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody().getToken()).isNotBlank();
+            assertThat(response.getBody().getRefreshToken()).isNotBlank();
+            assertThat(response.getBody().getTokenType()).isEqualTo("Bearer");
+            assertThat(response.getBody().getExpiresIn()).isPositive();
             assertThat(response.getBody().getUser()).isNotNull();
             assertThat(response.getBody().getUser().getEmail()).isEqualTo(email);
             assertThat(response.getBody().getUser().getBaseCurrencyCode()).isEqualTo("USD");
@@ -67,6 +72,12 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
             assertThat(savedUser).isPresent();
             assertThat(savedUser.get().getEmail()).isEqualTo(email);
             assertThat(savedUser.get().getPasswordHash()).isNotEqualTo(password); // Password should be hashed
+
+            // Verify refresh token is persisted in database
+            Optional<RefreshToken> savedToken = refreshTokenRepository.findByToken(response.getBody().getRefreshToken());
+            assertThat(savedToken).isPresent();
+            assertThat(savedToken.get().getUser().getId()).isEqualTo(savedUser.get().getId());
+            assertThat(savedToken.get().isRevoked()).isFalse();
         }
 
         @Test
@@ -138,7 +149,7 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
     class UserLoginTests {
 
         @Test
-        @DisplayName("should login with valid credentials and return JWT token")
+        @DisplayName("should login with valid credentials and return JWT token and refresh token")
         void shouldLogin_WhenCredentialsAreValid() {
             // Arrange
             String email = "logintest@example.com";
@@ -161,6 +172,9 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody().getToken()).isNotBlank();
+            assertThat(response.getBody().getRefreshToken()).isNotBlank();
+            assertThat(response.getBody().getTokenType()).isEqualTo("Bearer");
+            assertThat(response.getBody().getExpiresIn()).isPositive();
             assertThat(response.getBody().getUser()).isNotNull();
             assertThat(response.getBody().getUser().getEmail()).isEqualTo(email);
         }
@@ -287,26 +301,188 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
     }
 
     @Nested
+    @DisplayName("Token Refresh")
+    class TokenRefreshTests {
+
+        @Test
+        @DisplayName("should refresh access token with valid refresh token")
+        void shouldRefreshAccessToken_WhenRefreshTokenIsValid() {
+            // Arrange
+            AuthResponse authResponse = registerUser();
+            String refreshToken = authResponse.getRefreshToken();
+
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken(refreshToken)
+                    .build();
+
+            // Act
+            ResponseEntity<AuthResponse> response = restTemplate.postForEntity(
+                    getBaseUrl("/auth/refresh"),
+                    request,
+                    AuthResponse.class
+            );
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getToken()).isNotBlank();
+            assertThat(response.getBody().getRefreshToken()).isNotBlank();
+            // Token rotation: new refresh token should be different
+            assertThat(response.getBody().getRefreshToken()).isNotEqualTo(refreshToken);
+            assertThat(response.getBody().getTokenType()).isEqualTo("Bearer");
+            assertThat(response.getBody().getExpiresIn()).isPositive();
+        }
+
+        @Test
+        @DisplayName("should reject refresh with invalid token")
+        void shouldRejectRefresh_WhenTokenIsInvalid() {
+            // Arrange
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken("invalid-refresh-token")
+                    .build();
+
+            // Act
+            ResponseEntity<ErrorResponse> response = restTemplate.postForEntity(
+                    getBaseUrl("/auth/refresh"),
+                    request,
+                    ErrorResponse.class
+            );
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+
+        @Test
+        @DisplayName("should reject refresh with revoked token")
+        void shouldRejectRefresh_WhenTokenIsRevoked() {
+            // Arrange
+            AuthResponse authResponse = registerUser();
+            String refreshToken = authResponse.getRefreshToken();
+
+            // First, use the refresh token (which rotates it and revokes the old one)
+            RefreshTokenRequest firstRequest = RefreshTokenRequest.builder()
+                    .refreshToken(refreshToken)
+                    .build();
+            restTemplate.postForEntity(
+                    getBaseUrl("/auth/refresh"),
+                    firstRequest,
+                    AuthResponse.class
+            );
+
+            // Try to use the old (now revoked) token again
+            RefreshTokenRequest secondRequest = RefreshTokenRequest.builder()
+                    .refreshToken(refreshToken)
+                    .build();
+
+            // Act
+            ResponseEntity<ErrorResponse> response = restTemplate.postForEntity(
+                    getBaseUrl("/auth/refresh"),
+                    secondRequest,
+                    ErrorResponse.class
+            );
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+
+        @Test
+        @DisplayName("should be able to use new access token after refresh")
+        void shouldBeAbleToUseNewAccessToken_AfterRefresh() {
+            // Arrange
+            AuthResponse authResponse = registerUser();
+            String refreshToken = authResponse.getRefreshToken();
+
+            RefreshTokenRequest request = RefreshTokenRequest.builder()
+                    .refreshToken(refreshToken)
+                    .build();
+
+            ResponseEntity<AuthResponse> refreshResponse = restTemplate.postForEntity(
+                    getBaseUrl("/auth/refresh"),
+                    request,
+                    AuthResponse.class
+            );
+
+            String newAccessToken = refreshResponse.getBody().getToken();
+
+            // Act - Use the new access token to access a protected endpoint
+            ResponseEntity<UserResponse> meResponse = authenticatedGet(
+                    "/auth/me",
+                    newAccessToken,
+                    UserResponse.class
+            );
+
+            // Assert
+            assertThat(meResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(meResponse.getBody()).isNotNull();
+        }
+    }
+
+    @Nested
     @DisplayName("Logout")
     class LogoutTests {
 
         @Test
-        @DisplayName("should successfully logout authenticated user")
-        void shouldLogout_WhenUserIsAuthenticated() {
+        @DisplayName("should successfully logout and revoke refresh token")
+        void shouldLogout_AndRevokeRefreshToken() {
             // Arrange
             AuthResponse authResponse = registerUser();
-            String token = authResponse.getToken();
+            String refreshToken = authResponse.getRefreshToken();
+
+            RefreshTokenRequest logoutRequest = RefreshTokenRequest.builder()
+                    .refreshToken(refreshToken)
+                    .build();
 
             // Act
-            ResponseEntity<Void> response = authenticatedPost(
-                    "/auth/logout",
-                    token,
-                    null,
+            ResponseEntity<Void> logoutResponse = restTemplate.postForEntity(
+                    getBaseUrl("/auth/logout"),
+                    logoutRequest,
                     Void.class
             );
 
             // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+            assertThat(logoutResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+            // Verify the refresh token is revoked - try to use it
+            RefreshTokenRequest refreshRequest = RefreshTokenRequest.builder()
+                    .refreshToken(refreshToken)
+                    .build();
+
+            ResponseEntity<ErrorResponse> refreshResponse = restTemplate.postForEntity(
+                    getBaseUrl("/auth/refresh"),
+                    refreshRequest,
+                    ErrorResponse.class
+            );
+
+            assertThat(refreshResponse.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+
+        @Test
+        @DisplayName("should handle logout with already revoked token gracefully")
+        void shouldHandleLogout_WhenTokenAlreadyRevoked() {
+            // Arrange
+            AuthResponse authResponse = registerUser();
+            String refreshToken = authResponse.getRefreshToken();
+
+            RefreshTokenRequest logoutRequest = RefreshTokenRequest.builder()
+                    .refreshToken(refreshToken)
+                    .build();
+
+            // Logout once
+            restTemplate.postForEntity(
+                    getBaseUrl("/auth/logout"),
+                    logoutRequest,
+                    Void.class
+            );
+
+            // Act - Logout again with same token (should not fail)
+            ResponseEntity<Void> secondLogoutResponse = restTemplate.postForEntity(
+                    getBaseUrl("/auth/logout"),
+                    logoutRequest,
+                    Void.class
+            );
+
+            // Assert
+            assertThat(secondLogoutResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         }
     }
 

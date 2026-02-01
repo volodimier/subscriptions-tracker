@@ -5,6 +5,9 @@ import com.subscriptiontracker.dto.request.UpdatePaymentRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.PaymentRecordResponse;
 import com.subscriptiontracker.entity.*;
+import com.subscriptiontracker.event.PaymentRecordCreatedEvent;
+import com.subscriptiontracker.event.PaymentRecordPaidEvent;
+import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
@@ -18,6 +21,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -47,6 +51,9 @@ class PaymentRecordServiceTest {
 
     @Mock
     private FxRateService fxRateService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private PaymentRecordService paymentRecordService;
@@ -227,6 +234,36 @@ class PaymentRecordServiceTest {
                     paymentRecordService.createPayment(1L, request)
             );
         }
+
+        @Test
+        @DisplayName("should publish PaymentRecordCreatedEvent on successful creation")
+        void shouldPublishPaymentRecordCreatedEventOnSuccessfulCreation() {
+            LocalDate paymentDate = LocalDate.now();
+            CreatePaymentRequest request = CreatePaymentRequest.builder()
+                    .subscriptionId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .paymentDate(paymentDate)
+                    .fxRateToBase(BigDecimal.ONE)
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(paymentRecordRepository.save(any(PaymentRecord.class))).thenReturn(testPayment);
+
+            paymentRecordService.createPayment(1L, request);
+
+            ArgumentCaptor<PaymentRecordCreatedEvent> eventCaptor = ArgumentCaptor.forClass(PaymentRecordCreatedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            PaymentRecordCreatedEvent event = eventCaptor.getValue();
+            assertEquals(1L, event.getPaymentRecordId());
+            assertEquals(1L, event.getSubscriptionId());
+            assertEquals(1L, event.getUserId());
+            assertEquals("Netflix", event.getServiceName());
+            assertEquals(new BigDecimal("15.99"), event.getAmount());
+            assertEquals("USD", event.getCurrencyCode());
+        }
     }
 
     @Nested
@@ -282,6 +319,70 @@ class PaymentRecordServiceTest {
 
             assertThrows(ResourceNotFoundException.class, () ->
                     paymentRecordService.updatePayment(1L, 1L, request)
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("markAsPaid")
+    class MarkAsPaid {
+
+        @Test
+        @DisplayName("should mark pending payment as paid")
+        void shouldMarkPendingPaymentAsPaid() {
+            LocalDate paidDate = LocalDate.now();
+
+            when(paymentRecordRepository.findByIdAndSubscriptionUserId(1L, 1L)).thenReturn(Optional.of(testPayment));
+            when(paymentRecordRepository.save(any(PaymentRecord.class))).thenReturn(testPayment);
+
+            PaymentRecordResponse result = paymentRecordService.markAsPaid(1L, 1L, paidDate);
+
+            assertNotNull(result);
+            verify(paymentRecordRepository).save(any(PaymentRecord.class));
+        }
+
+        @Test
+        @DisplayName("should publish PaymentRecordPaidEvent on successful payment")
+        void shouldPublishPaymentRecordPaidEventOnSuccessfulPayment() {
+            LocalDate paidDate = LocalDate.now();
+
+            when(paymentRecordRepository.findByIdAndSubscriptionUserId(1L, 1L)).thenReturn(Optional.of(testPayment));
+            when(paymentRecordRepository.save(any(PaymentRecord.class))).thenReturn(testPayment);
+
+            paymentRecordService.markAsPaid(1L, 1L, paidDate);
+
+            ArgumentCaptor<PaymentRecordPaidEvent> eventCaptor = ArgumentCaptor.forClass(PaymentRecordPaidEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            PaymentRecordPaidEvent event = eventCaptor.getValue();
+            assertEquals(1L, event.getPaymentRecordId());
+            assertEquals(1L, event.getSubscriptionId());
+            assertEquals(1L, event.getUserId());
+            assertEquals("Netflix", event.getServiceName());
+            assertEquals(new BigDecimal("15.99"), event.getAmount());
+            assertEquals("USD", event.getCurrencyCode());
+            assertEquals(paidDate, event.getPaidDate());
+        }
+
+        @Test
+        @DisplayName("should throw exception when payment not found")
+        void shouldThrowExceptionWhenPaymentNotFound() {
+            when(paymentRecordRepository.findByIdAndSubscriptionUserId(1L, 1L)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () ->
+                    paymentRecordService.markAsPaid(1L, 1L, LocalDate.now())
+            );
+        }
+
+        @Test
+        @DisplayName("should throw exception when payment is not pending")
+        void shouldThrowExceptionWhenPaymentIsNotPending() {
+            testPayment.markAsPaid(LocalDate.now()); // Make it paid first
+
+            when(paymentRecordRepository.findByIdAndSubscriptionUserId(1L, 1L)).thenReturn(Optional.of(testPayment));
+
+            assertThrows(BadRequestException.class, () ->
+                    paymentRecordService.markAsPaid(1L, 1L, LocalDate.now())
             );
         }
     }

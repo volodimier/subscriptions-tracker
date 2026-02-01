@@ -10,6 +10,9 @@ import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.SubscriptionDetailResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.*;
+import com.subscriptiontracker.event.SubscriptionCancelledEvent;
+import com.subscriptiontracker.event.SubscriptionCreatedEvent;
+import com.subscriptiontracker.event.SubscriptionReactivatedEvent;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
@@ -17,6 +20,7 @@ import com.subscriptiontracker.repository.ServiceRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -56,6 +60,7 @@ public class SubscriptionService {
     private final ServiceRepository serviceRepository;
     private final UserRepository userRepository;
     private final PaymentRecordRepository paymentRecordRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Retrieves a paginated list of subscriptions for a user with optional filters.
@@ -188,6 +193,15 @@ public class SubscriptionService {
                 .build();
 
         subscription = subscriptionRepository.save(subscription);
+
+        eventPublisher.publishEvent(new SubscriptionCreatedEvent(
+                subscription.getId(),
+                userId,
+                service.getId(),
+                service.getName(),
+                subscription.getAmount(),
+                subscription.getCurrencyCode()));
+
         return SubscriptionResponse.fromEntity(subscription);
     }
 
@@ -275,6 +289,13 @@ public class SubscriptionService {
         subscription.cancel(request.getCancelledAt().atStartOfDay());
 
         subscription = subscriptionRepository.save(subscription);
+
+        eventPublisher.publishEvent(new SubscriptionCancelledEvent(
+                subscription.getId(),
+                userId,
+                subscription.getService().getName(),
+                subscription.getCancelledAt()));
+
         return SubscriptionResponse.fromEntity(subscription);
     }
 
@@ -301,6 +322,13 @@ public class SubscriptionService {
         subscription.reactivate(request.getNextBillingDate());
 
         subscription = subscriptionRepository.save(subscription);
+
+        eventPublisher.publishEvent(new SubscriptionReactivatedEvent(
+                subscription.getId(),
+                userId,
+                subscription.getService().getName(),
+                subscription.getNextBillingDate()));
+
         return SubscriptionResponse.fromEntity(subscription);
     }
 

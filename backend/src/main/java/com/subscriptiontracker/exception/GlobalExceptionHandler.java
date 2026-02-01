@@ -1,6 +1,7 @@
 package com.subscriptiontracker.exception;
 
 import com.subscriptiontracker.dto.response.ErrorResponse;
+import com.subscriptiontracker.service.RefreshTokenService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -91,6 +92,19 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .error("UNAUTHORIZED")
                 .message("Invalid email or password")
+                .build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    /**
+     * Handles refresh token exceptions (401).
+     * This includes expired, revoked, or invalid refresh tokens.
+     */
+    @ExceptionHandler(RefreshTokenService.TokenRefreshException.class)
+    public ResponseEntity<ErrorResponse> handleTokenRefreshException(RefreshTokenService.TokenRefreshException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .error("TOKEN_REFRESH_ERROR")
+                .message(ex.getMessage())
                 .build();
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }

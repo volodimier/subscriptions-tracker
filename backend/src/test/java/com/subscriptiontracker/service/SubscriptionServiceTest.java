@@ -8,6 +8,9 @@ import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.SubscriptionDetailResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.*;
+import com.subscriptiontracker.event.SubscriptionCancelledEvent;
+import com.subscriptiontracker.event.SubscriptionCreatedEvent;
+import com.subscriptiontracker.event.SubscriptionReactivatedEvent;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
@@ -23,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -52,6 +56,9 @@ class SubscriptionServiceTest {
 
     @Mock
     private PaymentRecordRepository paymentRecordRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private SubscriptionService subscriptionService;
@@ -185,6 +192,36 @@ class SubscriptionServiceTest {
             assertNotNull(result);
             assertEquals(1L, result.getId());
             verify(subscriptionRepository).save(any(Subscription.class));
+        }
+
+        @Test
+        @DisplayName("should publish SubscriptionCreatedEvent on successful creation")
+        void shouldPublishSubscriptionCreatedEventOnSuccessfulCreation() {
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .startDate(LocalDate.now())
+                    .nextBillingDate(LocalDate.now().plusMonths(1))
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenReturn(testSubscription);
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<SubscriptionCreatedEvent> eventCaptor = ArgumentCaptor.forClass(SubscriptionCreatedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            SubscriptionCreatedEvent event = eventCaptor.getValue();
+            assertEquals(1L, event.getSubscriptionId());
+            assertEquals(1L, event.getUserId());
+            assertEquals(1L, event.getServiceId());
+            assertEquals("Netflix", event.getServiceName());
+            assertEquals(new BigDecimal("15.99"), event.getAmount());
+            assertEquals("USD", event.getCurrencyCode());
         }
 
         @Test
@@ -363,6 +400,28 @@ class SubscriptionServiceTest {
         }
 
         @Test
+        @DisplayName("should publish SubscriptionCancelledEvent on successful cancellation")
+        void shouldPublishSubscriptionCancelledEventOnSuccessfulCancellation() {
+            CancelSubscriptionRequest request = CancelSubscriptionRequest.builder()
+                    .cancelledAt(LocalDate.now())
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenReturn(testSubscription);
+
+            subscriptionService.cancelSubscription(1L, 1L, request);
+
+            ArgumentCaptor<SubscriptionCancelledEvent> eventCaptor = ArgumentCaptor.forClass(SubscriptionCancelledEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            SubscriptionCancelledEvent event = eventCaptor.getValue();
+            assertEquals(1L, event.getSubscriptionId());
+            assertEquals(1L, event.getUserId());
+            assertEquals("Netflix", event.getServiceName());
+            assertNotNull(event.getCancelledAt());
+        }
+
+        @Test
         @DisplayName("should throw exception when cancelling already cancelled subscription")
         void shouldThrowExceptionWhenCancellingAlreadyCancelledSubscription() {
             testSubscription.setStatus(SubscriptionStatus.cancelled);
@@ -417,6 +476,32 @@ class SubscriptionServiceTest {
             verify(subscriptionRepository).save(captor.capture());
             assertEquals(SubscriptionStatus.active, captor.getValue().getStatus());
             assertNull(captor.getValue().getCancelledAt());
+        }
+
+        @Test
+        @DisplayName("should publish SubscriptionReactivatedEvent on successful reactivation")
+        void shouldPublishSubscriptionReactivatedEventOnSuccessfulReactivation() {
+            testSubscription.setStatus(SubscriptionStatus.cancelled);
+            testSubscription.setCancelledAt(LocalDateTime.now());
+            LocalDate nextBillingDate = LocalDate.now().plusMonths(1);
+
+            ReactivateSubscriptionRequest request = ReactivateSubscriptionRequest.builder()
+                    .nextBillingDate(nextBillingDate)
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenReturn(testSubscription);
+
+            subscriptionService.reactivateSubscription(1L, 1L, request);
+
+            ArgumentCaptor<SubscriptionReactivatedEvent> eventCaptor = ArgumentCaptor.forClass(SubscriptionReactivatedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            SubscriptionReactivatedEvent event = eventCaptor.getValue();
+            assertEquals(1L, event.getSubscriptionId());
+            assertEquals(1L, event.getUserId());
+            assertEquals("Netflix", event.getServiceName());
+            assertEquals(nextBillingDate, event.getNextBillingDate());
         }
 
         @Test

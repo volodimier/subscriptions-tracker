@@ -1,6 +1,7 @@
 package com.subscriptiontracker.scheduler;
 
 import com.subscriptiontracker.entity.*;
+import com.subscriptiontracker.event.PaymentRecordCreatedEvent;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.service.FxRateService;
@@ -13,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,6 +49,9 @@ class PaymentGeneratorSchedulerTest {
 
     @Mock
     private FxRateService fxRateService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private PaymentGeneratorScheduler paymentGeneratorScheduler;
@@ -685,6 +690,43 @@ class PaymentGeneratorSchedulerTest {
             verify(paymentRecordRepository).save(paymentCaptor.capture());
 
             assertEquals(today, paymentCaptor.getValue().getPaymentDate());
+        }
+
+        @Test
+        @DisplayName("should publish PaymentRecordCreatedEvent after creating payment")
+        void shouldPublishPaymentRecordCreatedEventAfterCreatingPayment() {
+            LocalDate today = LocalDate.now();
+            testSubscription.setNextBillingDate(today);
+
+            PaymentRecord savedPayment = PaymentRecord.builder()
+                    .id(1L)
+                    .subscription(testSubscription)
+                    .amount(testSubscription.getAmount())
+                    .currencyCode(testSubscription.getCurrencyCode())
+                    .paymentDate(today)
+                    .fxRateToBase(BigDecimal.ONE)
+                    .amountInBaseCurrency(testSubscription.getAmount())
+                    .build();
+
+            when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
+                    .thenReturn(List.of(testSubscription));
+            when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
+                    .thenReturn(BigDecimal.ONE);
+            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+                    .thenReturn(savedPayment);
+            when(subscriptionRepository.save(any(Subscription.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            paymentGeneratorScheduler.generatePaymentRecords();
+
+            ArgumentCaptor<PaymentRecordCreatedEvent> eventCaptor = ArgumentCaptor.forClass(PaymentRecordCreatedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            PaymentRecordCreatedEvent event = eventCaptor.getValue();
+            assertEquals(1L, event.getPaymentRecordId());
+            assertEquals(1L, event.getSubscriptionId());
+            assertEquals(1L, event.getUserId());
+            assertEquals("Netflix", event.getServiceName());
         }
     }
 }

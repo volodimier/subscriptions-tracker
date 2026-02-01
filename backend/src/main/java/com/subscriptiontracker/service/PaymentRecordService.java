@@ -9,11 +9,14 @@ import com.subscriptiontracker.dto.response.PaymentRecordResponse;
 import com.subscriptiontracker.entity.PaymentRecord;
 import com.subscriptiontracker.entity.Subscription;
 import com.subscriptiontracker.entity.User;
+import com.subscriptiontracker.event.PaymentRecordCreatedEvent;
+import com.subscriptiontracker.event.PaymentRecordPaidEvent;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,6 +53,7 @@ public class PaymentRecordService {
     private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
     private final FxRateService fxRateService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Retrieves paginated payment records for a specific subscription.
@@ -123,6 +128,17 @@ public class PaymentRecordService {
                 .build();
 
         payment = paymentRecordRepository.save(payment);
+
+        eventPublisher.publishEvent(new PaymentRecordCreatedEvent(
+                payment.getId(),
+                subscription.getId(),
+                userId,
+                subscription.getService().getName(),
+                payment.getAmount(),
+                payment.getCurrencyCode(),
+                payment.getAmountInBaseCurrency(),
+                payment.getPaymentDate()));
+
         return PaymentRecordResponse.fromEntity(payment);
     }
 
@@ -178,6 +194,42 @@ public class PaymentRecordService {
         }
 
         payment = paymentRecordRepository.save(payment);
+        return PaymentRecordResponse.fromEntity(payment);
+    }
+
+    /**
+     * Marks a pending payment as paid.
+     *
+     * <p>Transitions a payment from pending to paid status and records
+     * the actual date when the payment was made. Publishes a
+     * {@link PaymentRecordPaidEvent} upon successful transition.</p>
+     *
+     * @param userId    the ID of the user who owns the payment record
+     * @param paymentId the ID of the payment record to mark as paid
+     * @param paidDate  the actual date when the payment was made
+     * @return the updated payment record response
+     * @throws ResourceNotFoundException if the payment record is not found
+     * @throws com.subscriptiontracker.exception.BadRequestException if the payment is not in pending status
+     */
+    @Transactional
+    public PaymentRecordResponse markAsPaid(Long userId, Long paymentId, LocalDate paidDate) {
+        PaymentRecord payment = paymentRecordRepository.findByIdAndSubscriptionUserId(paymentId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_PAYMENT_RECORD, DomainConstants.FIELD_ID, paymentId));
+
+        payment.markAsPaid(paidDate);
+        payment = paymentRecordRepository.save(payment);
+
+        Subscription subscription = payment.getSubscription();
+        eventPublisher.publishEvent(new PaymentRecordPaidEvent(
+                payment.getId(),
+                subscription.getId(),
+                userId,
+                subscription.getService().getName(),
+                payment.getAmount(),
+                payment.getCurrencyCode(),
+                paidDate));
+
         return PaymentRecordResponse.fromEntity(payment);
     }
 

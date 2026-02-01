@@ -1,11 +1,13 @@
 package com.subscriptiontracker.scheduler;
 
 import com.subscriptiontracker.entity.*;
+import com.subscriptiontracker.event.PaymentRecordCreatedEvent;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.service.FxRateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ public class PaymentGeneratorScheduler {
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentRecordRepository paymentRecordRepository;
     private final FxRateService fxRateService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Scheduled(cron = "0 0 1 * * *") // Run at 1 AM every day
     @Transactional
@@ -65,7 +68,18 @@ public class PaymentGeneratorScheduler {
                 .amountInBaseCurrency(amountInBase)
                 .build();
 
-        paymentRecordRepository.save(payment);
+        payment = paymentRecordRepository.save(payment);
+
+        eventPublisher.publishEvent(new PaymentRecordCreatedEvent(
+                payment.getId(),
+                subscription.getId(),
+                user.getId(),
+                subscription.getService().getName(),
+                payment.getAmount(),
+                payment.getCurrencyCode(),
+                payment.getAmountInBaseCurrency(),
+                payment.getPaymentDate()));
+
         log.debug("Created payment record for subscription {} on {}", subscription.getId(), paymentDate);
     }
 

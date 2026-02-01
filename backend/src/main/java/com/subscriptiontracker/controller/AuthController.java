@@ -1,6 +1,7 @@
 package com.subscriptiontracker.controller;
 
 import com.subscriptiontracker.dto.request.LoginRequest;
+import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
 import com.subscriptiontracker.dto.response.UserResponse;
@@ -22,7 +23,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * REST controller for authentication operations.
  *
- * <p>Handles user registration, login, logout, and session management.</p>
+ * <p>Handles user registration, login, token refresh, logout, and session management.
+ * Supports JWT-based authentication with refresh tokens for seamless token renewal.</p>
  *
  * @author Generated
  * @since 1.0
@@ -30,7 +32,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(name = "Authentication", description = "User registration, login, and session management")
+@Tag(name = "Authentication", description = "User registration, login, token refresh, and session management")
 public class AuthController {
 
     private final AuthService authService;
@@ -40,12 +42,12 @@ public class AuthController {
      * Registers a new user account.
      *
      * @param request the registration details including email and password
-     * @return the authentication response with user details and JWT token
+     * @return the authentication response with user details, access token, and refresh token
      */
     @Operation(
             summary = "Register a new user",
             description = "Creates a new user account with the provided email and password. "
-                    + "Returns a JWT token for immediate authentication."
+                    + "Returns both an access token and a refresh token for authentication."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User registered successfully"),
@@ -59,15 +61,15 @@ public class AuthController {
     }
 
     /**
-     * Authenticates a user and returns a JWT token.
+     * Authenticates a user and returns access and refresh tokens.
      *
      * @param request the login credentials (email and password)
-     * @return the authentication response with user details and JWT token
+     * @return the authentication response with user details, access token, and refresh token
      */
     @Operation(
             summary = "Authenticate user",
             description = "Authenticates a user with email and password credentials. "
-                    + "Returns a JWT token to be used for subsequent authenticated requests."
+                    + "Returns both an access token and a refresh token for authentication."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Login successful"),
@@ -76,6 +78,27 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Refreshes the access token using a valid refresh token.
+     *
+     * @param request the refresh token request
+     * @return the authentication response with new access token and rotated refresh token
+     */
+    @Operation(
+            summary = "Refresh access token",
+            description = "Uses a valid refresh token to obtain a new access token. "
+                    + "The refresh token is rotated for security - a new refresh token is returned."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token refreshed successfully"),
+            @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token")
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        AuthResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(response);
     }
 
@@ -100,20 +123,23 @@ public class AuthController {
     }
 
     /**
-     * Logs out the current user.
+     * Logs out the current user by revoking their refresh token.
      *
+     * @param request the refresh token request containing the token to revoke
      * @return empty response on successful logout
      */
     @Operation(
             summary = "Logout user",
-            description = "Invalidates the current session. Since JWT is stateless, "
-                    + "the client should remove the token from storage."
+            description = "Revokes the provided refresh token so it cannot be used to obtain "
+                    + "new access tokens. The client should also discard the access token."
     )
-    @ApiResponse(responseCode = "204", description = "Logout successful")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Logout successful"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data")
+    })
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        // JWT is stateless, so we just return success
-        // The client should remove the token from storage
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request);
         return ResponseEntity.noContent().build();
     }
 

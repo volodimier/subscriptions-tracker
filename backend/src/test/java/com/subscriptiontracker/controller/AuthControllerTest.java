@@ -2,12 +2,14 @@ package com.subscriptiontracker.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.subscriptiontracker.dto.request.LoginRequest;
+import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
 import com.subscriptiontracker.dto.response.UserResponse;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.service.AuthService;
 import com.subscriptiontracker.service.JwtService;
+import com.subscriptiontracker.service.RefreshTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -24,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -54,6 +57,7 @@ class AuthControllerTest {
 
     private RegisterRequest validRegisterRequest;
     private LoginRequest validLoginRequest;
+    private RefreshTokenRequest validRefreshTokenRequest;
     private AuthResponse authResponse;
 
     @BeforeEach
@@ -68,6 +72,10 @@ class AuthControllerTest {
                 .password("Password123")
                 .build();
 
+        validRefreshTokenRequest = RefreshTokenRequest.builder()
+                .refreshToken("valid-refresh-token")
+                .build();
+
         UserResponse userResponse = UserResponse.builder()
                 .id(1L)
                 .email("test@example.com")
@@ -78,6 +86,9 @@ class AuthControllerTest {
         authResponse = AuthResponse.builder()
                 .user(userResponse)
                 .token("jwt-token-value")
+                .refreshToken("refresh-token-value")
+                .tokenType("Bearer")
+                .expiresIn(86400L)
                 .build();
     }
 
@@ -232,14 +243,76 @@ class AuthControllerTest {
     }
 
     @Nested
+    @DisplayName("POST /auth/refresh")
+    class Refresh {
+
+        @Test
+        @DisplayName("should return 200 with new tokens when refresh token is valid")
+        void shouldReturn200WithNewTokensWhenRefreshTokenIsValid() throws Exception {
+            when(authService.refreshToken(any(RefreshTokenRequest.class))).thenReturn(authResponse);
+
+            mockMvc.perform(post("/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(validRefreshTokenRequest)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.token").value("jwt-token-value"))
+                    .andExpect(jsonPath("$.refreshToken").value("refresh-token-value"))
+                    .andExpect(jsonPath("$.tokenType").value("Bearer"));
+        }
+
+        @Test
+        @DisplayName("should return 401 when refresh token is invalid")
+        void shouldReturn401WhenRefreshTokenIsInvalid() throws Exception {
+            when(authService.refreshToken(any(RefreshTokenRequest.class)))
+                    .thenThrow(new RefreshTokenService.TokenRefreshException("Refresh token not found"));
+
+            mockMvc.perform(post("/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(validRefreshTokenRequest)))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.error").value("TOKEN_REFRESH_ERROR"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when refresh token is empty")
+        void shouldReturn400WhenRefreshTokenIsEmpty() throws Exception {
+            RefreshTokenRequest invalidRequest = RefreshTokenRequest.builder()
+                    .refreshToken("")
+                    .build();
+
+            mockMvc.perform(post("/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Nested
     @DisplayName("POST /auth/logout")
     class Logout {
 
         @Test
-        @DisplayName("should return 204 for logout")
+        @DisplayName("should return 204 for logout with valid refresh token")
         void shouldReturn204ForLogout() throws Exception {
-            mockMvc.perform(post("/auth/logout"))
+            doNothing().when(authService).logout(any(RefreshTokenRequest.class));
+
+            mockMvc.perform(post("/auth/logout")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(validRefreshTokenRequest)))
                     .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @DisplayName("should return 400 when refresh token is empty")
+        void shouldReturn400WhenRefreshTokenIsEmpty() throws Exception {
+            RefreshTokenRequest invalidRequest = RefreshTokenRequest.builder()
+                    .refreshToken("")
+                    .build();
+
+            mockMvc.perform(post("/auth/logout")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidRequest)))
+                    .andExpect(status().isBadRequest());
         }
     }
 
