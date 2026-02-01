@@ -70,14 +70,12 @@ tasks.named('test') {
     finalizedBy jacocoTestReport
 
     testLogging {
-        if (project.hasProperty('quiet')) {
-            events "failed"
-            exceptionFormat "full"
-            showStandardStreams false
-        } else {
-            events "passed", "skipped", "failed"
-            exceptionFormat "short"
-        }
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showExceptions true
+        showCauses true
+        showStackTraces true
+        showStandardStreams = System.getenv("CI") == "true"
     }
 }
 
