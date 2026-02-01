@@ -36,7 +36,6 @@ export interface CreateSubscriptionRequest {
   billingCycle: BillingCycle
   billingCycleDays?: number
   paymentMethod?: string
-  startDate: string
   nextBillingDate: string
   notes?: string
 }

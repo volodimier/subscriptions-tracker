@@ -397,9 +397,10 @@ class SubscriptionControllerTest {
         }
 
         @Test
-        @DisplayName("should return 400 when start date is missing")
-        void shouldReturn400WhenStartDateIsMissing() throws Exception {
-            CreateSubscriptionRequest invalidRequest = CreateSubscriptionRequest.builder()
+        @DisplayName("should return 201 when start date is missing (auto-calculated)")
+        void shouldReturn201WhenStartDateIsMissing() throws Exception {
+            // Start date is now optional - it's auto-calculated from nextBillingDate and billingCycle
+            CreateSubscriptionRequest requestWithoutStartDate = CreateSubscriptionRequest.builder()
                     .serviceId(1L)
                     .amount(new BigDecimal("15.99"))
                     .currencyCode("USD")
@@ -407,11 +408,14 @@ class SubscriptionControllerTest {
                     .nextBillingDate(LocalDate.of(2024, 2, 15))
                     .build();
 
+            when(subscriptionService.createSubscription(eq(USER_ID), any(CreateSubscriptionRequest.class)))
+                    .thenReturn(subscriptionResponse);
+
             mockMvc.perform(post("/subscriptions")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(invalidRequest)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+                            .content(objectMapper.writeValueAsString(requestWithoutStartDate)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.id").value(SUBSCRIPTION_ID));
         }
 
         @Test

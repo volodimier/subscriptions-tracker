@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import type { Subscription, CreateSubscriptionRequest, BillingCycle } from '@/types'
 import { CURRENCIES, BILLING_CYCLES } from '@/utils/constants'
 import { formatDateISO } from '@/utils/formatters'
-import { calculateNextBillingDate } from '@/utils/billingCalculations'
+import { calculateNextBillingDate, calculateStartDate } from '@/utils/billingCalculations'
 import ServiceSelector from '@/components/service/ServiceSelector.vue'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -25,7 +25,7 @@ const currencyCode = ref(settingsStore.settings?.baseCurrency || 'USD')
 const billingCycle = ref<BillingCycle>('monthly')
 const billingCycleDays = ref('')
 const paymentMethod = ref('')
-const startDate = ref(formatDateISO(new Date()))
+const startDate = ref('')
 const nextBillingDate = ref('')
 const notes = ref('')
 
@@ -37,9 +37,10 @@ onMounted(async () => {
     billingCycle.value = props.subscription.billingCycle
     billingCycleDays.value = props.subscription.billingCycleDays?.toString() || ''
     paymentMethod.value = props.subscription.paymentMethod || ''
-    startDate.value = props.subscription.startDate
     nextBillingDate.value = props.subscription.nextBillingDate
     notes.value = props.subscription.notes || ''
+    // Calculate start date from existing next billing date
+    updateStartDate()
   } else {
     // Fetch settings if not already loaded to get user's default currency
     if (!settingsStore.settings) {
@@ -48,21 +49,22 @@ onMounted(async () => {
     if (settingsStore.settings?.baseCurrency) {
       currencyCode.value = settingsStore.settings.baseCurrency
     }
-    updateNextBillingDate()
+    // Set next billing date to today, then calculate start date
+    nextBillingDate.value = formatDateISO(new Date())
+    updateStartDate()
   }
 })
 
-watch([startDate, billingCycle, billingCycleDays], () => {
-  if (!props.subscription) {
-    updateNextBillingDate()
-  }
+// Watch for changes to nextBillingDate or billing cycle to recalculate startDate
+watch([nextBillingDate, billingCycle, billingCycleDays], () => {
+  updateStartDate()
 })
 
-function updateNextBillingDate() {
-  if (!startDate.value) return
+function updateStartDate() {
+  if (!nextBillingDate.value) return
 
   const customDays = billingCycle.value === 'custom' ? parseInt(billingCycleDays.value) || 30 : undefined
-  nextBillingDate.value = calculateNextBillingDate(startDate.value, billingCycle.value, customDays)
+  startDate.value = calculateStartDate(nextBillingDate.value, billingCycle.value, customDays)
 }
 
 const isValid = computed(() => {
@@ -84,7 +86,6 @@ function handleSubmit() {
     billingCycle: billingCycle.value,
     billingCycleDays: billingCycle.value === 'custom' ? parseInt(billingCycleDays.value) : undefined,
     paymentMethod: paymentMethod.value || undefined,
-    startDate: startDate.value,
     nextBillingDate: nextBillingDate.value,
     notes: notes.value || undefined,
   }
@@ -178,16 +179,6 @@ function handleSubmit() {
 
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label for="startDate" class="label">Start Date *</label>
-        <input
-          id="startDate"
-          v-model="startDate"
-          type="date"
-          required
-          class="input"
-        />
-      </div>
-      <div>
         <label for="nextBillingDate" class="label">Next Billing Date *</label>
         <input
           id="nextBillingDate"
@@ -195,6 +186,16 @@ function handleSubmit() {
           type="date"
           required
           class="input"
+        />
+      </div>
+      <div>
+        <label for="startDate" class="label">Start Date</label>
+        <input
+          id="startDate"
+          v-model="startDate"
+          type="date"
+          readonly
+          class="input bg-gray-50 cursor-not-allowed"
         />
         <p class="text-xs text-gray-500 mt-1">Auto-calculated based on billing cycle</p>
       </div>

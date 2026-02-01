@@ -15,6 +15,7 @@ import com.subscriptiontracker.event.SubscriptionCreatedEvent;
 import com.subscriptiontracker.event.SubscriptionReactivatedEvent;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
+import com.subscriptiontracker.domain.valueobject.BillingPeriod;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
@@ -158,6 +159,9 @@ public class SubscriptionService {
      * <p>Validates that the referenced service exists and belongs to the user.
      * For custom billing cycles, the billingCycleDays field must be provided.</p>
      *
+     * <p>The start date is automatically calculated based on the next billing date
+     * and billing cycle. Any start date provided in the request is ignored.</p>
+     *
      * @param userId  the ID of the user creating the subscription
      * @param request the subscription creation request
      * @return the created subscription response
@@ -178,6 +182,10 @@ public class SubscriptionService {
             throw new BadRequestException(ErrorMessages.BILLING_CYCLE_DAYS_REQUIRED);
         }
 
+        // Auto-calculate start date from next billing date and billing cycle
+        BillingPeriod billingPeriod = BillingPeriod.of(request.getBillingCycle(), request.getBillingCycleDays());
+        LocalDate calculatedStartDate = billingPeriod.calculateStartDate(request.getNextBillingDate());
+
         Subscription subscription = Subscription.builder()
                 .user(user)
                 .service(service)
@@ -186,7 +194,7 @@ public class SubscriptionService {
                 .billingCycle(request.getBillingCycle())
                 .billingCycleDays(request.getBillingCycleDays())
                 .paymentMethod(request.getPaymentMethod())
-                .startDate(request.getStartDate())
+                .startDate(calculatedStartDate)
                 .nextBillingDate(request.getNextBillingDate())
                 .notes(request.getNotes())
                 .status(SubscriptionStatus.active)
@@ -210,6 +218,9 @@ public class SubscriptionService {
      *
      * <p>Only non-null fields in the request are updated. The subscription
      * must belong to the specified user.</p>
+     *
+     * <p>If the billing cycle or next billing date is changed, the start date
+     * is automatically recalculated to maintain consistency.</p>
      *
      * @param userId         the ID of the user who owns the subscription
      * @param subscriptionId the ID of the subscription to update
@@ -239,15 +250,20 @@ public class SubscriptionService {
             subscription.setCurrencyCode(request.getCurrencyCode());
         }
 
+        // Track if billing-related fields changed to trigger start date recalculation
+        boolean billingChanged = false;
+
         if (request.getBillingCycle() != null) {
             subscription.setBillingCycle(request.getBillingCycle());
             if (request.getBillingCycle() == BillingCycle.custom && request.getBillingCycleDays() == null) {
                 throw new BadRequestException(ErrorMessages.BILLING_CYCLE_DAYS_REQUIRED);
             }
+            billingChanged = true;
         }
 
         if (request.getBillingCycleDays() != null) {
             subscription.setBillingCycleDays(request.getBillingCycleDays());
+            billingChanged = true;
         }
 
         if (request.getPaymentMethod() != null) {
@@ -256,14 +272,32 @@ public class SubscriptionService {
 
         if (request.getNextBillingDate() != null) {
             subscription.setNextBillingDate(request.getNextBillingDate());
+            billingChanged = true;
         }
 
         if (request.getNotes() != null) {
             subscription.setNotes(request.getNotes());
         }
 
+        // Recalculate start date if billing-related fields changed
+        if (billingChanged) {
+            recalculateStartDate(subscription);
+        }
+
         subscription = subscriptionRepository.save(subscription);
         return SubscriptionResponse.fromEntity(subscription);
+    }
+
+    /**
+     * Recalculates and sets the start date for a subscription based on its
+     * current billing period and next billing date.
+     *
+     * @param subscription the subscription to update
+     */
+    private void recalculateStartDate(Subscription subscription) {
+        BillingPeriod billingPeriod = subscription.getBillingPeriod();
+        LocalDate calculatedStartDate = billingPeriod.calculateStartDate(subscription.getNextBillingDate());
+        subscription.setStartDate(calculatedStartDate);
     }
 
     /**
@@ -304,7 +338,8 @@ public class SubscriptionService {
      *
      * <p>Delegates to the subscription entity's reactivate method which sets
      * the status back to active, clears the cancellation timestamp, and sets
-     * a new next billing date.</p>
+     * a new next billing date. The start date is recalculated based on the
+     * new next billing date and the subscription's billing cycle.</p>
      *
      * @param userId         the ID of the user who owns the subscription
      * @param subscriptionId the ID of the subscription to reactivate
@@ -320,6 +355,9 @@ public class SubscriptionService {
                         ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, subscriptionId));
 
         subscription.reactivate(request.getNextBillingDate());
+
+        // Recalculate start date after reactivation with new next billing date
+        recalculateStartDate(subscription);
 
         subscription = subscriptionRepository.save(subscription);
 

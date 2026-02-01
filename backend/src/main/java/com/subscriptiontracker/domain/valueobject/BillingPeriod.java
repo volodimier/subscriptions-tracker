@@ -239,6 +239,49 @@ public final class BillingPeriod {
     }
 
     /**
+     * Calculates the start date based on the given next billing date.
+     *
+     * <p>This is the inverse of {@link #calculateNextDate(LocalDate)}, subtracting
+     * one billing cycle from the next billing date to determine when the subscription
+     * started.</p>
+     *
+     * <p>The calculation is based on the billing cycle type:</p>
+     * <ul>
+     *   <li>{@code monthly} - subtracts 1 month</li>
+     *   <li>{@code yearly} - subtracts 1 year</li>
+     *   <li>{@code bi_annual} - subtracts 6 months</li>
+     *   <li>{@code custom} - subtracts the specified number of days</li>
+     * </ul>
+     *
+     * <p>For monthly cycles, the day-of-month is preserved where possible.
+     * For example, March 31 - 1 month = February 29 (in a leap year) or February 28.</p>
+     *
+     * @param nextBillingDate the next billing date to calculate backwards from
+     * @return the calculated start date
+     * @throws IllegalArgumentException if nextBillingDate is null
+     * @throws IllegalStateException    if custom cycle but customDays is not set
+     * @see #calculateNextDate(LocalDate)
+     */
+    public LocalDate calculateStartDate(LocalDate nextBillingDate) {
+        if (nextBillingDate == null) {
+            throw new IllegalArgumentException(ErrorMessages.NEXT_BILLING_DATE_CANNOT_BE_NULL);
+        }
+
+        return switch (this.cycle) {
+            case monthly -> nextBillingDate.minusMonths(1);
+            case yearly -> nextBillingDate.minusYears(1);
+            case bi_annual -> nextBillingDate.minusMonths(6);
+            case custom -> {
+                if (this.customDays == null || this.customDays <= 0) {
+                    throw new IllegalStateException(
+                            ErrorMessages.BILLING_CYCLE_DAYS_MUST_BE_SET);
+                }
+                yield nextBillingDate.minusDays(this.customDays);
+            }
+        };
+    }
+
+    /**
      * Returns the number of months per billing cycle.
      *
      * <p>For custom cycles, this returns an approximation based on 30 days per month.</p>

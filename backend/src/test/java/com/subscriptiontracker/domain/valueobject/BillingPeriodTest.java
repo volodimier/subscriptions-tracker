@@ -234,6 +234,117 @@ class BillingPeriodTest {
     }
 
     @Nested
+    @DisplayName("calculateStartDate()")
+    class CalculateStartDate {
+
+        @Test
+        @DisplayName("should calculate start date for monthly cycle")
+        void shouldCalculateStartDateForMonthlyCycle() {
+            BillingPeriod period = BillingPeriod.monthly();
+            LocalDate nextBillingDate = LocalDate.of(2024, 2, 15);
+
+            LocalDate startDate = period.calculateStartDate(nextBillingDate);
+
+            assertEquals(LocalDate.of(2024, 1, 15), startDate);
+        }
+
+        @Test
+        @DisplayName("should calculate start date for yearly cycle")
+        void shouldCalculateStartDateForYearlyCycle() {
+            BillingPeriod period = BillingPeriod.yearly();
+            LocalDate nextBillingDate = LocalDate.of(2025, 1, 15);
+
+            LocalDate startDate = period.calculateStartDate(nextBillingDate);
+
+            assertEquals(LocalDate.of(2024, 1, 15), startDate);
+        }
+
+        @Test
+        @DisplayName("should calculate start date for bi-annual cycle")
+        void shouldCalculateStartDateForBiAnnualCycle() {
+            BillingPeriod period = BillingPeriod.biAnnual();
+            LocalDate nextBillingDate = LocalDate.of(2024, 7, 15);
+
+            LocalDate startDate = period.calculateStartDate(nextBillingDate);
+
+            assertEquals(LocalDate.of(2024, 1, 15), startDate);
+        }
+
+        @Test
+        @DisplayName("should calculate start date for custom cycle")
+        void shouldCalculateStartDateForCustomCycle() {
+            BillingPeriod period = BillingPeriod.custom(14);
+            LocalDate nextBillingDate = LocalDate.of(2024, 1, 29);
+
+            LocalDate startDate = period.calculateStartDate(nextBillingDate);
+
+            assertEquals(LocalDate.of(2024, 1, 15), startDate);
+        }
+
+        @Test
+        @DisplayName("should handle month-end edge case for monthly cycle")
+        void shouldHandleMonthEndEdgeCaseForMonthlyCycle() {
+            BillingPeriod period = BillingPeriod.monthly();
+            LocalDate nextBillingDate = LocalDate.of(2024, 2, 29);
+
+            LocalDate startDate = period.calculateStartDate(nextBillingDate);
+
+            // February 29 - 1 month = January 29
+            assertEquals(LocalDate.of(2024, 1, 29), startDate);
+        }
+
+        @Test
+        @DisplayName("should handle leap year for yearly cycle")
+        void shouldHandleLeapYearForYearlyCycle() {
+            BillingPeriod period = BillingPeriod.yearly();
+            LocalDate nextBillingDate = LocalDate.of(2025, 2, 28);
+
+            LocalDate startDate = period.calculateStartDate(nextBillingDate);
+
+            // Feb 28, 2025 - 1 year = Feb 28, 2024 (even though 2024 is a leap year)
+            assertEquals(LocalDate.of(2024, 2, 28), startDate);
+        }
+
+        @Test
+        @DisplayName("should throw exception for null next billing date")
+        void shouldThrowExceptionForNullNextBillingDate() {
+            BillingPeriod period = BillingPeriod.monthly();
+
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                    () -> period.calculateStartDate(null));
+
+            assertEquals("Next billing date cannot be null", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("should be inverse of calculateNextDate")
+        void shouldBeInverseOfCalculateNextDate() {
+            LocalDate startDate = LocalDate.of(2024, 1, 15);
+            BillingPeriod monthly = BillingPeriod.monthly();
+            BillingPeriod yearly = BillingPeriod.yearly();
+            BillingPeriod biAnnual = BillingPeriod.biAnnual();
+            BillingPeriod custom = BillingPeriod.custom(30);
+
+            // For each period type, calculateStartDate(calculateNextDate(date)) should equal date
+            assertEquals(startDate, monthly.calculateStartDate(monthly.calculateNextDate(startDate)));
+            assertEquals(startDate, yearly.calculateStartDate(yearly.calculateNextDate(startDate)));
+            assertEquals(startDate, biAnnual.calculateStartDate(biAnnual.calculateNextDate(startDate)));
+            assertEquals(startDate, custom.calculateStartDate(custom.calculateNextDate(startDate)));
+        }
+
+        @Test
+        @DisplayName("should handle cross-year calculation")
+        void shouldHandleCrossYearCalculation() {
+            BillingPeriod period = BillingPeriod.monthly();
+            LocalDate nextBillingDate = LocalDate.of(2024, 1, 15);
+
+            LocalDate startDate = period.calculateStartDate(nextBillingDate);
+
+            assertEquals(LocalDate.of(2023, 12, 15), startDate);
+        }
+    }
+
+    @Nested
     @DisplayName("getMonthsPerCycle()")
     class GetMonthsPerCycle {
 

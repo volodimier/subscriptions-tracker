@@ -275,7 +275,6 @@ describe('Subscriptions Store', () => {
       amount: 15.99,
       currencyCode: 'USD',
       billingCycle: 'monthly' as const,
-      startDate: '2025-01-01',
       nextBillingDate: '2025-02-01',
     }
 
