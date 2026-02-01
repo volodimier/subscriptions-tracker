@@ -64,8 +64,7 @@ public abstract class BaseIntegrationTest {
             new PostgreSQLContainer<>("postgres:15-alpine")
                     .withDatabaseName("subscription_tracker_test")
                     .withUsername("test")
-                    .withPassword("test")
-                    .withReuse(true);
+                    .withPassword("test");
 
     @LocalServerPort
     protected int port;
