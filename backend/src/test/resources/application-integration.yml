@@ -1,0 +1,19 @@
+# Integration test configuration
+# Database properties are set dynamically via @DynamicPropertySource
+
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+logging:
+  level:
+    org.testcontainers: INFO
+    com.github.dockerjava: WARN
+    org.springframework.test: INFO
