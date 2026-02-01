@@ -13,6 +13,8 @@ import com.subscriptiontracker.repository.RefreshTokenRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.repository.UserRepository;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,7 +25,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.context.annotation.Import;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -52,7 +54,6 @@ import java.util.UUID;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration")
 @EnabledIfDockerAvailable
-@Import(IntegrationTestConfig.class)
 public abstract class BaseIntegrationTest {
 
     /**
@@ -113,10 +114,52 @@ public abstract class BaseIntegrationTest {
     }
 
     /**
-     * Cleans up the database before each test to ensure test isolation.
+     * Flag to track if TestRestTemplate has been configured.
+     * Uses volatile for thread-safe visibility across test threads.
+     */
+    private static volatile boolean restTemplateConfigured = false;
+
+    /**
+     * Configures TestRestTemplate and cleans up the database before each test.
+     *
+     * <p>The TestRestTemplate is configured to use Apache HttpClient which
+     * properly handles 401/403 responses without attempting authentication
+     * negotiation, unlike Java's default HttpURLConnection.</p>
      */
     @BeforeEach
-    void cleanDatabase() {
+    void setUp() {
+        configureRestTemplate();
+        cleanDatabase();
+    }
+
+    /**
+     * Configures TestRestTemplate to use Apache HttpClient.
+     *
+     * <p>This is necessary because Spring Boot's TestRestTemplateContextCustomizer
+     * uses registerSingleton() which bypasses BeanPostProcessor, so we must
+     * configure the request factory directly.</p>
+     */
+    private void configureRestTemplate() {
+        if (!restTemplateConfigured) {
+            synchronized (BaseIntegrationTest.class) {
+                if (!restTemplateConfigured) {
+                    CloseableHttpClient httpClient = HttpClients.custom()
+                            .disableRedirectHandling()
+                            .disableAuthCaching()
+                            .build();
+                    HttpComponentsClientHttpRequestFactory factory =
+                            new HttpComponentsClientHttpRequestFactory(httpClient);
+                    restTemplate.getRestTemplate().setRequestFactory(factory);
+                    restTemplateConfigured = true;
+                }
+            }
+        }
+    }
+
+    /**
+     * Cleans up the database to ensure test isolation.
+     */
+    private void cleanDatabase() {
         paymentRecordRepository.deleteAll();
         subscriptionRepository.deleteAll();
         serviceRepository.deleteAll();
