@@ -24,8 +24,8 @@ const emit = defineEmits<{
         <p class="text-sm text-red-700">{{ message }}</p>
       </div>
       <button
-        @click="emit('dismiss')"
         class="ml-3 flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+        @click="emit('dismiss')"
       >
         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path

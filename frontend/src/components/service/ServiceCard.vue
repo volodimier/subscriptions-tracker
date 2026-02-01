@@ -36,13 +36,12 @@ const canDelete = (props.service.subscriptionCount ?? 0) === 0
       </span>
       <div class="flex space-x-3">
         <button
-          @click="emit('edit', service)"
           class="text-primary-600 hover:text-primary-700 font-medium transition-colors"
+          @click="emit('edit', service)"
         >
           Edit
         </button>
         <button
-          @click="emit('delete', service)"
           :disabled="!canDelete"
           :class="[
             'font-medium transition-colors',
@@ -51,6 +50,7 @@ const canDelete = (props.service.subscriptionCount ?? 0) === 0
               : 'text-gray-400 cursor-not-allowed'
           ]"
           :title="!canDelete ? 'Cannot delete - service is in use' : ''"
+          @click="emit('delete', service)"
         >
           Delete
         </button>

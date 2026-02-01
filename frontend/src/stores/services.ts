@@ -45,7 +45,7 @@ export const useServicesStore = defineStore('services', () => {
   async function fetchCategories() {
     try {
       categories.value = await serviceService.getCategories()
-    } catch (err: unknown) {
+    } catch {
       // Silently fail for categories
     }
   }

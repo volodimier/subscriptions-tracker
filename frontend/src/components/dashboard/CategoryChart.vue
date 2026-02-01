@@ -74,7 +74,7 @@ const chartOptions = computed(() => ({
             <span
               class="w-3 h-3 rounded-full mr-2"
               :style="{ backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'][index] }"
-            ></span>
+            />
             <span class="text-gray-700">{{ item.category || 'Uncategorized' }}</span>
           </div>
           <div class="text-right">

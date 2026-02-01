@@ -164,7 +164,7 @@ function cancelDialog() {
     <!-- Reactivate Dialog -->
     <div v-if="showReactivateDialog" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="cancelDialog"></div>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="cancelDialog" />
         <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
           <h2 class="text-xl font-semibold mb-4">Reactivate Subscription</h2>
           <p class="text-gray-600 mb-4">
@@ -180,8 +180,8 @@ function cancelDialog() {
             />
           </div>
           <div class="flex justify-end space-x-3">
-            <button @click="cancelDialog" class="btn-secondary">Cancel</button>
-            <button @click="confirmReactivate" class="btn-success">Reactivate</button>
+            <button class="btn-secondary" @click="cancelDialog">Cancel</button>
+            <button class="btn-success" @click="confirmReactivate">Reactivate</button>
           </div>
         </div>
       </div>

@@ -16,7 +16,7 @@ const emit = defineEmits<{
 <template>
   <div class="fixed inset-0 z-50 overflow-y-auto">
     <div class="flex min-h-full items-center justify-center p-4">
-      <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="emit('cancel')"></div>
+      <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="emit('cancel')" />
 
       <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-soft-lg transition-all sm:w-full sm:max-w-lg">
         <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">

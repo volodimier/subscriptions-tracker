@@ -52,7 +52,7 @@ function handleSubmit() {
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit" class="space-y-4">
+  <form class="space-y-4" @submit.prevent="handleSubmit">
     <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
       {{ error }}
     </div>
@@ -109,7 +109,7 @@ function handleSubmit() {
     </div>
 
     <div class="flex justify-end space-x-3 pt-4">
-      <button type="button" @click="emit('cancel')" class="btn-secondary">
+      <button type="button" class="btn-secondary" @click="emit('cancel')">
         Cancel
       </button>
       <button type="submit" :disabled="!isValid" class="btn-primary">

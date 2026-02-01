@@ -22,8 +22,6 @@ onMounted(async () => {
   await subscriptionsStore.fetchSubscription(subscriptionId)
 })
 
-const subscription = subscriptionsStore.currentSubscription
-
 async function handleCancel() {
   try {
     await subscriptionsStore.cancelSubscription(subscriptionId, {
@@ -110,7 +108,7 @@ async function handleDelete() {
             >
               Edit
             </router-link>
-            <button @click="showDeleteDialog = true" class="btn-danger">
+            <button class="btn-danger" @click="showDeleteDialog = true">
               Delete
             </button>
           </div>
@@ -200,12 +198,12 @@ async function handleDelete() {
           <h3 class="font-semibold text-gray-900 mb-3">Actions</h3>
           <div class="flex space-x-3">
             <template v-if="subscriptionsStore.currentSubscription.status === 'active'">
-              <button @click="showCancelDialog = true" class="btn-danger">
+              <button class="btn-danger" @click="showCancelDialog = true">
                 Cancel Subscription
               </button>
             </template>
             <template v-else>
-              <button @click="showReactivateDialog = true" class="btn-success">
+              <button class="btn-success" @click="showReactivateDialog = true">
                 Reactivate Subscription
               </button>
             </template>
@@ -243,7 +241,7 @@ async function handleDelete() {
     <!-- Reactivate Dialog -->
     <div v-if="showReactivateDialog" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showReactivateDialog = false"></div>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showReactivateDialog = false" />
         <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
           <h2 class="text-xl font-semibold mb-4">Reactivate Subscription</h2>
           <p class="text-gray-600 mb-4">
@@ -259,8 +257,8 @@ async function handleDelete() {
             />
           </div>
           <div class="flex justify-end space-x-3">
-            <button @click="showReactivateDialog = false" class="btn-secondary">Cancel</button>
-            <button @click="handleReactivate" class="btn-success">Reactivate</button>
+            <button class="btn-secondary" @click="showReactivateDialog = false">Cancel</button>
+            <button class="btn-success" @click="handleReactivate">Reactivate</button>
           </div>
         </div>
       </div>

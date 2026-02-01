@@ -15,6 +15,6 @@ defineProps<{
           'h-12 w-12': size === 'lg',
         },
       ]"
-    ></div>
+    />
   </div>
 </template>
