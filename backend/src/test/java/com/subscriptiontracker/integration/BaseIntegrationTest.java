@@ -22,6 +22,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -50,6 +51,7 @@ import java.util.UUID;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration")
 @EnabledIfDockerAvailable
+@Import(IntegrationTestConfig.class)
 public abstract class BaseIntegrationTest {
 
     /**
@@ -406,11 +408,18 @@ public abstract class BaseIntegrationTest {
      * Creates a test user with unique credentials and returns user details.
      *
      * @return a TestUser object containing the user's credentials and token
+     * @throws AssertionError if registration fails
      */
     protected TestUser createTestUser() {
         String email = "testuser-" + UUID.randomUUID() + "@example.com";
         String password = "SecurePass123";
         AuthResponse authResponse = registerUser(email, password);
+        if (authResponse == null) {
+            throw new AssertionError("Registration failed: authResponse is null for email " + email);
+        }
+        if (authResponse.getUser() == null) {
+            throw new AssertionError("Registration failed: user is null in authResponse for email " + email);
+        }
         return new TestUser(
                 email,
                 password,
