@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useServicesStore } from '@/stores/services'
-import type { Service, CreateServiceRequest } from '@/types'
+import type { Service, CreateServiceRequest, UpdateServiceRequest } from '@/types'
 import ServiceForm from './ServiceForm.vue'
 
 const props = defineProps<{
@@ -45,10 +45,11 @@ function openCreateForm() {
   formError.value = ''
 }
 
-async function handleCreateService(data: CreateServiceRequest) {
+async function handleCreateService(data: CreateServiceRequest | UpdateServiceRequest) {
   formError.value = ''
   try {
-    const service = await servicesStore.createService(data)
+    // When creating a new service, the form always provides a CreateServiceRequest with name
+    const service = await servicesStore.createService(data as CreateServiceRequest)
     emit('update:modelValue', service.id)
     showCreateForm.value = false
   } catch (err: unknown) {

@@ -14,36 +14,41 @@ echo -e "${BLUE}║              Project Verification Suite                    �
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-echo -e "${YELLOW}[1/8] Running backend tests with coverage...${NC}"
+echo -e "${YELLOW}[1/9] Running backend tests with coverage...${NC}"
 (cd "$PROJECT_ROOT/backend" && ./gradlew test jacocoTestReport --no-daemon -q)
 echo -e "${GREEN}✓ Backend tests passed${NC}"
 echo -e "${BLUE}  Coverage: backend/build/reports/jacoco/test/html/index.html${NC}"
 echo ""
 
-echo -e "${YELLOW}[2/8] Installing frontend dependencies...${NC}"
+echo -e "${YELLOW}[2/9] Installing frontend dependencies...${NC}"
 (cd "$PROJECT_ROOT/frontend" && npm ci)
 echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
 echo ""
 
-echo -e "${YELLOW}[3/8] Running frontend lint check...${NC}"
+echo -e "${YELLOW}[3/9] Running frontend type check...${NC}"
+(cd "$PROJECT_ROOT/frontend" && npm run type-check)
+echo -e "${GREEN}✓ Frontend type check passed${NC}"
+echo ""
+
+echo -e "${YELLOW}[4/9] Running frontend lint check...${NC}"
 (cd "$PROJECT_ROOT/frontend" && npm run lint:check)
 echo -e "${GREEN}✓ Frontend lint check passed${NC}"
 echo ""
 
-echo -e "${YELLOW}[4/8] Running frontend tests with coverage...${NC}"
+echo -e "${YELLOW}[5/9] Running frontend tests with coverage...${NC}"
 (cd "$PROJECT_ROOT/frontend" && npm run test:coverage:quiet --silent)
 echo -e "${GREEN}✓ Frontend tests passed${NC}"
 echo -e "${BLUE}  Coverage: frontend/coverage/index.html${NC}"
 echo ""
 
-echo -e "${YELLOW}[5/8] Building test container...${NC}"
+echo -e "${YELLOW}[6/9] Building test container...${NC}"
 docker compose -f "$PROJECT_ROOT/docker-compose.verify.yml" build -q
 echo -e "${GREEN}✓ Build successful${NC}"
 
-echo -e "${YELLOW}[6/8] Starting test container...${NC}"
+echo -e "${YELLOW}[7/9] Starting test container...${NC}"
 docker compose -f "$PROJECT_ROOT/docker-compose.verify.yml" up -d subscription-tracker-verify
 
-echo -e "${YELLOW}[7/8] Waiting for healthy status...${NC}"
+echo -e "${YELLOW}[8/9] Waiting for healthy status...${NC}"
 for i in {1..24}; do
   status=$(docker inspect --format='{{.State.Health.Status}}' subscription-tracker-verify 2>/dev/null)
   if [ "$status" = "healthy" ]; then
@@ -59,7 +64,7 @@ for i in {1..24}; do
   sleep 5
 done
 
-echo -e "${YELLOW}[8/8] Stopping test container...${NC}"
+echo -e "${YELLOW}[9/9] Stopping test container...${NC}"
 docker compose -f "$PROJECT_ROOT/docker-compose.verify.yml" down
 echo -e "${GREEN}✓ Container stopped${NC}"
 
