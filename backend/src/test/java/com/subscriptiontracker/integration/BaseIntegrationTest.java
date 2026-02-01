@@ -58,6 +58,16 @@ import java.util.UUID;
 @Import(IntegrationTestConfig.class)
 public abstract class BaseIntegrationTest {
 
+    /*
+     * Static initializer to disable Java's built-in HTTP authentication
+     * before any Spring context or HTTP connections are created.
+     * This prevents HttpURLConnection from attempting authentication
+     * negotiation on 401 responses.
+     */
+    static {
+        java.net.Authenticator.setDefault(null);
+    }
+
     /**
      * Shared PostgreSQL container for all integration tests.
      * Uses singleton pattern for better CI compatibility.
@@ -124,8 +134,17 @@ public abstract class BaseIntegrationTest {
      */
     @BeforeEach
     void setUp() {
+        disableJavaAuthenticator();
         configureRestTemplate();
         cleanDatabase();
+    }
+
+    /**
+     * Disables Java's built-in HTTP authentication to prevent HttpURLConnection
+     * from attempting authentication negotiation on 401 responses.
+     */
+    private void disableJavaAuthenticator() {
+        java.net.Authenticator.setDefault(null);
     }
 
     /**
