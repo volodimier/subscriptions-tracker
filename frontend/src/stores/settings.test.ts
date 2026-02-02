@@ -151,7 +151,7 @@ describe('Settings Store', () => {
       vi.mocked(settingsService.updateSettings).mockResolvedValue(updatedSettings)
 
       const authStore = useAuthStore()
-      authStore.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD' }
+      authStore.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
 
       const store = useSettingsStore()
       await store.updateBaseCurrency('EUR')
@@ -266,7 +266,7 @@ describe('Settings Store', () => {
       vi.mocked(settingsService.deleteAccount).mockResolvedValue(undefined)
 
       const authStore = useAuthStore()
-      authStore.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD' }
+      authStore.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
       authStore.token = 'some-token'
 
       const store = useSettingsStore()

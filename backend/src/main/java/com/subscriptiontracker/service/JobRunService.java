@@ -1,15 +1,21 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.dto.response.JobRunResponse;
+import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.entity.JobRun;
 import com.subscriptiontracker.entity.JobStatus;
 import com.subscriptiontracker.entity.TriggerType;
+import com.subscriptiontracker.exception.ResourceNotFoundException;
 import com.subscriptiontracker.repository.JobRunRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -109,5 +115,41 @@ public class JobRunService {
     public Optional<LocalDateTime> getLatestSuccessfulFxRateRefreshDateTime() {
         return getLatestSuccessfulRun(JOB_FX_RATE_REFRESH)
                 .map(JobRun::getFinishDatetime);
+    }
+
+    /**
+     * Retrieves all job runs with pagination.
+     *
+     * <p>Returns job runs ordered by finish time descending (most recent first).</p>
+     *
+     * @param page  page number (1-based)
+     * @param limit number of items per page
+     * @return paginated response containing job run details
+     */
+    @Transactional(readOnly = true)
+    public PaginatedResponse<JobRunResponse> getAllJobRuns(int page, int limit) {
+        // Convert to 0-based page index
+        PageRequest pageRequest = PageRequest.of(page - 1, limit);
+        Page<JobRun> jobRunPage = jobRunRepository.findAllByOrderByFinishDatetimeDesc(pageRequest);
+
+        List<JobRunResponse> jobRunResponses = jobRunPage.getContent().stream()
+                .map(JobRunResponse::fromEntity)
+                .toList();
+
+        return PaginatedResponse.of(jobRunResponses, page, limit, jobRunPage.getTotalElements());
+    }
+
+    /**
+     * Retrieves a specific job run by ID.
+     *
+     * @param id the job run ID
+     * @return the job run details
+     * @throws ResourceNotFoundException if the job run is not found
+     */
+    @Transactional(readOnly = true)
+    public JobRunResponse getJobRunById(Long id) {
+        JobRun jobRun = jobRunRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("JobRun", "id", id));
+        return JobRunResponse.fromEntity(jobRun);
     }
 }

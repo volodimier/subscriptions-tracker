@@ -118,3 +118,32 @@ After running `verify.sh`, coverage reports are available at:
 
 - **Payment Generator** (Daily 1:00 AM): Creates payment records for due subscriptions
 - **FX Rate Refresh** (Daily midnight): Updates exchange rates
+
+## User Roles
+
+The application supports two user roles:
+
+| Role | Capabilities |
+|------|--------------|
+| **USER** | Manage personal subscriptions, services, and view statistics |
+| **ADMIN** | All USER capabilities + view job run history, manually trigger FX rate refresh |
+
+All new users are created with the `USER` role by default.
+
+### Setting Up an Admin User
+
+Admin users must be promoted manually via the database. There is no API endpoint for role escalation for security reasons.
+
+```sql
+-- Connect to your PostgreSQL database and run:
+UPDATE users SET role = 'ADMIN' WHERE email = 'your-email@example.com';
+```
+
+**Using Docker Compose:**
+
+```bash
+docker compose exec db psql -U postgres -d subscriptions_tracker -c \
+  "UPDATE users SET role = 'ADMIN' WHERE email = 'your-email@example.com';"
+```
+
+After promotion, the user must log out and log back in for the role change to take effect.

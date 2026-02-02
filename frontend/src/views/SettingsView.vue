@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/auth'
 import { CURRENCIES } from '@/utils/constants'
 import { formatDateTime } from '@/utils/formatters'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
 const settingsStore = useSettingsStore()
+const authStore = useAuthStore()
 
 const selectedCurrency = ref('')
 const showPasswordDialog = ref(false)
@@ -186,13 +188,13 @@ function closeDeleteDialog() {
             <p class="text-sm text-gray-500">
               Last updated: {{ settingsStore.settings.fxRatesLastUpdated ? formatDateTime(settingsStore.settings.fxRatesLastUpdated) : 'Never' }}
             </p>
-            <button class="btn-secondary mt-2" @click="handleRefreshFxRates">
+            <button v-if="authStore.isAdmin" class="btn-secondary mt-2" @click="handleRefreshFxRates">
               Refresh Rates Now
             </button>
           </div>
           <div v-if="settingsStore.settings.currentFxRates">
             <p class="text-sm text-gray-500 mb-2">Current rates (to {{ settingsStore.settings.baseCurrency }}):</p>
-            <div class="flex space-x-4">
+            <div class="flex space-x-4 flex-wrap gap-y-1">
               <span
                 v-for="(rate, currency) in settingsStore.settings.currentFxRates"
                 :key="currency"

@@ -4,6 +4,16 @@ import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const showUserMenu = ref(false)
+const showAdminMenu = ref(false)
+
+function toggleAdminMenu() {
+  showAdminMenu.value = !showAdminMenu.value
+  showUserMenu.value = false
+}
+
+function closeAdminMenu() {
+  showAdminMenu.value = false
+}
 
 async function handleLogout() {
   await authStore.logout()
@@ -11,6 +21,7 @@ async function handleLogout() {
 
 function toggleUserMenu() {
   showUserMenu.value = !showUserMenu.value
+  showAdminMenu.value = false
 }
 
 function closeUserMenu() {
@@ -56,6 +67,31 @@ function closeUserMenu() {
             >
               Statistics
             </router-link>
+
+            <!-- Admin Menu -->
+            <div v-if="authStore.isAdmin" class="relative ml-2">
+              <button
+                class="px-3.5 py-2 rounded-lg text-sm font-medium text-amber-700 hover:text-amber-800 hover:bg-amber-50/50 transition-colors flex items-center"
+                @click="toggleAdminMenu"
+              >
+                Admin
+                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div
+                v-if="showAdminMenu"
+                class="absolute left-0 mt-2 w-48 bg-white/95 backdrop-blur-sm rounded-xl shadow-soft-lg py-1.5 z-50 border border-gray-200/60"
+                @click="closeAdminMenu"
+              >
+                <router-link
+                  to="/admin/job-runs"
+                  class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Job Runs
+                </router-link>
+              </div>
+            </div>
           </nav>
         </div>
 

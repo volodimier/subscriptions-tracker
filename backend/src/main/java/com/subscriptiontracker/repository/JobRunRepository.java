@@ -2,6 +2,8 @@ package com.subscriptiontracker.repository;
 
 import com.subscriptiontracker.entity.JobRun;
 import com.subscriptiontracker.entity.JobStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -44,4 +46,12 @@ public interface JobRunRepository extends JpaRepository<JobRun, Long> {
     @Query("SELECT jr FROM JobRun jr WHERE jr.jobName = :jobName " +
            "ORDER BY jr.finishDatetime DESC LIMIT 1")
     Optional<JobRun> findLatestByJobName(@Param("jobName") String jobName);
+
+    /**
+     * Finds all job runs ordered by finish time descending.
+     *
+     * @param pageable pagination parameters
+     * @return page of job runs
+     */
+    Page<JobRun> findAllByOrderByFinishDatetimeDesc(Pageable pageable);
 }

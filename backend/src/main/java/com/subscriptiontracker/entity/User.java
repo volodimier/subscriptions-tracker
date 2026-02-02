@@ -23,10 +23,14 @@ import java.util.List;
  * <p>The user's base currency is used to convert all subscription payments to a common
  * currency for spending analytics and dashboard summaries.</p>
  *
+ * <p>Each user has a role that determines their access level within the system.
+ * The default role is {@link Role#USER}.</p>
+ *
  * @author Generated
  * @since 1.0
  * @see Service
  * @see Subscription
+ * @see Role
  */
 @Entity
 @Table(name = "users")
@@ -65,6 +69,15 @@ public class User {
     @Column(name = "base_currency_code", nullable = false)
     @Builder.Default
     private String baseCurrencyCode = DomainConstants.DEFAULT_CURRENCY;
+
+    /**
+     * The user's role determining their access level.
+     * Defaults to {@link Role#USER}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    @Builder.Default
+    private Role role = Role.USER;
 
     /**
      * Timestamp when the user account was created.

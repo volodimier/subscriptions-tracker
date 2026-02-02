@@ -18,6 +18,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -156,18 +157,22 @@ public class PaymentRecordController {
     /**
      * Manually refreshes foreign exchange rates.
      *
+     * <p>This operation requires the ADMIN role.</p>
+     *
      * @param userDetails the authenticated user details
      * @return the refresh result with updated rates
      */
     @Operation(
             summary = "Refresh FX rates",
-            description = "Manually triggers a refresh of foreign exchange rates from the external API."
+            description = "Manually triggers a refresh of foreign exchange rates from the external API. Requires ADMIN role."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "FX rates refreshed successfully"),
+            @ApiResponse(responseCode = "403", description = "Not authorized - requires ADMIN role"),
             @ApiResponse(responseCode = "500", description = "Failed to fetch FX rates from external API")
     })
     @PostMapping("/fx-rates/refresh")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> refreshFxRates(
             @AuthenticationPrincipal UserDetails userDetails
     ) {
