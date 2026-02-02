@@ -4,6 +4,7 @@ import com.subscriptiontracker.dto.response.ErrorResponse;
 import com.subscriptiontracker.service.RefreshTokenService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -107,6 +108,21 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage())
                 .build();
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    /**
+     * Handles access denied exceptions (403).
+     *
+     * <p>Returned when an authenticated user attempts to access a resource
+     * they don't have permission for (e.g., non-admin accessing admin endpoints).</p>
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .error("FORBIDDEN")
+                .message("You do not have permission to access this resource")
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     /**

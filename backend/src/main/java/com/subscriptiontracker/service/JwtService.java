@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -22,8 +23,8 @@ import java.util.function.Function;
  * stateless authentication. Tokens are signed using HMAC-SHA256
  * with a configurable secret key.</p>
  *
- * <p>The token contains the user's email as the subject and has
- * a configurable expiration time.</p>
+ * <p>The token contains the user's email as the subject, their role,
+ * and has a configurable expiration time.</p>
  *
  * @author Generated
  * @since 1.0
@@ -35,6 +36,9 @@ public class JwtService {
 
     private final JwtConfig jwtConfig;
 
+    /** Claim name for storing the user's role in the JWT token. */
+    private static final String ROLE_CLAIM = "role";
+
     /**
      * Extracts the username (email) from a JWT token.
      *
@@ -43,6 +47,16 @@ public class JwtService {
      */
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    /**
+     * Extracts the role from a JWT token.
+     *
+     * @param token the JWT token
+     * @return the role stored in the token's role claim, or null if not present
+     */
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get(ROLE_CLAIM, String.class));
     }
 
     /**
@@ -61,11 +75,22 @@ public class JwtService {
     /**
      * Generates a JWT token for a user.
      *
+     * <p>Automatically includes the user's role from their authorities.</p>
+     *
      * @param userDetails the user details to encode in the token
      * @return the generated JWT token string
      */
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        Map<String, Object> claims = new HashMap<>();
+        // Extract role from authorities (e.g., "ROLE_ADMIN" -> "ADMIN")
+        String role = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(auth -> auth.startsWith("ROLE_"))
+                .map(auth -> auth.substring(5))
+                .findFirst()
+                .orElse("USER");
+        claims.put(ROLE_CLAIM, role);
+        return generateToken(claims, userDetails);
     }
 
     /**

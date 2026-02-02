@@ -6,6 +6,7 @@ import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
 import com.subscriptiontracker.entity.RefreshToken;
+import com.subscriptiontracker.entity.Role;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.repository.UserRepository;
@@ -88,6 +89,7 @@ class AuthServiceTest {
                 .email("test@example.com")
                 .passwordHash("encodedPassword")
                 .baseCurrencyCode("USD")
+                .role(Role.USER)
                 .build();
 
         userDetails = org.springframework.security.core.userdetails.User
@@ -126,6 +128,7 @@ class AuthServiceTest {
             assertNotNull(response.getUser());
             assertEquals("test@example.com", response.getUser().getEmail());
             assertEquals("USD", response.getUser().getBaseCurrencyCode());
+            assertEquals(Role.USER, response.getUser().getRole());
             assertEquals("jwt-token", response.getToken());
             assertEquals("refresh-token-uuid", response.getRefreshToken());
             assertEquals("Bearer", response.getTokenType());

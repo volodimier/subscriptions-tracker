@@ -1,7 +1,10 @@
+export type UserRole = 'USER' | 'ADMIN'
+
 export interface User {
   id: number
   email: string
   baseCurrencyCode?: string
+  role: UserRole
   createdAt?: string
   updatedAt?: string
 }
@@ -37,4 +40,19 @@ export interface UserSettings {
   baseCurrency: string
   fxRatesLastUpdated?: string
   currentFxRates?: Record<string, number>
+}
+
+// Admin types
+export type JobTriggerType = 'SCHEDULED' | 'MANUAL'
+export type JobStatus = 'SUCCESS' | 'FAILURE'
+
+export interface JobRun {
+  id: number
+  jobName: string
+  triggerType: JobTriggerType
+  status: JobStatus
+  startTime: string
+  finishTime?: string
+  errorMessage?: string
+  createdAt: string
 }

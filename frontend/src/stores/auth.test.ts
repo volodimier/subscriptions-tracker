@@ -57,7 +57,7 @@ describe('Auth Store', () => {
     it('should return false when token is null', () => {
       const store = useAuthStore()
       store.token = null
-      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD' }
+      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
       expect(store.isAuthenticated).toBe(false)
     })
 
@@ -71,13 +71,33 @@ describe('Auth Store', () => {
     it('should return true when both token and user are set', () => {
       const store = useAuthStore()
       store.token = 'some-token'
-      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD' }
+      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
       expect(store.isAuthenticated).toBe(true)
     })
   })
 
+  describe('isAdmin computed', () => {
+    it('should return false when user is null', () => {
+      const store = useAuthStore()
+      store.user = null
+      expect(store.isAdmin).toBe(false)
+    })
+
+    it('should return false when user role is USER', () => {
+      const store = useAuthStore()
+      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
+      expect(store.isAdmin).toBe(false)
+    })
+
+    it('should return true when user role is ADMIN', () => {
+      const store = useAuthStore()
+      store.user = { id: 1, email: 'admin@example.com', baseCurrencyCode: 'USD', role: 'ADMIN' }
+      expect(store.isAdmin).toBe(true)
+    })
+  })
+
   describe('login', () => {
-    const mockUser = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD' }
+    const mockUser = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' as const }
     const mockToken = 'mock-jwt-token'
     const mockResponse = { user: mockUser, token: mockToken }
 
@@ -165,7 +185,7 @@ describe('Auth Store', () => {
   })
 
   describe('register', () => {
-    const mockUser = { id: 1, email: 'new@example.com', baseCurrencyCode: 'USD' }
+    const mockUser = { id: 1, email: 'new@example.com', baseCurrencyCode: 'USD', role: 'USER' as const }
     const mockToken = 'mock-jwt-token'
     const mockResponse = { user: mockUser, token: mockToken }
 
@@ -228,7 +248,7 @@ describe('Auth Store', () => {
   describe('logout', () => {
     it('should clear user and token', async () => {
       const store = useAuthStore()
-      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD' }
+      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
       store.token = 'some-token'
 
       vi.mocked(authService.logout).mockResolvedValue(undefined)
@@ -261,7 +281,7 @@ describe('Auth Store', () => {
 
     it('should clear state even if logout API fails', async () => {
       const store = useAuthStore()
-      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD' }
+      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
       store.token = 'some-token'
       localStorage.setItem('token', 'some-token')
 
@@ -277,7 +297,7 @@ describe('Auth Store', () => {
 
   describe('checkAuth', () => {
     it('should restore auth state from localStorage', async () => {
-      const mockUser = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD' }
+      const mockUser = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' as const }
       const mockToken = 'stored-token'
 
       localStorage.setItem('token', mockToken)
@@ -336,7 +356,7 @@ describe('Auth Store', () => {
   describe('updateUser', () => {
     it('should update user in store', () => {
       const store = useAuthStore()
-      const updatedUser = { id: 1, email: 'updated@example.com', baseCurrencyCode: 'EUR' }
+      const updatedUser = { id: 1, email: 'updated@example.com', baseCurrencyCode: 'EUR', role: 'USER' as const }
 
       store.updateUser(updatedUser)
 
@@ -345,7 +365,7 @@ describe('Auth Store', () => {
 
     it('should update user in localStorage', () => {
       const store = useAuthStore()
-      const updatedUser = { id: 1, email: 'updated@example.com', baseCurrencyCode: 'EUR' }
+      const updatedUser = { id: 1, email: 'updated@example.com', baseCurrencyCode: 'EUR', role: 'USER' as const }
 
       store.updateUser(updatedUser)
 
