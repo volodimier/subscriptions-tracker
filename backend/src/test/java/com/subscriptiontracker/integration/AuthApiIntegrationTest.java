@@ -486,21 +486,4 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
         }
     }
 
-    @Nested
-    @DisplayName("Health Check")
-    class HealthCheckTests {
-
-        @Test
-        @DisplayName("should return OK for health check endpoint")
-        void shouldReturnOk_ForHealthCheck() {
-            // Act
-            ResponseEntity<Void> response = restTemplate.getForEntity(
-                    getBaseUrl("/auth/health"),
-                    Void.class
-            );
-
-            // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        }
-    }
 }

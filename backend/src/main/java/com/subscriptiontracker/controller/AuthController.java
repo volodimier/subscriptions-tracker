@@ -143,18 +143,4 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Health check endpoint.
-     *
-     * @return empty response indicating the service is healthy
-     */
-    @Operation(
-            summary = "Health check",
-            description = "Simple health check endpoint to verify the API is running."
-    )
-    @ApiResponse(responseCode = "200", description = "Service is healthy")
-    @GetMapping("/health")
-    public ResponseEntity<Void> health() {
-        return ResponseEntity.ok().build();
-    }
 }
