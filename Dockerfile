@@ -73,9 +73,9 @@ ENV POSTGRES_DB=subscription_tracker \
 # 80 - nginx (frontend + API proxy)
 EXPOSE 80
 
-# Health check
+# Health check - uses Spring Boot Actuator endpoint (checks database connectivity)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost/api/v1/auth/me 2>/dev/null || curl -f http://localhost/ || exit 1
+    CMD curl -f http://localhost:8080/api/v1/actuator/health || exit 1
 
 # Start all services via supervisor
 CMD ["/app/start.sh"]
