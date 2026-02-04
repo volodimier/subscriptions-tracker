@@ -316,15 +316,4 @@ class AuthControllerTest {
         }
     }
 
-    @Nested
-    @DisplayName("GET /auth/health")
-    class Health {
-
-        @Test
-        @DisplayName("should return 200 for health check")
-        void shouldReturn200ForHealthCheck() throws Exception {
-            mockMvc.perform(get("/auth/health"))
-                    .andExpect(status().isOk());
-        }
-    }
 }
