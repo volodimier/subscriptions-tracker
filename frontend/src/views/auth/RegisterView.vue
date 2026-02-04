@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { Eye, EyeOff, Loader2, Check, Circle } from 'lucide-vue-next'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const authStore = useAuthStore()
 
@@ -55,134 +60,130 @@ async function handleSubmit() {
     <div class="max-w-md w-full space-y-8">
       <div class="text-center">
         <h1 class="text-3xl font-semibold text-primary-600 tracking-tight">SubscriptionTracker</h1>
-        <p class="mt-2 text-gray-500">Track your subscriptions simply</p>
+        <p class="mt-2 text-muted-foreground">Track your subscriptions simply</p>
       </div>
 
-      <div class="bg-white rounded-2xl shadow-soft p-8 border border-gray-100">
-        <h2 class="text-2xl font-semibold text-gray-900 mb-6 tracking-tight">Create Your Account</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-2xl">Create Your Account</CardTitle>
+          <CardDescription>Enter your details to get started</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form class="space-y-6" @submit.prevent="handleSubmit">
+            <Alert v-if="error" variant="destructive">
+              <AlertDescription>{{ error }}</AlertDescription>
+            </Alert>
 
-        <form class="space-y-6" @submit.prevent="handleSubmit">
-          <div v-if="error" class="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-xl text-sm">
-            {{ error }}
-          </div>
-
-          <div>
-            <label for="email" class="label">Email Address</label>
-            <input
-              id="email"
-              v-model="email"
-              type="email"
-              autocomplete="email"
-              required
-              class="input"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label for="password" class="label">Password</label>
-            <div class="relative">
-              <input
-                id="password"
-                v-model="password"
-                :type="showPassword ? 'text' : 'password'"
-                autocomplete="new-password"
+            <div class="space-y-2">
+              <Label for="email">Email Address</Label>
+              <Input
+                id="email"
+                v-model="email"
+                type="email"
+                autocomplete="email"
                 required
-                class="input pr-10"
+                placeholder="you@example.com"
               />
-              <button
-                type="button"
-                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
-                @click="showPassword = !showPassword"
-              >
-                <svg v-if="!showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-              </button>
             </div>
-          </div>
 
-          <div>
-            <label for="confirm-password" class="label">Confirm Password</label>
-            <div class="relative">
-              <input
-                id="confirm-password"
-                v-model="confirmPassword"
-                :type="showConfirmPassword ? 'text' : 'password'"
-                autocomplete="new-password"
-                required
-                class="input pr-10"
-                :class="{ 'input-error': confirmPassword && !passwordsMatch }"
-              />
-              <button
-                type="button"
-                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
-                @click="showConfirmPassword = !showConfirmPassword"
-              >
-                <svg v-if="!showConfirmPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-              </button>
+            <div class="space-y-2">
+              <Label for="password">Password</Label>
+              <div class="relative">
+                <Input
+                  id="password"
+                  v-model="password"
+                  :type="showPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  required
+                  class="pr-10"
+                />
+                <button
+                  type="button"
+                  class="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
+                  @click="showPassword = !showPassword"
+                >
+                  <EyeOff v-if="showPassword" class="h-5 w-5" />
+                  <Eye v-else class="h-5 w-5" />
+                </button>
+              </div>
             </div>
-            <p v-if="confirmPassword && !passwordsMatch" class="mt-1 text-sm text-red-600">
-              Passwords do not match
+
+            <div class="space-y-2">
+              <Label for="confirm-password">Confirm Password</Label>
+              <div class="relative">
+                <Input
+                  id="confirm-password"
+                  v-model="confirmPassword"
+                  :type="showConfirmPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  required
+                  class="pr-10"
+                  :class="{ 'border-destructive focus-visible:ring-destructive': confirmPassword && !passwordsMatch }"
+                />
+                <button
+                  type="button"
+                  class="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
+                  @click="showConfirmPassword = !showConfirmPassword"
+                >
+                  <EyeOff v-if="showConfirmPassword" class="h-5 w-5" />
+                  <Eye v-else class="h-5 w-5" />
+                </button>
+              </div>
+              <p v-if="confirmPassword && !passwordsMatch" class="text-sm text-destructive">
+                Passwords do not match
+              </p>
+            </div>
+
+            <div class="space-y-2 bg-muted/50 rounded-lg p-4">
+              <p class="text-sm font-medium text-muted-foreground">Password Requirements:</p>
+              <ul class="text-sm space-y-1.5">
+                <li :class="['flex items-center transition-colors', passwordValidation.minLength ? 'text-green-600' : 'text-muted-foreground']">
+                  <Check v-if="passwordValidation.minLength" class="mr-2 h-3 w-3" />
+                  <Circle v-else class="mr-2 h-3 w-3" />
+                  At least 8 characters
+                </li>
+                <li :class="['flex items-center transition-colors', passwordValidation.hasUppercase ? 'text-green-600' : 'text-muted-foreground']">
+                  <Check v-if="passwordValidation.hasUppercase" class="mr-2 h-3 w-3" />
+                  <Circle v-else class="mr-2 h-3 w-3" />
+                  Contains uppercase letter
+                </li>
+                <li :class="['flex items-center transition-colors', passwordValidation.hasNumber ? 'text-green-600' : 'text-muted-foreground']">
+                  <Check v-if="passwordValidation.hasNumber" class="mr-2 h-3 w-3" />
+                  <Circle v-else class="mr-2 h-3 w-3" />
+                  Contains number
+                </li>
+              </ul>
+            </div>
+
+            <Button
+              type="submit"
+              :disabled="!isValid || authStore.loading"
+              class="w-full"
+            >
+              <Loader2 v-if="authStore.loading" class="mr-2 h-4 w-4 animate-spin" />
+              {{ authStore.loading ? 'Creating Account...' : 'Create Account' }}
+            </Button>
+          </form>
+
+          <div class="mt-6">
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-border" />
+              </div>
+              <div class="relative flex justify-center text-sm">
+                <span class="px-3 bg-card text-muted-foreground">or</span>
+              </div>
+            </div>
+
+            <p class="mt-6 text-center text-sm text-muted-foreground">
+              Already have an account?
+              <router-link to="/login" class="font-medium text-primary hover:text-primary/80 transition-colors">
+                Login
+              </router-link>
             </p>
           </div>
-
-          <div class="space-y-2 bg-gray-50/50 rounded-xl p-4">
-            <p class="text-sm font-medium text-gray-600">Password Requirements:</p>
-            <ul class="text-sm space-y-1.5">
-              <li :class="['flex items-center transition-colors', passwordValidation.minLength ? 'text-green-600' : 'text-gray-400']">
-                <span class="mr-2 text-xs">{{ passwordValidation.minLength ? '\u2713' : '\u25CB' }}</span>
-                At least 8 characters
-              </li>
-              <li :class="['flex items-center transition-colors', passwordValidation.hasUppercase ? 'text-green-600' : 'text-gray-400']">
-                <span class="mr-2 text-xs">{{ passwordValidation.hasUppercase ? '\u2713' : '\u25CB' }}</span>
-                Contains uppercase letter
-              </li>
-              <li :class="['flex items-center transition-colors', passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-400']">
-                <span class="mr-2 text-xs">{{ passwordValidation.hasNumber ? '\u2713' : '\u25CB' }}</span>
-                Contains number
-              </li>
-            </ul>
-          </div>
-
-          <button
-            type="submit"
-            :disabled="!isValid || authStore.loading"
-            class="w-full btn-primary py-3 flex items-center justify-center"
-          >
-            <LoadingSpinner v-if="authStore.loading" size="sm" class="mr-2" />
-            {{ authStore.loading ? 'Creating Account...' : 'Create Account' }}
-          </button>
-        </form>
-
-        <div class="mt-6">
-          <div class="relative">
-            <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-gray-200" />
-            </div>
-            <div class="relative flex justify-center text-sm">
-              <span class="px-3 bg-white text-gray-400">or</span>
-            </div>
-          </div>
-
-          <p class="mt-6 text-center text-sm text-gray-500">
-            Already have an account?
-            <router-link to="/login" class="font-medium text-primary-600 hover:text-primary-500 transition-colors">
-              Login
-            </router-link>
-          </p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   </div>
 </template>
