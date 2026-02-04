@@ -99,6 +99,40 @@ jobs:
         with:
           context: .
           push: false
+          load: true
           tags: subscription-tracker:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Test container health
+        run: |
+          docker run -d --name test-container \
+            -e POSTGRES_PASSWORD=ci_test_password_123 \
+            -e JWT_SECRET=$(openssl rand -base64 32) \
+            -e FX_RATE_API_KEY=test_key \
+            -p 8080:80 \
+            subscription-tracker:test
+
+          echo "Waiting for container to become healthy..."
+          for i in $(seq 1 24); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' test-container)
+            echo "Attempt $i/24: Status = $STATUS"
+            if [ "$STATUS" == "healthy" ]; then
+              echo "Container is healthy!"
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "Container failed to become healthy"
+          exit 1
+
+      - name: Print container logs
+        if: always()
+        run: |
+          echo "=== Container logs ==="
+          docker logs test-container 2>&1 || true
+
+      - name: Cleanup test container
+        if: always()
+        run: docker rm -f test-container 2>/dev/null || true
