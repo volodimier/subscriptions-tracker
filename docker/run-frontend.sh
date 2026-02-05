@@ -8,11 +8,10 @@ if [ -d "/workspace/frontend" ]; then
 
     cd /workspace/frontend
 
-    # Install dependencies if node_modules is empty or doesn't exist
-    if [ ! -d "node_modules" ] || [ -z "$(ls -A node_modules 2>/dev/null)" ]; then
-        echo "Installing npm dependencies..."
-        npm install
-    fi
+    # Always run npm install to ensure dependencies are in sync with package.json
+    # npm is smart enough to skip if everything is up to date
+    echo "Syncing npm dependencies..."
+    npm install
 
     echo "Starting Vite dev server with hot reload..."
     echo "Changes to Vue files will update instantly"
