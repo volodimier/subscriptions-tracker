@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import AppHeader from '@/components/common/AppHeader.vue'
+import { AppLayout } from '@/components/layout'
 
 const authStore = useAuthStore()
+const route = useRoute()
+
+// Auth routes that should not have the sidebar layout
+const authRoutes = ['login', 'register']
+
+const shouldUseSidebarLayout = computed(() => {
+  return authStore.isAuthenticated && !authRoutes.includes(route.name as string)
+})
 
 onMounted(async () => {
   await authStore.checkAuth()
@@ -11,10 +20,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col">
-    <AppHeader v-if="authStore.isAuthenticated" />
-    <main class="flex-1">
-      <router-view />
-    </main>
-  </div>
+  <AppLayout v-if="shouldUseSidebarLayout">
+    <router-view />
+  </AppLayout>
+  <router-view v-else />
 </template>

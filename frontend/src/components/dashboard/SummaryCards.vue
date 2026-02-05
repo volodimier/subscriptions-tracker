@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { DashboardSummary, Projection } from '@/types'
 import { formatCurrency } from '@/utils/formatters'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DollarSign, TrendingUp, CreditCard, XCircle } from 'lucide-vue-next'
 
 defineProps<{
   summary: DashboardSummary['summary']
@@ -9,37 +11,67 @@ defineProps<{
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    <div class="card">
-      <p class="text-sm font-medium text-gray-500 tracking-wide">Monthly Burn Rate</p>
-      <p class="mt-2 text-3xl font-semibold text-gray-900 tracking-tight">
-        {{ formatCurrency(summary.monthlyAverage, summary.currency) }}
-      </p>
-      <p class="mt-1 text-sm text-gray-400">in {{ summary.currency }}</p>
-    </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <Card>
+      <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle class="text-sm font-medium text-muted-foreground">
+          Monthly Burn Rate
+        </CardTitle>
+        <DollarSign class="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div class="text-2xl font-bold">
+          {{ formatCurrency(summary.monthlyAverage, summary.currency) }}
+        </div>
+        <p class="text-xs text-muted-foreground">
+          in {{ summary.currency }}
+        </p>
+      </CardContent>
+    </Card>
 
-    <div class="card">
-      <p class="text-sm font-medium text-gray-500 tracking-wide">Total Spent</p>
-      <p class="mt-2 text-3xl font-semibold text-gray-900 tracking-tight">
-        {{ formatCurrency(summary.totalSpent, summary.currency) }}
-      </p>
-      <p v-if="projection" class="mt-1 text-sm text-gray-400">
-        Projected: {{ formatCurrency(projection.estimatedTotal, summary.currency) }}
-      </p>
-    </div>
+    <Card>
+      <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle class="text-sm font-medium text-muted-foreground">
+          Total Spent
+        </CardTitle>
+        <TrendingUp class="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div class="text-2xl font-bold">
+          {{ formatCurrency(summary.totalSpent, summary.currency) }}
+        </div>
+        <p v-if="projection" class="text-xs text-muted-foreground">
+          Projected: {{ formatCurrency(projection.estimatedTotal, summary.currency) }}
+        </p>
+      </CardContent>
+    </Card>
 
-    <div class="card">
-      <p class="text-sm font-medium text-gray-500 tracking-wide">Active Subscriptions</p>
-      <p class="mt-2 text-3xl font-semibold text-green-600 tracking-tight">
-        {{ summary.activeSubscriptions }}
-      </p>
-    </div>
+    <Card>
+      <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle class="text-sm font-medium text-muted-foreground">
+          Active Subscriptions
+        </CardTitle>
+        <CreditCard class="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div class="text-2xl font-bold text-green-600">
+          {{ summary.activeSubscriptions }}
+        </div>
+      </CardContent>
+    </Card>
 
-    <div class="card">
-      <p class="text-sm font-medium text-gray-500 tracking-wide">Cancelled</p>
-      <p class="mt-2 text-3xl font-semibold text-gray-400 tracking-tight">
-        {{ summary.cancelledSubscriptions }}
-      </p>
-    </div>
+    <Card>
+      <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle class="text-sm font-medium text-muted-foreground">
+          Cancelled
+        </CardTitle>
+        <XCircle class="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div class="text-2xl font-bold text-muted-foreground">
+          {{ summary.cancelledSubscriptions }}
+        </div>
+      </CardContent>
+    </Card>
   </div>
 </template>
