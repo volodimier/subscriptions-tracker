@@ -1,6 +1,8 @@
 services:
   subscription-tracker-verify:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.verify
     container_name: subscription-tracker-verify
     ports:
       - "8888:80"

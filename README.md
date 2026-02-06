@@ -24,26 +24,41 @@ A full-stack application for tracking personal subscriptions with multi-currency
 - Docker 20.10+
 - (Optional) FX Rate API key from [exchangerate-api.com](https://www.exchangerate-api.com/)
 
-### Run with Docker Compose
+### Run with Docker Compose (Development)
 
 ```bash
 # Configure environment
-cp .env.example .env
-# Edit .env with your POSTGRES_PASSWORD and JWT_SECRET
+cp .env.dev.example .env.dev
+# Edit .env.dev with your secrets
 
-# Start application
-docker compose up -d
+# Start development container
+docker compose -f docker-compose.dev.yml up -d
 
-# Access at http://localhost
+# Access at http://localhost:8889
 ```
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `POSTGRES_PASSWORD` | Yes | Database password |
-| `JWT_SECRET` | Yes | JWT signing secret (min 32 chars) |
-| `FX_RATE_API_KEY` | No | Exchange rate API key |
+The backend uses a single `application.yml` with environment variable overrides (no Spring profiles).
+
+**Required:**
+
+| Variable | Description |
+|----------|-------------|
+| `POSTGRES_PASSWORD` | Database password |
+| `JWT_SECRET` | JWT signing secret (min 32 chars) |
+
+**Optional:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FX_RATE_API_KEY` | *(empty)* | Exchange rate API key |
+| `CORS_ALLOWED_ORIGINS` | `localhost:3000,5173` | Allowed CORS origins |
+| `SWAGGER_ENABLED` | `true` | Set `false` in production |
+| `LOG_LEVEL_APP` | `INFO` | App logging level |
+| `DEVTOOLS_ENABLED` | `false` | Spring DevTools (hot reload) |
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for full configuration reference.
 
 ## Development
 
@@ -67,7 +82,8 @@ subscription-tracker/
 ├── scripts/
 │   ├── verify.sh            # Test & verify (Linux/macOS)
 │   └── verify.ps1           # Test & verify (Windows)
-└── docker-compose.yml
+├── docker-compose.dev.yml   # Development container
+└── docker-compose.verify.yml # Verification/testing container
 ```
 
 ### Running Tests
@@ -111,7 +127,7 @@ After running `verify.sh`, coverage reports are available at:
 
 ## API Documentation
 
-- **Swagger UI**: `http://localhost/api/v1/swagger-ui.html`
+- **Swagger UI**: `http://localhost/api/v1/swagger-ui.html` (disabled in production by default)
 - **OpenAPI Schema**: `http://localhost/api/v1/v3/api-docs` (JSON) or `backend/docs/api-schema.json`
 
 ## Scheduled Jobs

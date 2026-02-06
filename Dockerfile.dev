@@ -59,7 +59,9 @@ RUN chmod +x /app/*.sh
 # Environment variables
 ENV POSTGRES_DB=subscription_tracker_dev \
     POSTGRES_USER=dev_user \
-    SPRING_PROFILES_ACTIVE=docker
+    DEVTOOLS_ENABLED=true \
+    LOG_LEVEL_APP=DEBUG \
+    LOG_LEVEL_SECURITY=DEBUG
 
 # Expose ports
 # 80 - nginx (frontend + API proxy)
