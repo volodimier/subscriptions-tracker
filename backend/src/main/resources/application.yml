@@ -1,8 +1,13 @@
 spring:
-  profiles:
-    active: dev
   application:
     name: subscription-tracker
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/subscription_tracker}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -10,7 +15,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: false
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: true
@@ -21,15 +26,22 @@ spring:
     baseline-on-migrate: true
     locations: classpath:db/migration
 
+  devtools:
+    restart:
+      enabled: ${DEVTOOLS_ENABLED:false}
+      additional-paths: src/main/java
+    livereload:
+      enabled: ${DEVTOOLS_ENABLED:false}
+
 server:
   port: 8080
   servlet:
     context-path: /api/v1
 
 jwt:
-  secret: ${JWT_SECRET}  # Required - application will fail to start if not configured
-  expiration: 86400000   # Access token expiration: 24 hours in milliseconds
-  refresh-expiration: 604800000  # Refresh token expiration: 7 days in milliseconds
+  secret: ${JWT_SECRET}
+  expiration: 86400000
+  refresh-expiration: 604800000
 
 fx-rate:
   api-key: ${FX_RATE_API_KEY:}
@@ -40,14 +52,15 @@ cors:
 
 springdoc:
   api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
     path: /v3/api-docs
   swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
     path: /swagger-ui.html
     operations-sorter: method
     tags-sorter: alpha
   show-actuator: false
 
-# Spring Boot Actuator configuration
 management:
   endpoints:
     web:
@@ -61,3 +74,12 @@ management:
   health:
     db:
       enabled: true
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:WARN}
+    com.subscriptiontracker: ${LOG_LEVEL_APP:INFO}
+    org.springframework: ${LOG_LEVEL_SPRING:WARN}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:WARN}
+    org.hibernate: ${LOG_LEVEL_HIBERNATE:WARN}
+    org.hibernate.SQL: ${LOG_LEVEL_SQL:WARN}

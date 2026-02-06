@@ -56,9 +56,10 @@ tmp/
 temp/
 *.tmp
 
-# Markdown files in root (except README.md)
+# Markdown files in root (except README.md and DEPLOYMENT.md)
 /*.md
 !README.md
+!DEPLOYMENT.md
 
 # Other
 process-task.sh
