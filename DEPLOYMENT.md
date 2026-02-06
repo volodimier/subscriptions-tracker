@@ -4,21 +4,12 @@
 
 Uses an all-in-one Docker container with PostgreSQL, backend, and frontend bundled together.
 
-### Why Dev Container
-
-- **Consistent environment**: No JDK/Node version mismatches
-- **Fast onboarding**: Clone repo → run container → done
-- **No local dependencies**: Everything runs in Docker
-- **Hot reload**: Code changes reflect immediately
-
-### Running Locally
-
 ```bash
 # Configure environment
 cp .env.dev.example .env.dev
 # Edit .env.dev with your secrets
 
-# Build and run the dev container
+# Build and run
 docker compose -f docker-compose.dev.yml up -d
 
 # Access the app
@@ -29,172 +20,155 @@ docker compose -f docker-compose.dev.yml up -d
 ### Running Tests
 
 ```bash
-# Run full verification (backend + frontend tests, container health check)
 ./scripts/verify.sh        # Linux/Mac
 ./scripts/verify.ps1       # Windows
 ```
 
-Tests run in containers to ensure consistent results across machines.
+---
 
-### Architecture Difference
+## Railway Deployment
 
-Local dev uses a single container for simplicity. Production uses separate services. This is intentional — staging environment catches any integration issues before production.
+The application is deployed as three services on Railway:
+- **PostgreSQL** - Managed database
+- **Backend** - Spring Boot API (Railpack builder)
+- **Frontend** - Vue.js static site (Railpack builder)
+
+### Architecture
+
+```
+                         Railway Project
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   PostgreSQL ◄──private──► Backend ◄──public──► Users  │
+│   (no domain)              (port 8080)                  │
+│                                                         │
+│                            Frontend ◄──public──► Users  │
+│                            (port 3000)                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+- Database: No public domain (only backend connects to it internally)
+- Backend: Needs public domain (browser calls API directly)
+- Frontend: Needs public domain (serves static files to users)
 
 ---
 
-## Production (Railway)
+## Setup Guide
 
-## Overview
+### Step 1: Create Project
 
-The application is deployed as two separate services on Railway:
-- **Backend**: Spring Boot API (Railpack builder)
-- **Frontend**: Vue.js static site
-- **Database**: Railway managed PostgreSQL
+1. Go to [railway.app](https://railway.app) → **New Project**
+2. Name it (e.g., `subscriptions-tracker-staging` or `subscriptions-tracker-prod`)
 
-## Database
+### Step 2: Add PostgreSQL
 
-Use Railway's managed PostgreSQL:
-1. Add PostgreSQL plugin to your Railway project
-2. Link it to the backend service
-3. Railway auto-injects connection variables
+1. Click **+ New** → **Database** → **PostgreSQL**
+2. Railway auto-generates credentials (visible in Variables tab)
 
-## Backend
+### Step 3: Add Backend
 
-### Setup
+1. **+ New** → **GitHub Repo** → Select your repo
+2. **Settings → General**:
+   - Root Directory: `/backend`
+   - Watch Paths: `/backend/**`
+3. **Settings → Deploy**:
+   - Branch: `staging` or `master` (depending on environment)
+4. **Settings → Networking**:
+   - Click **Generate Domain**
+   - Enter port: `8080`
+5. **Variables** → Add all backend variables (see table below)
 
-1. Create new Railway service
-2. Connect your GitHub repo
-3. Set root directory: `/backend`
-4. Add environment variables (see below)
-5. Deploy
+### Step 4: Add Frontend
 
-Railway uses the `backend/railway.json` configuration file which specifies:
-- Railpack builder (set `RAILPACK_JDK_VERSION=17` to match project's Java version)
-- Build command: `./gradlew clean build -x test --no-daemon` (tests run in CI, not on Railway)
-- Health check on `/api/v1/actuator/health`
-- Auto-restart on failure (max 5 retries)
+1. **+ New** → **GitHub Repo** → Select your repo
+2. **Settings → General**:
+   - Root Directory: `/frontend`
+   - Watch Paths: `/frontend/**`
+3. **Settings → Deploy**:
+   - Branch: `staging` or `master` (depending on environment)
+4. **Settings → Networking**:
+   - Click **Generate Domain**
+   - Enter port: `3000`
+5. **Variables** → Add frontend variable (see table below)
 
-### Environment Variables
+### Step 5: Update Backend CORS
 
-The backend uses a single `application.yml` with environment variable overrides. No Spring profiles are used.
+After frontend domain is generated, update backend's `CORS_ALLOWED_ORIGINS` with the frontend URL.
 
-**Required:**
+### Step 6: Verify
 
-| Variable | Description |
-|----------|-------------|
-| `SPRING_DATASOURCE_URL` | PostgreSQL connection string |
-| `SPRING_DATASOURCE_USERNAME` | Database username |
-| `SPRING_DATASOURCE_PASSWORD` | Database password |
-| `JWT_SECRET` | Secret for JWT signing (min 32 chars) |
-| `RAILPACK_JDK_VERSION` | Set to `17` (project requires Java 17) |
+```bash
+# Check backend health
+curl https://your-backend.up.railway.app/api/v1/actuator/health
 
-**Optional:**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `FX_RATE_API_KEY` | *(empty)* | API key for exchange rates |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://localhost:5173` | Comma-separated allowed origins |
-| `SWAGGER_ENABLED` | `true` | Set to `false` to disable Swagger UI in production |
-| `LOG_LEVEL_APP` | `INFO` | Logging level for application code |
-| `LOG_LEVEL_ROOT` | `WARN` | Root logging level |
-| `DEVTOOLS_ENABLED` | `false` | Spring DevTools (hot reload) |
-| `JAVA_DEBUG` | `false` | Enable remote debug port 5005 |
-
-**Production recommendation:** Set `SWAGGER_ENABLED=false` to hide API documentation.
-
-### Health Check
-
-The `/actuator/health` endpoint is available for Railway health monitoring.
-
-## Frontend
-
-### Setup
-
-1. Create new Railway service in same project
-2. Connect your GitHub repo
-3. Set root directory: `/frontend`
-4. Configure build settings (see below)
-5. Add environment variables
-6. Deploy
-
-### Build Settings
-
-Railway uses the `frontend/railway.json` configuration file which specifies:
-- Railpack builder (uses `engines.node` from package.json: `>=20`)
-- Build command: `npm ci && npm run build`
-- Static site deployment (Railpack auto-detects Vite and serves `dist/` folder)
-
-**Note:** Railpack automatically detects static site frameworks like Vite and configures the output directory. Set `RAILPACK_SPA_OUTPUT_DIR` if you need a custom output directory.
-
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend API URL (e.g., `https://api.yourdomain.com`) |
-
-## Custom Domain
-
-Configure custom domains in Railway dashboard for both services:
-- Frontend: `yourdomain.com`
-- Backend: `api.yourdomain.com`
-
-Update backend CORS configuration to allow your frontend domain.
-
-## Staging Environment
-
-Use a **separate Railway project** for staging to keep it fully isolated from production.
-
-### Setup
-
-1. Create new Railway project (e.g., `subscriptions-tracker-staging`)
-2. Follow same setup steps as production for database, backend, and frontend
-3. Configure to auto-deploy from a staging branch or pull requests
-
-### Differences from Production
-
-| Aspect | Staging | Production |
-|--------|---------|------------|
-| Railway project | Separate | Separate |
-| Database | Own PostgreSQL instance | Own PostgreSQL instance |
-| Domain | `staging.yourdomain.com` | `yourdomain.com` |
-| API domain | `api-staging.yourdomain.com` | `api.yourdomain.com` |
-| Branch | `staging` or PR deploys | `main` / `master` |
-| Resources | Smaller (cost saving) | Scaled for traffic |
-| API keys | Test keys if available | Production keys |
-
-### Deployment Flow
-
-```
-Feature branch → PR → Staging (auto-deploy) → Verify → Merge to main → Production
+# Open frontend in browser
+open https://your-frontend.up.railway.app
 ```
 
-### Environment Variables
+---
 
-Same variables as production, but with staging-specific values:
-- Different `JWT_SECRET`
-- Test API keys for `FX_RATE_API_KEY` if available
-- `SWAGGER_ENABLED=true` (optional, to allow API testing)
-- `VITE_API_BASE_URL=https://api-staging.yourdomain.com`
+## Environment Variables
+
+### Backend Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SPRING_DATASOURCE_URL` | Yes | `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
+| `SPRING_DATASOURCE_USERNAME` | Yes | `${{Postgres.PGUSER}}` |
+| `SPRING_DATASOURCE_PASSWORD` | Yes | `${{Postgres.PGPASSWORD}}` |
+| `JWT_SECRET` | Yes | Secret for JWT signing (generate with `openssl rand -base64 32`) |
+| `RAILPACK_JDK_VERSION` | Yes | `17` (project requires Java 17) |
+| `CORS_ALLOWED_ORIGINS` | Yes | Frontend URL (e.g., `https://your-frontend.up.railway.app`) |
+| `SWAGGER_ENABLED` | No | Enable/disable Swagger UI (default: `true`) |
+| `FX_RATE_API_KEY` | No | API key for exchange rates |
+
+**Note:** Use `${{Postgres.VARIABLE}}` syntax to reference the PostgreSQL service variables. Additional debug variables (logging levels, JPA settings) are available in `application.yml` but rarely need overriding.
+
+### Frontend Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_BASE_URL` | Yes | Backend URL (e.g., `https://your-backend.up.railway.app`) |
+
+---
 
 ## Configuration Files
 
-Both services use `railway.json` files for explicit build configuration:
+Both services use `railway.json` for build configuration:
 
 | File | Purpose |
 |------|---------|
-| `backend/railway.json` | Backend Railpack config (Gradle build, health checks, restart policy) |
-| `frontend/railway.json` | Frontend Railpack config (static site build) |
+| `backend/railway.json` | Gradle build, health check on `/api/v1/actuator/health`, restart policy |
+| `frontend/railway.json` | Static site build with `npm ci && npm run build` |
 
-These files provide version-controlled configuration that works for both staging and production environments. Environment variables handle the differences between environments.
+---
 
-### Railpack Version Detection
+## Environments
 
-- **Backend**: Requires `RAILPACK_JDK_VERSION=17` (Railpack defaults to 21)
-- **Frontend**: Uses `engines.node` from package.json (set to `>=20`)
+Use **separate Railway projects** for staging and production to keep them fully isolated.
 
-## Notes
+Staging deploys from the `staging` branch and is used for testing before production. You can enable Swagger UI and use test API keys. Railway-generated subdomains work fine for staging.
 
-- Railway uses Railpack as the default builder (successor to Nixpacks)
-- Railpack handles build caching automatically for both services
-- Railpack auto-detects Gradle for Java and Vite for the frontend
-- To switch backend to Dockerfile later, add `Dockerfile` to `/backend` folder
+Production deploys from the `master` branch. Disable Swagger UI for security. Use unique secrets that differ from staging. Configure custom domains for a professional appearance.
+
+### Branching Strategy
+
+```
+feature/* ──PR──► staging ──PR──► master
+                    │               │
+                    ▼               ▼
+              Railway Staging   Railway Prod
+```
+
+---
+
+## Custom Domains (Optional)
+
+In Railway dashboard → Service → Settings → Networking → Custom Domain:
+
+| Service | Staging | Production |
+|---------|---------|------------|
+| Frontend | `staging.yourdomain.com` | `yourdomain.com` |
+| Backend | `api-staging.yourdomain.com` | `api.yourdomain.com` |
+
+Remember to update `CORS_ALLOWED_ORIGINS` and `VITE_API_BASE_URL` when using custom domains.
