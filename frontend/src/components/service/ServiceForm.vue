@@ -2,6 +2,10 @@
 import { ref, onMounted, computed } from 'vue'
 import type { Service, CreateServiceRequest, UpdateServiceRequest } from '@/types'
 import { CATEGORY_SUGGESTIONS } from '@/utils/constants'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const props = defineProps<{
   service?: Service | null
@@ -71,32 +75,34 @@ function handleSubmit() {
 
   emit('save', data)
 }
+
+const selectClass = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
 </script>
 
 <template>
   <form class="space-y-4" @submit.prevent="handleSubmit">
-    <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-      {{ error }}
-    </div>
+    <Alert v-if="error" variant="destructive">
+      <AlertDescription>{{ error }}</AlertDescription>
+    </Alert>
 
     <div>
-      <label for="name" class="label">Service Name *</label>
-      <input
+      <Label for="name">Service Name *</Label>
+      <Input
         id="name"
         v-model="name"
         type="text"
         required
-        class="input"
         placeholder="e.g., Netflix, Spotify"
+        class="mt-2"
       />
     </div>
 
     <div>
-      <label for="category" class="label">Category</label>
+      <Label for="category">Category</Label>
       <select
         id="category"
         v-model="category"
-        class="input"
+        :class="['mt-2', selectClass]"
       >
         <option value="">Select a category</option>
         <option v-for="cat in CATEGORY_SUGGESTIONS" :key="cat" :value="cat">
@@ -106,23 +112,23 @@ function handleSubmit() {
     </div>
 
     <div>
-      <label for="websiteUrl" class="label">Website URL</label>
-      <input
+      <Label for="websiteUrl">Website URL</Label>
+      <Input
         id="websiteUrl"
         v-model="websiteUrl"
         type="text"
-        class="input"
         placeholder="example.com"
+        class="mt-2"
       />
     </div>
 
     <div class="flex justify-end space-x-3 pt-4">
-      <button type="button" class="btn-secondary" @click="emit('cancel')">
+      <Button type="button" variant="outline" @click="emit('cancel')">
         Cancel
-      </button>
-      <button type="submit" :disabled="!isValid" class="btn-primary">
+      </Button>
+      <Button type="submit" :disabled="!isValid">
         {{ service ? 'Save Changes' : 'Create Service' }}
-      </button>
+      </Button>
     </div>
   </form>
 </template>

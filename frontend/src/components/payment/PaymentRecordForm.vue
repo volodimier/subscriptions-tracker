@@ -3,6 +3,11 @@ import { ref, computed, onMounted } from 'vue'
 import type { PaymentRecord, CreatePaymentRequest } from '@/types'
 import { CURRENCIES } from '@/utils/constants'
 import { formatDateISO } from '@/utils/formatters'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { DatePicker } from '@/components/ui/date-picker'
 
 const props = defineProps<{
   payment?: PaymentRecord | null
@@ -49,31 +54,33 @@ function handleSubmit() {
 
   emit('save', data)
 }
+
+const selectClass = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
 </script>
 
 <template>
   <form class="space-y-4" @submit.prevent="handleSubmit">
-    <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-      {{ error }}
-    </div>
+    <Alert v-if="error" variant="destructive">
+      <AlertDescription>{{ error }}</AlertDescription>
+    </Alert>
 
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label for="amount" class="label">Amount *</label>
-        <input
+        <Label for="amount">Amount *</Label>
+        <Input
           id="amount"
           v-model="amount"
           type="number"
           step="0.01"
           min="0.01"
           required
-          class="input"
           placeholder="0.00"
+          class="mt-2"
         />
       </div>
       <div>
-        <label for="currency" class="label">Currency *</label>
-        <select id="currency" v-model="currencyCode" class="input">
+        <Label for="currency">Currency *</Label>
+        <select id="currency" v-model="currencyCode" :class="['mt-2', selectClass]">
           <option v-for="currency in CURRENCIES" :key="currency" :value="currency">
             {{ currency }}
           </option>
@@ -82,39 +89,37 @@ function handleSubmit() {
     </div>
 
     <div>
-      <label for="paymentDate" class="label">Payment Date *</label>
-      <input
-        id="paymentDate"
+      <Label>Payment Date *</Label>
+      <DatePicker
         v-model="paymentDate"
-        type="date"
-        required
-        class="input"
+        placeholder="Select payment date"
+        class="mt-2"
       />
     </div>
 
     <div>
-      <label for="fxRateToBase" class="label">FX Rate to Base Currency</label>
-      <input
+      <Label for="fxRateToBase">FX Rate to Base Currency</Label>
+      <Input
         id="fxRateToBase"
         v-model="fxRateToBase"
         type="number"
         step="0.000001"
         min="0.000001"
-        class="input"
         placeholder="Leave empty to auto-calculate"
+        class="mt-2"
       />
-      <p class="text-xs text-gray-500 mt-1">
+      <p class="text-xs text-muted-foreground mt-1">
         Leave empty to use the current exchange rate
       </p>
     </div>
 
     <div class="flex justify-end space-x-3 pt-4">
-      <button type="button" class="btn-secondary" @click="emit('cancel')">
+      <Button type="button" variant="outline" @click="emit('cancel')">
         Cancel
-      </button>
-      <button type="submit" :disabled="!isValid" class="btn-primary">
+      </Button>
+      <Button type="submit" :disabled="!isValid">
         {{ payment ? 'Save Changes' : 'Add Payment' }}
-      </button>
+      </Button>
     </div>
   </form>
 </template>

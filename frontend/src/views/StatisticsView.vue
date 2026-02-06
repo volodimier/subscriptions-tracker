@@ -6,6 +6,10 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import SummaryCards from '@/components/dashboard/SummaryCards.vue'
 import CategoryChart from '@/components/dashboard/CategoryChart.vue'
 import SpendingChart from '@/components/dashboard/SpendingChart.vue'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 
 const dashboardStore = useDashboardStore()
 
@@ -65,24 +69,26 @@ function setPreset(preset: string) {
     </div>
 
     <!-- Date Range Selector -->
-    <div class="card mb-6">
-      <div class="flex flex-wrap items-center gap-4">
-        <div class="flex items-center space-x-2">
-          <label class="text-sm text-gray-600">From:</label>
-          <input v-model="startDate" type="date" class="input w-auto" />
+    <Card class="mb-6">
+      <CardContent class="pt-6">
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="flex items-center space-x-2">
+            <Label class="text-sm text-muted-foreground">From:</Label>
+            <DatePicker v-model="startDate" placeholder="Start date" class="w-auto" />
+          </div>
+          <div class="flex items-center space-x-2">
+            <Label class="text-sm text-muted-foreground">To:</Label>
+            <DatePicker v-model="endDate" placeholder="End date" class="w-auto" />
+          </div>
+          <div class="flex space-x-2">
+            <Button variant="outline" size="sm" @click="setPreset('thisMonth')">This Month</Button>
+            <Button variant="outline" size="sm" @click="setPreset('last3Months')">Last 3 Months</Button>
+            <Button variant="outline" size="sm" @click="setPreset('thisYear')">This Year</Button>
+            <Button variant="outline" size="sm" @click="setPreset('allTime')">All Time</Button>
+          </div>
         </div>
-        <div class="flex items-center space-x-2">
-          <label class="text-sm text-gray-600">To:</label>
-          <input v-model="endDate" type="date" class="input w-auto" />
-        </div>
-        <div class="flex space-x-2">
-          <button class="btn-secondary text-sm" @click="setPreset('thisMonth')">This Month</button>
-          <button class="btn-secondary text-sm" @click="setPreset('last3Months')">Last 3 Months</button>
-          <button class="btn-secondary text-sm" @click="setPreset('thisYear')">This Year</button>
-          <button class="btn-secondary text-sm" @click="setPreset('allTime')">All Time</button>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
 
     <div v-if="dashboardStore.loading" class="flex justify-center py-12">
       <LoadingSpinner size="lg" />
@@ -97,61 +103,71 @@ function setPreset(preset: string) {
 
       <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Category Breakdown -->
-        <div class="card">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4">Spending by Category</h2>
-          <CategoryChart
-            v-if="dashboardStore.summary.byCategory.length > 0"
-            :data="dashboardStore.summary.byCategory"
-            :currency="dashboardStore.summary.summary.currency"
-          />
-          <div v-else class="text-center py-8 text-gray-500">
-            No spending data available for this period
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Spending by Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CategoryChart
+              v-if="dashboardStore.summary.byCategory.length > 0"
+              :data="dashboardStore.summary.byCategory"
+              :currency="dashboardStore.summary.summary.currency"
+            />
+            <div v-else class="text-center py-8 text-muted-foreground">
+              No spending data available for this period
+            </div>
+          </CardContent>
+        </Card>
 
         <!-- Spending Over Time -->
-        <div class="card">
-          <h2 class="text-lg font-semibold text-gray-900 mb-4">Monthly Spending</h2>
-          <SpendingChart
-            v-if="dashboardStore.projection"
-            :data="dashboardStore.projection.monthlyBreakdown"
-            :currency="dashboardStore.projection.baseCurrency"
-          />
-          <div v-else class="text-center py-8 text-gray-500">
-            No projection data available
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Spending</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SpendingChart
+              v-if="dashboardStore.projection"
+              :data="dashboardStore.projection.monthlyBreakdown"
+              :currency="dashboardStore.projection.baseCurrency"
+            />
+            <div v-else class="text-center py-8 text-muted-foreground">
+              No projection data available
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <!-- Projection Card -->
-      <div v-if="dashboardStore.projection" class="mt-6 card">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">
-          {{ dashboardStore.projection.year }} Projection
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <p class="text-sm text-gray-500">Estimated Total</p>
-            <p class="text-2xl font-bold text-primary-600">
-              {{ formatCurrency(dashboardStore.projection.projection.estimatedTotal, dashboardStore.projection.baseCurrency) }}
-            </p>
+      <Card v-if="dashboardStore.projection" class="mt-6">
+        <CardHeader>
+          <CardTitle>{{ dashboardStore.projection.year }} Projection</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <p class="text-sm text-muted-foreground">Estimated Total</p>
+              <p class="text-2xl font-bold text-primary">
+                {{ formatCurrency(dashboardStore.projection.projection.estimatedTotal, dashboardStore.projection.baseCurrency) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-sm text-muted-foreground">Active Subscriptions</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ dashboardStore.projection.projection.activeSubscriptions }}
+              </p>
+            </div>
+            <div>
+              <p class="text-sm text-muted-foreground">Monthly Average</p>
+              <p class="text-2xl font-bold text-gray-900">
+                {{ formatCurrency(dashboardStore.projection.projection.estimatedTotal / 12, dashboardStore.projection.baseCurrency) }}
+              </p>
+            </div>
           </div>
-          <div>
-            <p class="text-sm text-gray-500">Active Subscriptions</p>
-            <p class="text-2xl font-bold text-gray-900">
-              {{ dashboardStore.projection.projection.activeSubscriptions }}
-            </p>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500">Monthly Average</p>
-            <p class="text-2xl font-bold text-gray-900">
-              {{ formatCurrency(dashboardStore.projection.projection.estimatedTotal / 12, dashboardStore.projection.baseCurrency) }}
-            </p>
-          </div>
-        </div>
-        <p class="text-sm text-gray-500 mt-4">
-          {{ dashboardStore.projection.projection.assumptions }}
-        </p>
-      </div>
+          <p class="text-sm text-muted-foreground mt-4">
+            {{ dashboardStore.projection.projection.assumptions }}
+          </p>
+        </CardContent>
+      </Card>
     </template>
   </div>
 </template>

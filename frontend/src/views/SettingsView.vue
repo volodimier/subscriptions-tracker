@@ -5,6 +5,19 @@ import { useAuthStore } from '@/stores/auth'
 import { CURRENCIES } from '@/utils/constants'
 import { formatDateTime } from '@/utils/formatters'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
@@ -112,9 +125,9 @@ function closeDeleteDialog() {
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <h1 class="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
 
-    <div v-if="successMessage" class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-      {{ successMessage }}
-    </div>
+    <Alert v-if="successMessage" class="mb-6 bg-green-50 border-green-200 text-green-700">
+      <AlertDescription>{{ successMessage }}</AlertDescription>
+    </Alert>
 
     <div v-if="settingsStore.loading && !settingsStore.settings" class="flex justify-center py-12">
       <LoadingSpinner size="lg" />
@@ -122,29 +135,33 @@ function closeDeleteDialog() {
 
     <template v-else-if="settingsStore.settings">
       <!-- User Profile -->
-      <div class="card mb-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">User Profile</h2>
-        <div class="space-y-4">
+      <Card class="mb-6">
+        <CardHeader>
+          <CardTitle>User Profile</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-4">
           <div>
-            <label class="label">Email</label>
-            <p class="text-gray-900">{{ settingsStore.settings.email }}</p>
-            <p class="text-sm text-gray-500">(Cannot be changed)</p>
+            <Label>Email</Label>
+            <p class="text-gray-900 mt-1">{{ settingsStore.settings.email }}</p>
+            <p class="text-sm text-muted-foreground">(Cannot be changed)</p>
           </div>
           <div>
-            <button class="btn-secondary" @click="showPasswordDialog = true">
+            <Button variant="outline" @click="showPasswordDialog = true">
               Change Password
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <!-- Preferences -->
-      <div class="card mb-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Preferences</h2>
-        <div class="space-y-4">
+      <Card class="mb-6">
+        <CardHeader>
+          <CardTitle>Preferences</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-4">
           <div>
-            <label class="label">Base Currency</label>
-            <div class="flex items-center space-x-3">
+            <Label>Base Currency</Label>
+            <div class="flex items-center space-x-3 mt-2">
               <div class="flex space-x-2">
                 <label
                   v-for="currency in CURRENCIES"
@@ -152,8 +169,8 @@ function closeDeleteDialog() {
                   :class="[
                     'flex items-center justify-center px-4 py-2 border rounded-lg cursor-pointer transition-colors',
                     selectedCurrency === currency
-                      ? 'border-primary-500 bg-primary-50 text-primary-700'
-                      : 'border-gray-300 hover:border-gray-400'
+                      ? 'border-primary bg-primary/5 text-primary'
+                      : 'border-input hover:border-gray-400'
                   ]"
                 >
                   <input
@@ -165,35 +182,36 @@ function closeDeleteDialog() {
                   <span class="font-medium">{{ currency }}</span>
                 </label>
               </div>
-              <button
+              <Button
                 :disabled="selectedCurrency === settingsStore.settings.baseCurrency"
-                class="btn-primary"
                 @click="updateCurrency"
               >
                 Save
-              </button>
+              </Button>
             </div>
-            <p class="text-sm text-gray-500 mt-2">
+            <p class="text-sm text-muted-foreground mt-2">
               Changing base currency will affect how statistics are calculated
             </p>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <!-- FX Rates -->
-      <div class="card mb-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">FX Rates</h2>
-        <div class="space-y-4">
+      <Card class="mb-6">
+        <CardHeader>
+          <CardTitle>FX Rates</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-4">
           <div>
-            <p class="text-sm text-gray-500">
+            <p class="text-sm text-muted-foreground">
               Last updated: {{ settingsStore.settings.fxRatesLastUpdated ? formatDateTime(settingsStore.settings.fxRatesLastUpdated) : 'Never' }}
             </p>
-            <button v-if="authStore.isAdmin" class="btn-secondary mt-2" @click="handleRefreshFxRates">
+            <Button v-if="authStore.isAdmin" variant="outline" class="mt-2" @click="handleRefreshFxRates">
               Refresh Rates Now
-            </button>
+            </Button>
           </div>
           <div v-if="settingsStore.settings.currentFxRates">
-            <p class="text-sm text-gray-500 mb-2">Current rates (to {{ settingsStore.settings.baseCurrency }}):</p>
+            <p class="text-sm text-muted-foreground mb-2">Current rates (to {{ settingsStore.settings.baseCurrency }}):</p>
             <div class="flex space-x-4 flex-wrap gap-y-1">
               <span
                 v-for="(rate, currency) in settingsStore.settings.currentFxRates"
@@ -204,121 +222,120 @@ function closeDeleteDialog() {
               </span>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <!-- Account Management -->
-      <div class="card border-red-200">
-        <h2 class="text-lg font-semibold text-red-600 mb-4">Danger Zone</h2>
-        <div class="space-y-4">
+      <Card class="border-red-200">
+        <CardHeader>
+          <CardTitle class="text-red-600">Danger Zone</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-4">
           <div>
-            <p class="text-sm text-gray-600 mb-2">
+            <p class="text-sm text-muted-foreground mb-2">
               Permanently delete your account and all associated data. This action cannot be undone.
             </p>
-            <button class="btn-danger" @click="showDeleteDialog = true">
+            <Button variant="destructive" @click="showDeleteDialog = true">
               Delete Account
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </template>
 
     <!-- Change Password Dialog -->
-    <div v-if="showPasswordDialog" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="closePasswordDialog" />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <h2 class="text-xl font-semibold mb-4">Change Password</h2>
+    <Dialog v-model:open="showPasswordDialog">
+      <DialogContent class="sm:max-w-md" @escape-key-down="closePasswordDialog" @pointer-down-outside="closePasswordDialog">
+        <DialogHeader>
+          <DialogTitle>Change Password</DialogTitle>
+        </DialogHeader>
 
-          <div v-if="passwordError" class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-            {{ passwordError }}
+        <Alert v-if="passwordError" variant="destructive" class="mt-2">
+          <AlertDescription>{{ passwordError }}</AlertDescription>
+        </Alert>
+
+        <form class="space-y-4 py-4" @submit.prevent="handleChangePassword">
+          <div>
+            <Label for="currentPassword">Current Password</Label>
+            <Input
+              id="currentPassword"
+              v-model="currentPassword"
+              type="password"
+              required
+              class="mt-2"
+            />
           </div>
-
-          <form class="space-y-4" @submit.prevent="handleChangePassword">
-            <div>
-              <label for="currentPassword" class="label">Current Password</label>
-              <input
-                id="currentPassword"
-                v-model="currentPassword"
-                type="password"
-                required
-                class="input"
-              />
-            </div>
-            <div>
-              <label for="newPassword" class="label">New Password</label>
-              <input
-                id="newPassword"
-                v-model="newPassword"
-                type="password"
-                required
-                class="input"
-              />
-            </div>
-            <div>
-              <label for="confirmNewPassword" class="label">Confirm New Password</label>
-              <input
-                id="confirmNewPassword"
-                v-model="confirmNewPassword"
-                type="password"
-                required
-                class="input"
-              />
-            </div>
-            <div class="flex justify-end space-x-3 pt-4">
-              <button type="button" class="btn-secondary" @click="closePasswordDialog">Cancel</button>
-              <button type="submit" class="btn-primary">Change Password</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+          <div>
+            <Label for="newPassword">New Password</Label>
+            <Input
+              id="newPassword"
+              v-model="newPassword"
+              type="password"
+              required
+              class="mt-2"
+            />
+          </div>
+          <div>
+            <Label for="confirmNewPassword">Confirm New Password</Label>
+            <Input
+              id="confirmNewPassword"
+              v-model="confirmNewPassword"
+              type="password"
+              required
+              class="mt-2"
+            />
+          </div>
+          <DialogFooter class="pt-4">
+            <Button type="button" variant="outline" @click="closePasswordDialog">Cancel</Button>
+            <Button type="submit">Change Password</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- Delete Account Dialog -->
-    <div v-if="showDeleteDialog" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="closeDeleteDialog" />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <h2 class="text-xl font-semibold text-red-600 mb-4">Delete Account</h2>
-
-          <p class="text-gray-600 mb-4">
+    <Dialog v-model:open="showDeleteDialog">
+      <DialogContent class="sm:max-w-md" @escape-key-down="closeDeleteDialog" @pointer-down-outside="closeDeleteDialog">
+        <DialogHeader>
+          <DialogTitle class="text-red-600">Delete Account</DialogTitle>
+          <DialogDescription>
             This will permanently delete your account, all subscriptions, services, and payment history.
             This action cannot be undone.
-          </p>
+          </DialogDescription>
+        </DialogHeader>
 
-          <div v-if="deleteError" class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-            {{ deleteError }}
+        <Alert v-if="deleteError" variant="destructive" class="mt-2">
+          <AlertDescription>{{ deleteError }}</AlertDescription>
+        </Alert>
+
+        <form class="space-y-4 py-4" @submit.prevent="handleDeleteAccount">
+          <div>
+            <Label for="deletePassword">Password</Label>
+            <Input
+              id="deletePassword"
+              v-model="deletePassword"
+              type="password"
+              required
+              class="mt-2"
+            />
           </div>
-
-          <form class="space-y-4" @submit.prevent="handleDeleteAccount">
-            <div>
-              <label for="deletePassword" class="label">Password</label>
-              <input
-                id="deletePassword"
-                v-model="deletePassword"
-                type="password"
-                required
-                class="input"
-              />
-            </div>
-            <div>
-              <label for="deleteConfirmation" class="label">Type DELETE to confirm</label>
-              <input
-                id="deleteConfirmation"
-                v-model="deleteConfirmation"
-                type="text"
-                required
-                class="input"
-                placeholder="DELETE"
-              />
-            </div>
-            <div class="flex justify-end space-x-3 pt-4">
-              <button type="button" class="btn-secondary" @click="closeDeleteDialog">Cancel</button>
-              <button type="submit" class="btn-danger">Delete My Account</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+          <div>
+            <Label for="deleteConfirmation">Type DELETE to confirm</Label>
+            <Input
+              id="deleteConfirmation"
+              v-model="deleteConfirmation"
+              type="text"
+              required
+              placeholder="DELETE"
+              class="mt-2"
+            />
+          </div>
+          <DialogFooter class="pt-4">
+            <Button type="button" variant="outline" @click="closeDeleteDialog">Cancel</Button>
+            <Button type="submit" variant="destructive">Delete My Account</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

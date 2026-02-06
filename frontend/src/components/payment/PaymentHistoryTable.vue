@@ -7,6 +7,13 @@ import PaymentRecordForm from './PaymentRecordForm.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const props = defineProps<{
   subscriptionId: number
@@ -102,61 +109,60 @@ function cancelDelete() {
   <div class="space-y-4">
     <div class="flex justify-between items-center">
       <h3 class="text-lg font-semibold text-gray-900">Payment History</h3>
-      <button class="btn-primary text-sm" @click="openCreateForm">
+      <Button size="sm" @click="openCreateForm">
         + Add Payment
-      </button>
+      </Button>
     </div>
 
     <div v-if="paymentsStore.loading" class="flex justify-center py-8">
       <LoadingSpinner />
     </div>
 
-    <div v-else-if="paymentsStore.payments.length === 0" class="text-center py-8 text-gray-500">
+    <div v-else-if="paymentsStore.payments.length === 0" class="text-center py-8 text-muted-foreground">
       No payment records found.
     </div>
 
     <div v-else class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+        <thead class="bg-muted/50">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Currency</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FX Rate</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base Amount</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Currency</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">FX Rate</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Base Amount</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="payment in paymentsStore.payments" :key="payment.id">
+        <tbody class="bg-background divide-y divide-gray-200">
+          <tr v-for="payment in paymentsStore.payments" :key="payment.id" class="hover:bg-muted/50">
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
               {{ formatDate(payment.paymentDate) }}
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
               {{ formatCurrency(payment.amount, payment.currencyCode) }}
             </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">
               {{ payment.currencyCode }}
             </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-muted-foreground">
               {{ payment.fxRateToBase.toFixed(4) }}
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
               {{ formatCurrency(payment.amountInBaseCurrency, 'USD') }}
             </td>
-            <td class="px-4 py-3 whitespace-nowrap text-right text-sm">
-              <button
-                class="text-primary-600 hover:text-primary-800 mr-3"
-                @click="openEditForm(payment)"
-              >
+            <td class="px-4 py-3 whitespace-nowrap text-right text-sm space-x-1">
+              <Button variant="ghost" size="sm" @click="openEditForm(payment)">
                 Edit
-              </button>
-              <button
-                class="text-red-600 hover:text-red-800"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                class="text-red-600 hover:text-red-700 hover:bg-red-50"
                 @click="confirmDelete(payment)"
               >
                 Delete
-              </button>
+              </Button>
             </td>
           </tr>
         </tbody>
@@ -172,25 +178,24 @@ function cancelDelete() {
       />
     </div>
 
-    <!-- Payment Form Modal -->
-    <div v-if="showForm" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="handleCancel" />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-          <h2 class="text-xl font-semibold mb-4">
+    <!-- Payment Form Dialog -->
+    <Dialog v-model:open="showForm">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
             {{ editingPayment ? 'Edit Payment' : 'Add Manual Payment' }}
-          </h2>
-          <PaymentRecordForm
-            :payment="editingPayment"
-            :subscription-id="subscriptionId"
-            :default-currency="currencyCode"
-            :error="formError"
-            @save="handleSave"
-            @cancel="handleCancel"
-          />
-        </div>
-      </div>
-    </div>
+          </DialogTitle>
+        </DialogHeader>
+        <PaymentRecordForm
+          :payment="editingPayment"
+          :subscription-id="subscriptionId"
+          :default-currency="currencyCode"
+          :error="formError"
+          @save="handleSave"
+          @cancel="handleCancel"
+        />
+      </DialogContent>
+    </Dialog>
 
     <!-- Delete Confirmation Dialog -->
     <ConfirmDialog

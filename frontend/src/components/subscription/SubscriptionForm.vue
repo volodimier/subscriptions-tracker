@@ -6,6 +6,11 @@ import { formatDateISO } from '@/utils/formatters'
 import { calculateStartDate } from '@/utils/billingCalculations'
 import ServiceSelector from '@/components/service/ServiceSelector.vue'
 import { useSettingsStore } from '@/stores/settings'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { DatePicker } from '@/components/ui/date-picker'
 
 const props = defineProps<{
   subscription?: Subscription | null
@@ -96,32 +101,32 @@ function handleSubmit() {
 
 <template>
   <form class="space-y-6" @submit.prevent="handleSubmit">
-    <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-      {{ error }}
-    </div>
+    <Alert v-if="error" variant="destructive">
+      <AlertDescription>{{ error }}</AlertDescription>
+    </Alert>
 
     <div>
-      <label class="label">Service *</label>
-      <ServiceSelector v-model="serviceId" />
+      <Label>Service *</Label>
+      <ServiceSelector v-model="serviceId" class="mt-2" />
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label for="amount" class="label">Amount *</label>
-        <input
+        <Label for="amount">Amount *</Label>
+        <Input
           id="amount"
           v-model="amount"
           type="number"
           step="0.01"
           min="0.01"
           required
-          class="input"
           placeholder="0.00"
+          class="mt-2"
         />
       </div>
       <div>
-        <label for="currency" class="label">Currency *</label>
-        <select id="currency" v-model="currencyCode" class="input">
+        <Label for="currency">Currency *</Label>
+        <select id="currency" v-model="currencyCode" class="mt-2 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm">
           <option v-for="currency in CURRENCIES" :key="currency" :value="currency">
             {{ currency }}
           </option>
@@ -130,16 +135,16 @@ function handleSubmit() {
     </div>
 
     <div>
-      <label class="label">Billing Cycle *</label>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <Label>Billing Cycle *</Label>
+      <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
         <label
           v-for="cycle in BILLING_CYCLES"
           :key="cycle.value"
           :class="[
             'flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-colors',
             billingCycle === cycle.value
-              ? 'border-primary-500 bg-primary-50 text-primary-700'
-              : 'border-gray-300 hover:border-gray-400'
+              ? 'border-primary bg-primary/5 text-primary'
+              : 'border-input hover:border-gray-400'
           ]"
         >
           <input
@@ -154,71 +159,68 @@ function handleSubmit() {
     </div>
 
     <div v-if="billingCycle === 'custom'">
-      <label for="billingCycleDays" class="label">Every how many days? *</label>
-      <input
+      <Label for="billingCycleDays">Every how many days? *</Label>
+      <Input
         id="billingCycleDays"
         v-model="billingCycleDays"
         type="number"
         min="1"
         required
-        class="input"
         placeholder="30"
+        class="mt-2"
       />
     </div>
 
     <div>
-      <label for="paymentMethod" class="label">Payment Method</label>
-      <input
+      <Label for="paymentMethod">Payment Method</Label>
+      <Input
         id="paymentMethod"
         v-model="paymentMethod"
         type="text"
-        class="input"
         placeholder="e.g., Revolut Visa"
+        class="mt-2"
       />
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label for="nextBillingDate" class="label">Next Billing Date *</label>
-        <input
-          id="nextBillingDate"
+        <Label>Next Billing Date *</Label>
+        <DatePicker
           v-model="nextBillingDate"
-          type="date"
-          required
-          class="input"
+          placeholder="Select billing date"
+          class="mt-2"
         />
       </div>
       <div>
-        <label for="startDate" class="label">Start Date</label>
-        <input
-          id="startDate"
+        <Label>Start Date</Label>
+        <DatePicker
           v-model="startDate"
-          type="date"
-          readonly
-          class="input bg-gray-50 cursor-not-allowed"
+          disabled
+          placeholder="Auto-calculated"
+          class="mt-2"
         />
-        <p class="text-xs text-gray-500 mt-1">Auto-calculated based on billing cycle</p>
+        <p class="text-xs text-muted-foreground mt-1">Auto-calculated based on billing cycle</p>
       </div>
     </div>
 
     <div>
-      <label for="notes" class="label">Notes</label>
+      <Label for="notes">Notes</Label>
       <textarea
         id="notes"
         v-model="notes"
         rows="3"
-        class="input"
+        class="mt-2 flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
         placeholder="Optional notes..."
       />
     </div>
 
     <div class="flex justify-end space-x-3 pt-4">
-      <button type="button" class="btn-secondary" @click="emit('cancel')">
+      <Button type="button" variant="outline" @click="emit('cancel')">
         Cancel
-      </button>
-      <button type="submit" :disabled="!isValid" class="btn-primary">
+      </Button>
+      <Button type="submit" :disabled="!isValid">
         {{ subscription ? 'Save Changes' : 'Create Subscription' }}
-      </button>
+      </Button>
     </div>
   </form>
 </template>
