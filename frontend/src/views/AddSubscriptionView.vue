@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
 import type { CreateSubscriptionRequest } from '@/types'
 import SubscriptionForm from '@/components/subscription/SubscriptionForm.vue'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const router = useRouter()
 const subscriptionsStore = useSubscriptionsStore()
@@ -33,13 +34,17 @@ function handleCancel() {
       </router-link>
     </div>
 
-    <div class="card">
-      <h1 class="text-2xl font-bold text-gray-900 mb-6">Add New Subscription</h1>
-      <SubscriptionForm
-        :error="formError"
-        @save="handleSave"
-        @cancel="handleCancel"
-      />
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle class="text-2xl">Add New Subscription</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <SubscriptionForm
+          :error="formError"
+          @save="handleSave"
+          @cancel="handleCancel"
+        />
+      </CardContent>
+    </Card>
   </div>
 </template>

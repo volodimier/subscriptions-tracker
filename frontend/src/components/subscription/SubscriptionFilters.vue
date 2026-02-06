@@ -2,6 +2,7 @@
 import { ref, watch, onMounted } from 'vue'
 import type { SubscriptionFilters, SubscriptionStatus } from '@/types'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
+import { Input } from '@/components/ui/input'
 
 const props = defineProps<{
   modelValue: SubscriptionFilters
@@ -32,22 +33,23 @@ watch([status, category, search, sort, order], () => {
     order: order.value,
   })
 })
+
+const selectClass = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
 </script>
 
 <template>
   <div class="space-y-4">
     <div class="flex flex-wrap gap-4">
       <div class="flex-1 min-w-[200px]">
-        <input
+        <Input
           v-model="search"
           type="text"
           placeholder="Search subscriptions..."
-          class="input"
         />
       </div>
 
       <div>
-        <select v-model="status" class="input">
+        <select v-model="status" :class="selectClass">
           <option value="active">Active</option>
           <option value="cancelled">Cancelled</option>
           <option value="all">All</option>
@@ -55,7 +57,7 @@ watch([status, category, search, sort, order], () => {
       </div>
 
       <div v-if="subscriptionsStore.categories.length > 0">
-        <select v-model="category" class="input">
+        <select v-model="category" :class="selectClass">
           <option value="">All Categories</option>
           <option v-for="cat in subscriptionsStore.categories" :key="cat" :value="cat">
             {{ cat }}
@@ -64,7 +66,7 @@ watch([status, category, search, sort, order], () => {
       </div>
 
       <div>
-        <select v-model="sort" class="input">
+        <select v-model="sort" :class="selectClass">
           <option value="nextBillingDate">Sort by Next Billing</option>
           <option value="amount">Sort by Amount</option>
           <option value="name">Sort by Name</option>
@@ -72,7 +74,7 @@ watch([status, category, search, sort, order], () => {
       </div>
 
       <div>
-        <select v-model="order" class="input">
+        <select v-model="order" :class="selectClass">
           <option value="asc">Ascending</option>
           <option value="desc">Descending</option>
         </select>

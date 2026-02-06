@@ -7,6 +7,16 @@ import ServiceForm from '@/components/service/ServiceForm.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Package } from 'lucide-vue-next'
 
 const servicesStore = useServicesStore()
 
@@ -93,23 +103,23 @@ function cancelDelete() {
         <h1 class="text-2xl font-bold text-gray-900">My Services</h1>
         <p class="text-gray-600">Manage your subscription services catalog</p>
       </div>
-      <button class="btn-primary" @click="openCreateForm">
+      <Button @click="openCreateForm">
         + Add Service
-      </button>
+      </Button>
     </div>
 
     <div class="mb-6">
-      <input
+      <Input
         v-model="searchQuery"
         type="text"
         placeholder="Search services..."
-        class="input max-w-md"
+        class="max-w-md"
       />
     </div>
 
-    <div v-if="servicesStore.error" class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-      {{ servicesStore.error }}
-    </div>
+    <Alert v-if="servicesStore.error" variant="destructive" class="mb-6">
+      <AlertDescription>{{ servicesStore.error }}</AlertDescription>
+    </Alert>
 
     <div v-if="servicesStore.loading" class="flex justify-center py-12">
       <LoadingSpinner size="lg" />
@@ -117,14 +127,12 @@ function cancelDelete() {
 
     <div v-else-if="servicesStore.services.length === 0" class="text-center py-12">
       <div class="text-gray-500">
-        <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
+        <Package class="mx-auto h-12 w-12" />
         <h3 class="mt-2 text-sm font-medium text-gray-900">No services</h3>
         <p class="mt-1 text-sm text-gray-500">Get started by creating a new service.</p>
-        <button class="mt-4 btn-primary" @click="openCreateForm">
+        <Button class="mt-4" @click="openCreateForm">
           + Add Service
-        </button>
+        </Button>
       </div>
     </div>
 
@@ -147,23 +155,22 @@ function cancelDelete() {
       />
     </div>
 
-    <!-- Service Form Modal -->
-    <div v-if="showForm" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="handleCancel" />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-          <h2 class="text-xl font-semibold mb-4">
+    <!-- Service Form Dialog -->
+    <Dialog v-model:open="showForm">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
             {{ editingService ? 'Edit Service' : 'Add New Service' }}
-          </h2>
-          <ServiceForm
-            :service="editingService"
-            :error="formError"
-            @save="handleSave"
-            @cancel="handleCancel"
-          />
-        </div>
-      </div>
-    </div>
+          </DialogTitle>
+        </DialogHeader>
+        <ServiceForm
+          :service="editingService"
+          :error="formError"
+          @save="handleSave"
+          @cancel="handleCancel"
+        />
+      </DialogContent>
+    </Dialog>
 
     <!-- Delete Confirmation Dialog -->
     <ConfirmDialog

@@ -5,6 +5,7 @@ import { useSubscriptionsStore } from '@/stores/subscriptions'
 import type { UpdateSubscriptionRequest } from '@/types'
 import SubscriptionForm from '@/components/subscription/SubscriptionForm.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const router = useRouter()
 const route = useRoute()
@@ -45,17 +46,21 @@ function handleCancel() {
       <LoadingSpinner size="lg" />
     </div>
 
-    <div v-else-if="subscriptionsStore.currentSubscription" class="card">
-      <h1 class="text-2xl font-bold text-gray-900 mb-6">
-        Edit {{ subscriptionsStore.currentSubscription.service.name }} Subscription
-      </h1>
-      <SubscriptionForm
-        :subscription="subscriptionsStore.currentSubscription"
-        :error="formError"
-        @save="handleSave"
-        @cancel="handleCancel"
-      />
-    </div>
+    <Card v-else-if="subscriptionsStore.currentSubscription">
+      <CardHeader>
+        <CardTitle class="text-2xl">
+          Edit {{ subscriptionsStore.currentSubscription.service.name }} Subscription
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <SubscriptionForm
+          :subscription="subscriptionsStore.currentSubscription"
+          :error="formError"
+          @save="handleSave"
+          @cancel="handleCancel"
+        />
+      </CardContent>
+    </Card>
 
     <div v-else class="text-center py-12">
       <p class="text-gray-500">Subscription not found</p>

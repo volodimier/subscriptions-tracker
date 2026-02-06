@@ -6,6 +6,19 @@ import { formatCurrency, formatDate, formatDateTime, getBillingCycleLabel, daysU
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { formatDateISO } from '@/utils/formatters'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const router = useRouter()
 const route = useRoute()
@@ -70,146 +83,143 @@ async function handleDelete() {
     </div>
 
     <div v-else-if="subscriptionsStore.currentSubscription" class="space-y-6">
-      <div class="card">
-        <div class="flex items-start justify-between">
-          <div class="flex items-center space-x-4">
-            <div v-if="subscriptionsStore.currentSubscription.service.faviconUrl" class="w-16 h-16 flex-shrink-0">
-              <img
-                :src="subscriptionsStore.currentSubscription.service.faviconUrl"
-                :alt="subscriptionsStore.currentSubscription.service.name"
-                class="w-full h-full object-contain rounded"
-              />
+      <Card>
+        <CardContent class="p-6">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center space-x-4">
+              <div v-if="subscriptionsStore.currentSubscription.service.faviconUrl" class="w-16 h-16 flex-shrink-0">
+                <img
+                  :src="subscriptionsStore.currentSubscription.service.faviconUrl"
+                  :alt="subscriptionsStore.currentSubscription.service.name"
+                  class="w-full h-full object-contain rounded"
+                />
+              </div>
+              <div v-else class="w-16 h-16 bg-primary-100 rounded flex items-center justify-center">
+                <span class="text-primary-600 font-bold text-2xl">
+                  {{ subscriptionsStore.currentSubscription.service.name.charAt(0).toUpperCase() }}
+                </span>
+              </div>
+              <div>
+                <h1 class="text-2xl font-bold text-gray-900">
+                  {{ subscriptionsStore.currentSubscription.service.name }}
+                </h1>
+                <Badge
+                  :variant="subscriptionsStore.currentSubscription.status === 'active' ? 'secondary' : 'outline'"
+                  :class="subscriptionsStore.currentSubscription.status === 'active' ? 'bg-green-100 text-green-800 border-green-200 mt-1' : 'mt-1'"
+                >
+                  {{ subscriptionsStore.currentSubscription.status === 'active' ? 'Active' : 'Cancelled' }}
+                </Badge>
+              </div>
             </div>
-            <div v-else class="w-16 h-16 bg-primary-100 rounded flex items-center justify-center">
-              <span class="text-primary-600 font-bold text-2xl">
-                {{ subscriptionsStore.currentSubscription.service.name.charAt(0).toUpperCase() }}
-              </span>
-            </div>
-            <div>
-              <h1 class="text-2xl font-bold text-gray-900">
-                {{ subscriptionsStore.currentSubscription.service.name }}
-              </h1>
-              <span
-                :class="[
-                  'inline-block px-3 py-1 text-sm font-medium rounded-full mt-1',
-                  subscriptionsStore.currentSubscription.status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-800'
-                ]"
-              >
-                {{ subscriptionsStore.currentSubscription.status === 'active' ? 'Active' : 'Cancelled' }}
-              </span>
+            <div class="flex space-x-2">
+              <Button variant="outline" as-child>
+                <router-link :to="`/subscriptions/${subscriptionId}/edit`">
+                  Edit
+                </router-link>
+              </Button>
+              <Button variant="destructive" @click="showDeleteDialog = true">
+                Delete
+              </Button>
             </div>
           </div>
-          <div class="flex space-x-2">
-            <router-link
-              :to="`/subscriptions/${subscriptionId}/edit`"
-              class="btn-secondary"
-            >
-              Edit
-            </router-link>
-            <button class="btn-danger" @click="showDeleteDialog = true">
-              Delete
-            </button>
-          </div>
-        </div>
 
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="space-y-4">
-            <h3 class="font-semibold text-gray-900">Subscription Details</h3>
-            <dl class="space-y-3">
-              <div class="flex justify-between">
-                <dt class="text-gray-500">Amount</dt>
-                <dd class="font-medium">
-                  {{ formatCurrency(subscriptionsStore.currentSubscription.amount, subscriptionsStore.currentSubscription.currencyCode) }}
-                </dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-500">Billing Cycle</dt>
-                <dd class="font-medium">
-                  {{ getBillingCycleLabel(subscriptionsStore.currentSubscription.billingCycle) }}
-                  <span v-if="subscriptionsStore.currentSubscription.billingCycleDays">
-                    ({{ subscriptionsStore.currentSubscription.billingCycleDays }} days)
-                  </span>
-                </dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-500">Category</dt>
-                <dd class="font-medium">{{ subscriptionsStore.currentSubscription.service.category || '-' }}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-500">Payment Method</dt>
-                <dd class="font-medium">{{ subscriptionsStore.currentSubscription.paymentMethod || '-' }}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-500">Start Date</dt>
-                <dd class="font-medium">{{ formatDate(subscriptionsStore.currentSubscription.startDate) }}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-500">
-                  {{ subscriptionsStore.currentSubscription.status === 'active' ? 'Next Billing' : 'Cancelled' }}
-                </dt>
-                <dd class="font-medium">
-                  <template v-if="subscriptionsStore.currentSubscription.status === 'active'">
-                    {{ formatDate(subscriptionsStore.currentSubscription.nextBillingDate) }}
-                    <span
-                      v-if="daysUntil(subscriptionsStore.currentSubscription.nextBillingDate) <= 7"
-                      class="text-orange-600 text-sm"
-                    >
-                      ({{ daysUntil(subscriptionsStore.currentSubscription.nextBillingDate) === 0 ? 'Today' : `in ${daysUntil(subscriptionsStore.currentSubscription.nextBillingDate)} days` }})
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <h3 class="font-semibold text-gray-900">Subscription Details</h3>
+              <dl class="space-y-3">
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Amount</dt>
+                  <dd class="font-medium">
+                    {{ formatCurrency(subscriptionsStore.currentSubscription.amount, subscriptionsStore.currentSubscription.currencyCode) }}
+                  </dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Billing Cycle</dt>
+                  <dd class="font-medium">
+                    {{ getBillingCycleLabel(subscriptionsStore.currentSubscription.billingCycle) }}
+                    <span v-if="subscriptionsStore.currentSubscription.billingCycleDays">
+                      ({{ subscriptionsStore.currentSubscription.billingCycleDays }} days)
                     </span>
-                  </template>
-                  <template v-else>
-                    {{ subscriptionsStore.currentSubscription.cancelledAt ? formatDateTime(subscriptionsStore.currentSubscription.cancelledAt) : '-' }}
-                  </template>
-                </dd>
-              </div>
-              <div v-if="subscriptionsStore.currentSubscription.notes">
-                <dt class="text-gray-500">Notes</dt>
-                <dd class="font-medium mt-1">{{ subscriptionsStore.currentSubscription.notes }}</dd>
-              </div>
-            </dl>
+                  </dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Category</dt>
+                  <dd class="font-medium">{{ subscriptionsStore.currentSubscription.service.category || '-' }}</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Payment Method</dt>
+                  <dd class="font-medium">{{ subscriptionsStore.currentSubscription.paymentMethod || '-' }}</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Start Date</dt>
+                  <dd class="font-medium">{{ formatDate(subscriptionsStore.currentSubscription.startDate) }}</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">
+                    {{ subscriptionsStore.currentSubscription.status === 'active' ? 'Next Billing' : 'Cancelled' }}
+                  </dt>
+                  <dd class="font-medium">
+                    <template v-if="subscriptionsStore.currentSubscription.status === 'active'">
+                      {{ formatDate(subscriptionsStore.currentSubscription.nextBillingDate) }}
+                      <span
+                        v-if="daysUntil(subscriptionsStore.currentSubscription.nextBillingDate) <= 7"
+                        class="text-orange-600 text-sm"
+                      >
+                        ({{ daysUntil(subscriptionsStore.currentSubscription.nextBillingDate) === 0 ? 'Today' : `in ${daysUntil(subscriptionsStore.currentSubscription.nextBillingDate)} days` }})
+                      </span>
+                    </template>
+                    <template v-else>
+                      {{ subscriptionsStore.currentSubscription.cancelledAt ? formatDateTime(subscriptionsStore.currentSubscription.cancelledAt) : '-' }}
+                    </template>
+                  </dd>
+                </div>
+                <div v-if="subscriptionsStore.currentSubscription.notes">
+                  <dt class="text-gray-500">Notes</dt>
+                  <dd class="font-medium mt-1">{{ subscriptionsStore.currentSubscription.notes }}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div v-if="subscriptionsStore.currentSubscription.stats" class="space-y-4">
+              <h3 class="font-semibold text-gray-900">Quick Stats</h3>
+              <dl class="space-y-3">
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Total Paid</dt>
+                  <dd class="font-medium">{{ formatCurrency(subscriptionsStore.currentSubscription.stats.totalPaid, 'USD') }}</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Total Payments</dt>
+                  <dd class="font-medium">{{ subscriptionsStore.currentSubscription.stats.totalPayments }}</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Avg per Month</dt>
+                  <dd class="font-medium">{{ formatCurrency(subscriptionsStore.currentSubscription.stats.averagePerMonth, 'USD') }}</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-500">Active Since</dt>
+                  <dd class="font-medium">{{ formatDate(subscriptionsStore.currentSubscription.stats.activeSince) }}</dd>
+                </div>
+              </dl>
+            </div>
           </div>
 
-          <div v-if="subscriptionsStore.currentSubscription.stats" class="space-y-4">
-            <h3 class="font-semibold text-gray-900">Quick Stats</h3>
-            <dl class="space-y-3">
-              <div class="flex justify-between">
-                <dt class="text-gray-500">Total Paid</dt>
-                <dd class="font-medium">{{ formatCurrency(subscriptionsStore.currentSubscription.stats.totalPaid, 'USD') }}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-500">Total Payments</dt>
-                <dd class="font-medium">{{ subscriptionsStore.currentSubscription.stats.totalPayments }}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-500">Avg per Month</dt>
-                <dd class="font-medium">{{ formatCurrency(subscriptionsStore.currentSubscription.stats.averagePerMonth, 'USD') }}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-500">Active Since</dt>
-                <dd class="font-medium">{{ formatDate(subscriptionsStore.currentSubscription.stats.activeSince) }}</dd>
-              </div>
-            </dl>
+          <div class="mt-6 pt-6 border-t border-gray-200">
+            <h3 class="font-semibold text-gray-900 mb-3">Actions</h3>
+            <div class="flex space-x-3">
+              <template v-if="subscriptionsStore.currentSubscription.status === 'active'">
+                <Button variant="destructive" @click="showCancelDialog = true">
+                  Cancel Subscription
+                </Button>
+              </template>
+              <template v-else>
+                <Button variant="outline" class="text-green-600 border-green-600 hover:bg-green-50" @click="showReactivateDialog = true">
+                  Reactivate Subscription
+                </Button>
+              </template>
+            </div>
           </div>
-        </div>
-
-        <div class="mt-6 pt-6 border-t border-gray-200">
-          <h3 class="font-semibold text-gray-900 mb-3">Actions</h3>
-          <div class="flex space-x-3">
-            <template v-if="subscriptionsStore.currentSubscription.status === 'active'">
-              <button class="btn-danger" @click="showCancelDialog = true">
-                Cancel Subscription
-              </button>
-            </template>
-            <template v-else>
-              <button class="btn-success" @click="showReactivateDialog = true">
-                Reactivate Subscription
-              </button>
-            </template>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
 
     <div v-else class="text-center py-12">
@@ -239,29 +249,29 @@ async function handleDelete() {
     />
 
     <!-- Reactivate Dialog -->
-    <div v-if="showReactivateDialog" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showReactivateDialog = false" />
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <h2 class="text-xl font-semibold mb-4">Reactivate Subscription</h2>
-          <p class="text-gray-600 mb-4">
+    <Dialog v-model:open="showReactivateDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reactivate Subscription</DialogTitle>
+          <DialogDescription>
             Select the next billing date for this subscription:
-          </p>
-          <div class="mb-4">
-            <label for="reactivateDate" class="label">Next Billing Date</label>
-            <input
-              id="reactivateDate"
-              v-model="reactivateDate"
-              type="date"
-              class="input"
-            />
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button class="btn-secondary" @click="showReactivateDialog = false">Cancel</button>
-            <button class="btn-success" @click="handleReactivate">Reactivate</button>
-          </div>
+          </DialogDescription>
+        </DialogHeader>
+        <div class="py-4">
+          <Label>Next Billing Date</Label>
+          <DatePicker
+            v-model="reactivateDate"
+            placeholder="Select billing date"
+            class="mt-2"
+          />
         </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button variant="outline" @click="showReactivateDialog = false">Cancel</Button>
+          <Button variant="outline" class="text-green-600 border-green-600 hover:bg-green-50" @click="handleReactivate">
+            Reactivate
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
