@@ -47,7 +47,7 @@ Local dev uses a single container for simplicity. Production uses separate servi
 ## Overview
 
 The application is deployed as two separate services on Railway:
-- **Backend**: Spring Boot API (Nixpacks buildpack)
+- **Backend**: Spring Boot API (Railpack builder)
 - **Frontend**: Vue.js static site
 - **Database**: Railway managed PostgreSQL
 
@@ -68,7 +68,11 @@ Use Railway's managed PostgreSQL:
 4. Add environment variables (see below)
 5. Deploy
 
-Railway auto-detects Gradle + Spring Boot via Nixpacks - no Dockerfile needed.
+Railway uses the `backend/railway.json` configuration file which specifies:
+- Railpack builder (set `RAILPACK_JDK_VERSION=17` to match project's Java version)
+- Build command: `./gradlew clean build -x test --no-daemon` (tests run in CI, not on Railway)
+- Health check on `/api/v1/actuator/health`
+- Auto-restart on failure (max 5 retries)
 
 ### Environment Variables
 
@@ -82,6 +86,7 @@ The backend uses a single `application.yml` with environment variable overrides.
 | `SPRING_DATASOURCE_USERNAME` | Database username |
 | `SPRING_DATASOURCE_PASSWORD` | Database password |
 | `JWT_SECRET` | Secret for JWT signing (min 32 chars) |
+| `RAILPACK_JDK_VERSION` | Set to `17` (project requires Java 17) |
 
 **Optional:**
 
@@ -114,10 +119,12 @@ The `/actuator/health` endpoint is available for Railway health monitoring.
 
 ### Build Settings
 
-| Setting | Value |
-|---------|-------|
-| Build command | `npm run build` |
-| Output directory | `dist` |
+Railway uses the `frontend/railway.json` configuration file which specifies:
+- Railpack builder (uses `engines.node` from package.json: `>=20`)
+- Build command: `npm ci && npm run build`
+- Static site deployment (Railpack auto-detects Vite and serves `dist/` folder)
+
+**Note:** Railpack automatically detects static site frameworks like Vite and configures the output directory. Set `RAILPACK_SPA_OUTPUT_DIR` if you need a custom output directory.
 
 ### Environment Variables
 
@@ -169,7 +176,25 @@ Same variables as production, but with staging-specific values:
 - `SWAGGER_ENABLED=true` (optional, to allow API testing)
 - `VITE_API_BASE_URL=https://api-staging.yourdomain.com`
 
+## Configuration Files
+
+Both services use `railway.json` files for explicit build configuration:
+
+| File | Purpose |
+|------|---------|
+| `backend/railway.json` | Backend Railpack config (Gradle build, health checks, restart policy) |
+| `frontend/railway.json` | Frontend Railpack config (static site build) |
+
+These files provide version-controlled configuration that works for both staging and production environments. Environment variables handle the differences between environments.
+
+### Railpack Version Detection
+
+- **Backend**: Requires `RAILPACK_JDK_VERSION=17` (Railpack defaults to 21)
+- **Frontend**: Uses `engines.node` from package.json (set to `>=20`)
+
 ## Notes
 
-- Railway handles build caching automatically for both services
+- Railway uses Railpack as the default builder (successor to Nixpacks)
+- Railpack handles build caching automatically for both services
+- Railpack auto-detects Gradle for Java and Vite for the frontend
 - To switch backend to Dockerfile later, add `Dockerfile` to `/backend` folder
