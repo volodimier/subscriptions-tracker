@@ -19,7 +19,11 @@ export function formatDateISO(date: Date): string {
 }
 
 export function formatDateTime(dateString: string): string {
-  const date = new Date(dateString)
+  // Ensure the date string is treated as UTC if no timezone specified
+  const normalized = dateString.endsWith('Z') || dateString.includes('+') || dateString.includes('-', 10)
+    ? dateString
+    : dateString + 'Z'
+  const date = new Date(normalized)
   return date.toLocaleString('en-GB', {
     year: 'numeric',
     month: 'short',
