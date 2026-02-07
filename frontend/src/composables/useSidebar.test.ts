@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { config } from '@vue/test-utils'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h, nextTick } from 'vue'
 import { provideSidebar, useSidebar } from './useSidebar'
@@ -12,6 +13,7 @@ vi.mock('@vueuse/core', () => ({
 
 // Create a wrapper component that provides the sidebar context
 const createWrapperComponent = () => {
+  // eslint-disable-next-line vue/one-component-per-file
   return defineComponent({
     setup() {
       const context = provideSidebar()
@@ -24,6 +26,7 @@ const createWrapperComponent = () => {
 }
 
 // Create a child component that uses the sidebar
+// eslint-disable-next-line vue/one-component-per-file
 const ChildComponent = defineComponent({
   setup() {
     const sidebar = useSidebar()
@@ -158,18 +161,34 @@ describe('useSidebar', () => {
 
   describe('useSidebar without provider', () => {
     it('should throw error when used outside provider', () => {
-      const ComponentWithoutProvider = defineComponent({
-        setup() {
-          useSidebar()
-        },
-        render() {
-          return h('div')
-        },
-      })
+      // Suppress Vue's inject warning since we're deliberately testing the error case
+      const originalWarnHandler = config.global.config.warnHandler
+      const capturedWarnings: string[] = []
+      config.global.config.warnHandler = (msg: string) => {
+        capturedWarnings.push(msg)
+      }
 
-      expect(() => mount(ComponentWithoutProvider)).toThrow(
-        'useSidebar must be used within a component that calls provideSidebar'
-      )
+      try {
+        // eslint-disable-next-line vue/one-component-per-file
+        const ComponentWithoutProvider = defineComponent({
+          setup() {
+            useSidebar()
+          },
+          render() {
+            return h('div')
+          },
+        })
+
+        expect(() => mount(ComponentWithoutProvider)).toThrow(
+          'useSidebar must be used within a component that calls provideSidebar'
+        )
+
+        // Verify that the expected Vue warning was triggered
+        expect(capturedWarnings.some((w) => w.includes('injection'))).toBe(true)
+      } finally {
+        // Restore the original warn handler
+        config.global.config.warnHandler = originalWarnHandler
+      }
     })
   })
 
