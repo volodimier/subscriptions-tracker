@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import type { Subscription, CreateSubscriptionRequest, BillingCycle } from '@/types'
-import { CURRENCIES, BILLING_CYCLES } from '@/utils/constants'
+import { CURRENCIES, BILLING_CYCLES, SELECTABLE_BILLING_CYCLES } from '@/utils/constants'
 import { formatDateISO } from '@/utils/formatters'
 import { calculateStartDate } from '@/utils/billingCalculations'
 import ServiceSelector from '@/components/service/ServiceSelector.vue'
@@ -72,6 +72,23 @@ function updateStartDate() {
   startDate.value = calculateStartDate(nextBillingDate.value, billingCycle.value, customDays)
 }
 
+// Compute available billing cycles: use selectable cycles, but include the current
+// subscription's cycle if it's a hidden one (bi_annual or custom) to allow viewing/keeping it
+const availableBillingCycles = computed(() => {
+  const hiddenCycles = ['bi_annual', 'custom']
+  const currentCycle = props.subscription?.billingCycle
+
+  // If editing a subscription with a hidden cycle, include that cycle in the options
+  if (currentCycle && hiddenCycles.includes(currentCycle)) {
+    const currentCycleOption = BILLING_CYCLES.find(c => c.value === currentCycle)
+    if (currentCycleOption) {
+      return [...SELECTABLE_BILLING_CYCLES, currentCycleOption]
+    }
+  }
+
+  return SELECTABLE_BILLING_CYCLES
+})
+
 const isValid = computed(() => {
   return serviceId.value !== null &&
          amount.value !== '' &&
@@ -138,7 +155,7 @@ function handleSubmit() {
       <Label>Billing Cycle *</Label>
       <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
         <label
-          v-for="cycle in BILLING_CYCLES"
+          v-for="cycle in availableBillingCycles"
           :key="cycle.value"
           :class="[
             'flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-colors',

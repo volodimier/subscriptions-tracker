@@ -432,8 +432,8 @@ class SubscriptionControllerTest {
         }
 
         @Test
-        @DisplayName("should return 400 when custom billing cycle lacks days")
-        void shouldReturn400WhenCustomBillingCycleLacksDays() throws Exception {
+        @DisplayName("should return 400 when custom billing cycle is used (not supported)")
+        void shouldReturn400WhenCustomBillingCycleIsUsed() throws Exception {
             CreateSubscriptionRequest customRequest = CreateSubscriptionRequest.builder()
                     .serviceId(1L)
                     .amount(new BigDecimal("15.99"))
@@ -443,14 +443,36 @@ class SubscriptionControllerTest {
                     .nextBillingDate(LocalDate.of(2024, 2, 15))
                     .build();
 
-            when(subscriptionService.createSubscription(eq(USER_ID), any(CreateSubscriptionRequest.class)))
-                    .thenThrow(new BadRequestException("Billing cycle days is required for custom billing cycle"));
+            // Custom billing cycle is now rejected at the DTO validation level
+            // No service call is made, so no stubbing is needed
 
             mockMvc.perform(post("/subscriptions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(customRequest)))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        }
+
+        @Test
+        @DisplayName("should return 400 when bi_annual billing cycle is used (not supported)")
+        void shouldReturn400WhenBiAnnualBillingCycleIsUsed() throws Exception {
+            CreateSubscriptionRequest biAnnualRequest = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.bi_annual)
+                    .startDate(LocalDate.of(2024, 1, 15))
+                    .nextBillingDate(LocalDate.of(2024, 7, 15))
+                    .build();
+
+            // bi_annual billing cycle is now rejected at the DTO validation level
+            // No service call is made, so no stubbing is needed
+
+            mockMvc.perform(post("/subscriptions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(biAnnualRequest)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
         }
     }
 
