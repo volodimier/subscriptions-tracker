@@ -158,6 +158,34 @@ describe('formatters', () => {
       expect(result).toMatch(/(19|20) Jun 2025/)
       expect(result).toMatch(/\d{2}:\d{2}/)
     })
+
+    it('should treat datetime strings without timezone as UTC', () => {
+      // When no timezone is specified, should append Z and treat as UTC
+      const withoutTz = formatDateTime('2025-01-15T14:30:00')
+      const withZ = formatDateTime('2025-01-15T14:30:00Z')
+      // Both should produce the same result since we normalize to UTC
+      expect(withoutTz).toBe(withZ)
+    })
+
+    it('should preserve datetime strings that already have Z suffix', () => {
+      const result = formatDateTime('2025-06-20T10:00:00Z')
+      expect(result).toMatch(/\d{1,2} Jun 2025/)
+      expect(result).toMatch(/\d{2}:\d{2}/)
+    })
+
+    it('should preserve datetime strings with positive timezone offset', () => {
+      // +02:00 offset should be preserved, not have Z appended
+      const result = formatDateTime('2025-01-15T16:30:00+02:00')
+      expect(result).toMatch(/\d{1,2} Jan 2025/)
+      expect(result).toMatch(/\d{2}:\d{2}/)
+    })
+
+    it('should preserve datetime strings with negative timezone offset', () => {
+      // -05:00 offset should be preserved, not have Z appended
+      const result = formatDateTime('2025-01-15T09:30:00-05:00')
+      expect(result).toMatch(/\d{1,2} Jan 2025/)
+      expect(result).toMatch(/\d{2}:\d{2}/)
+    })
   })
 
   describe('daysUntil', () => {
