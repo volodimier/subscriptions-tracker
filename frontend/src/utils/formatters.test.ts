@@ -10,48 +10,48 @@ import {
 
 describe('formatters', () => {
   describe('formatCurrency', () => {
-    it('should format USD amounts with $ symbol', () => {
-      expect(formatCurrency(9.99, 'USD')).toBe('$9.99')
-      expect(formatCurrency(100, 'USD')).toBe('$100.00')
-      expect(formatCurrency(0, 'USD')).toBe('$0.00')
+    it('should format USD amounts with currency code suffix', () => {
+      expect(formatCurrency(9.99, 'USD')).toBe('9.99 USD')
+      expect(formatCurrency(100, 'USD')).toBe('100.00 USD')
+      expect(formatCurrency(0, 'USD')).toBe('0.00 USD')
     })
 
-    it('should format EUR amounts with € symbol', () => {
-      expect(formatCurrency(19.99, 'EUR')).toBe('€19.99')
-      expect(formatCurrency(50, 'EUR')).toBe('€50.00')
+    it('should format EUR amounts with currency code suffix', () => {
+      expect(formatCurrency(19.99, 'EUR')).toBe('19.99 EUR')
+      expect(formatCurrency(50, 'EUR')).toBe('50.00 EUR')
     })
 
-    it('should format GBP amounts with £ symbol', () => {
-      expect(formatCurrency(29.99, 'GBP')).toBe('£29.99')
-      expect(formatCurrency(75, 'GBP')).toBe('£75.00')
+    it('should format GBP amounts with currency code suffix', () => {
+      expect(formatCurrency(29.99, 'GBP')).toBe('29.99 GBP')
+      expect(formatCurrency(75, 'GBP')).toBe('75.00 GBP')
     })
 
-    it('should format PLN amounts with zł symbol', () => {
-      expect(formatCurrency(49.99, 'PLN')).toBe('zł49.99')
-      expect(formatCurrency(200, 'PLN')).toBe('zł200.00')
+    it('should format PLN amounts with currency code suffix', () => {
+      expect(formatCurrency(49.99, 'PLN')).toBe('49.99 PLN')
+      expect(formatCurrency(200, 'PLN')).toBe('200.00 PLN')
     })
 
-    it('should use currency code as fallback for unknown currencies', () => {
-      expect(formatCurrency(99.99, 'JPY')).toBe('JPY99.99')
-      expect(formatCurrency(50, 'CHF')).toBe('CHF50.00')
-      expect(formatCurrency(100, 'UNKNOWN')).toBe('UNKNOWN100.00')
+    it('should work with any currency code', () => {
+      expect(formatCurrency(99.99, 'JPY')).toBe('99.99 JPY')
+      expect(formatCurrency(50, 'CHF')).toBe('50.00 CHF')
+      expect(formatCurrency(100, 'CAD')).toBe('100.00 CAD')
     })
 
     it('should handle decimal precision correctly', () => {
-      expect(formatCurrency(9.999, 'USD')).toBe('$10.00')
-      expect(formatCurrency(9.994, 'USD')).toBe('$9.99')
-      expect(formatCurrency(0.01, 'USD')).toBe('$0.01')
-      expect(formatCurrency(0.001, 'USD')).toBe('$0.00')
+      expect(formatCurrency(9.999, 'USD')).toBe('10.00 USD')
+      expect(formatCurrency(9.994, 'USD')).toBe('9.99 USD')
+      expect(formatCurrency(0.01, 'USD')).toBe('0.01 USD')
+      expect(formatCurrency(0.001, 'USD')).toBe('0.00 USD')
     })
 
     it('should handle negative amounts', () => {
-      expect(formatCurrency(-9.99, 'USD')).toBe('$-9.99')
-      expect(formatCurrency(-100, 'EUR')).toBe('€-100.00')
+      expect(formatCurrency(-9.99, 'USD')).toBe('-9.99 USD')
+      expect(formatCurrency(-100, 'EUR')).toBe('-100.00 EUR')
     })
 
     it('should handle large amounts', () => {
-      expect(formatCurrency(1000000, 'USD')).toBe('$1000000.00')
-      expect(formatCurrency(99999.99, 'EUR')).toBe('€99999.99')
+      expect(formatCurrency(1000000, 'USD')).toBe('1000000.00 USD')
+      expect(formatCurrency(99999.99, 'EUR')).toBe('99999.99 EUR')
     })
   })
 

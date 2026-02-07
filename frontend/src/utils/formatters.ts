@@ -1,8 +1,5 @@
-import { CURRENCY_SYMBOLS } from './constants'
-
 export function formatCurrency(amount: number, currencyCode: string): string {
-  const symbol = CURRENCY_SYMBOLS[currencyCode] || currencyCode
-  return `${symbol}${amount.toFixed(2)}`
+  return `${amount.toFixed(2)} ${currencyCode}`
 }
 
 export function formatDate(dateString: string): string {

@@ -23,9 +23,6 @@ defineProps<{
         <div class="text-2xl font-bold">
           {{ formatCurrency(summary.monthlyAverage, summary.currency) }}
         </div>
-        <p class="text-xs text-muted-foreground">
-          in {{ summary.currency }}
-        </p>
       </CardContent>
     </Card>
 
