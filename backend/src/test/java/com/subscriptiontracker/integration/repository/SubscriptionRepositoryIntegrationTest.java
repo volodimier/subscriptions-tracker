@@ -527,6 +527,175 @@ class SubscriptionRepositoryIntegrationTest {
     }
 
     @Nested
+    @DisplayName("findEarliestStartDateByUserId")
+    class FindEarliestStartDateByUserIdTests {
+
+        @Test
+        @DisplayName("should find earliest start date when multiple subscriptions exist")
+        void shouldFindEarliestStartDateWhenMultipleSubscriptionsExist() {
+            // Arrange
+            LocalDate earliestDate = LocalDate.of(2022, 3, 15);
+            LocalDate middleDate = LocalDate.of(2023, 6, 20);
+            LocalDate latestDate = LocalDate.of(2024, 1, 10);
+
+            // Create subscriptions with different start dates
+            Subscription sub1 = Subscription.builder()
+                    .user(testUser)
+                    .service(testService)
+                    .amount(new BigDecimal("9.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .startDate(middleDate)
+                    .nextBillingDate(LocalDate.now().plusMonths(1))
+                    .status(SubscriptionStatus.active)
+                    .build();
+            subscriptionRepository.save(sub1);
+
+            Service service2 = Service.builder()
+                    .user(testUser)
+                    .name("Service 2")
+                    .category("Music")
+                    .build();
+            service2 = serviceRepository.save(service2);
+
+            Subscription sub2 = Subscription.builder()
+                    .user(testUser)
+                    .service(service2)
+                    .amount(new BigDecimal("14.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .startDate(earliestDate)
+                    .nextBillingDate(LocalDate.now().plusMonths(1))
+                    .status(SubscriptionStatus.active)
+                    .build();
+            subscriptionRepository.save(sub2);
+
+            Service service3 = Service.builder()
+                    .user(testUser)
+                    .name("Service 3")
+                    .category("Productivity")
+                    .build();
+            service3 = serviceRepository.save(service3);
+
+            Subscription sub3 = Subscription.builder()
+                    .user(testUser)
+                    .service(service3)
+                    .amount(new BigDecimal("19.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.yearly)
+                    .startDate(latestDate)
+                    .nextBillingDate(LocalDate.now().plusYears(1))
+                    .status(SubscriptionStatus.cancelled)
+                    .cancelledAt(LocalDateTime.now())
+                    .build();
+            subscriptionRepository.save(sub3);
+
+            // Act
+            var result = subscriptionRepository.findEarliestStartDateByUserId(testUser.getId());
+
+            // Assert
+            assertThat(result).isPresent();
+            assertThat(result.get()).isEqualTo(earliestDate);
+        }
+
+        @Test
+        @DisplayName("should return empty when user has no subscriptions")
+        void shouldReturnEmptyWhenUserHasNoSubscriptions() {
+            // Arrange
+            User otherUser = User.builder()
+                    .email("nosubscriptions@example.com")
+                    .passwordHash("hashedPassword")
+                    .baseCurrencyCode("USD")
+                    .build();
+            otherUser = userRepository.save(otherUser);
+
+            // Create a subscription for testUser but not for otherUser
+            createSubscription(SubscriptionStatus.active, LocalDate.now().plusDays(10), new BigDecimal("9.99"));
+
+            // Act
+            var result = subscriptionRepository.findEarliestStartDateByUserId(otherUser.getId());
+
+            // Assert
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("should find earliest date including cancelled subscriptions")
+        void shouldFindEarliestDateIncludingCancelledSubscriptions() {
+            // Arrange
+            LocalDate cancelledSubStartDate = LocalDate.of(2021, 1, 1);
+            LocalDate activeSubStartDate = LocalDate.of(2023, 6, 15);
+
+            // Create cancelled subscription with earlier start date
+            Subscription cancelledSub = Subscription.builder()
+                    .user(testUser)
+                    .service(testService)
+                    .amount(new BigDecimal("9.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .startDate(cancelledSubStartDate)
+                    .nextBillingDate(LocalDate.now().plusMonths(1))
+                    .status(SubscriptionStatus.cancelled)
+                    .cancelledAt(LocalDateTime.now())
+                    .build();
+            subscriptionRepository.save(cancelledSub);
+
+            Service service2 = Service.builder()
+                    .user(testUser)
+                    .name("Active Service")
+                    .category("Entertainment")
+                    .build();
+            service2 = serviceRepository.save(service2);
+
+            // Create active subscription with later start date
+            Subscription activeSub = Subscription.builder()
+                    .user(testUser)
+                    .service(service2)
+                    .amount(new BigDecimal("14.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .startDate(activeSubStartDate)
+                    .nextBillingDate(LocalDate.now().plusMonths(1))
+                    .status(SubscriptionStatus.active)
+                    .build();
+            subscriptionRepository.save(activeSub);
+
+            // Act
+            var result = subscriptionRepository.findEarliestStartDateByUserId(testUser.getId());
+
+            // Assert
+            assertThat(result).isPresent();
+            assertThat(result.get()).isEqualTo(cancelledSubStartDate);
+        }
+
+        @Test
+        @DisplayName("should return single subscription start date")
+        void shouldReturnSingleSubscriptionStartDate() {
+            // Arrange
+            LocalDate startDate = LocalDate.of(2023, 5, 10);
+
+            Subscription sub = Subscription.builder()
+                    .user(testUser)
+                    .service(testService)
+                    .amount(new BigDecimal("9.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .startDate(startDate)
+                    .nextBillingDate(LocalDate.now().plusMonths(1))
+                    .status(SubscriptionStatus.active)
+                    .build();
+            subscriptionRepository.save(sub);
+
+            // Act
+            var result = subscriptionRepository.findEarliestStartDateByUserId(testUser.getId());
+
+            // Assert
+            assertThat(result).isPresent();
+            assertThat(result.get()).isEqualTo(startDate);
+        }
+    }
+
+    @Nested
     @DisplayName("findByUserIdWithFilters")
     class FindByUserIdWithFiltersTests {
 

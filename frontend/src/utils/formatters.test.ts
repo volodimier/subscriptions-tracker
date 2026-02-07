@@ -76,18 +76,72 @@ describe('formatters', () => {
 
   describe('formatDateISO', () => {
     it('should format Date objects to ISO date strings', () => {
-      const date = new Date('2025-01-15T00:00:00Z')
+      // Use local date constructor to avoid timezone issues
+      const date = new Date(2025, 0, 15) // January 15, 2025
       expect(formatDateISO(date)).toBe('2025-01-15')
     })
 
     it('should handle different dates', () => {
-      expect(formatDateISO(new Date('2024-12-31T00:00:00Z'))).toBe('2024-12-31')
-      expect(formatDateISO(new Date('2025-06-01T00:00:00Z'))).toBe('2025-06-01')
+      expect(formatDateISO(new Date(2024, 11, 31))).toBe('2024-12-31') // December 31, 2024
+      expect(formatDateISO(new Date(2025, 5, 1))).toBe('2025-06-01') // June 1, 2025
     })
 
     it('should pad single digit months and days', () => {
-      expect(formatDateISO(new Date('2025-01-05T00:00:00Z'))).toBe('2025-01-05')
-      expect(formatDateISO(new Date('2025-09-09T00:00:00Z'))).toBe('2025-09-09')
+      expect(formatDateISO(new Date(2025, 0, 5))).toBe('2025-01-05') // January 5
+      expect(formatDateISO(new Date(2025, 8, 9))).toBe('2025-09-09') // September 9
+    })
+
+    it('should preserve local date (not UTC-shifted)', () => {
+      // Create a date at 11 PM local time - with UTC conversion this could shift to next day
+      const latePM = new Date(2025, 0, 15, 23, 30, 0) // Jan 15, 2025 at 11:30 PM local
+      expect(formatDateISO(latePM)).toBe('2025-01-15')
+
+      // Create a date at 1 AM local time - with UTC conversion this could shift to previous day
+      const earlyAM = new Date(2025, 0, 15, 1, 30, 0) // Jan 15, 2025 at 1:30 AM local
+      expect(formatDateISO(earlyAM)).toBe('2025-01-15')
+    })
+
+    it('should work at midnight local time', () => {
+      const midnight = new Date(2025, 5, 20, 0, 0, 0) // June 20, 2025 at midnight
+      expect(formatDateISO(midnight)).toBe('2025-06-20')
+    })
+
+    it('should work for dates at year boundaries', () => {
+      // New Year's Eve
+      const newYearsEve = new Date(2025, 11, 31) // December 31, 2025
+      expect(formatDateISO(newYearsEve)).toBe('2025-12-31')
+
+      // New Year's Day
+      const newYearsDay = new Date(2026, 0, 1) // January 1, 2026
+      expect(formatDateISO(newYearsDay)).toBe('2026-01-01')
+    })
+
+    it('should work for dates at month boundaries', () => {
+      // Last day of January
+      const endJan = new Date(2025, 0, 31)
+      expect(formatDateISO(endJan)).toBe('2025-01-31')
+
+      // First day of February
+      const startFeb = new Date(2025, 1, 1)
+      expect(formatDateISO(startFeb)).toBe('2025-02-01')
+    })
+
+    it('should work for leap year dates', () => {
+      // Feb 29 on a leap year (2024)
+      const leapDay = new Date(2024, 1, 29)
+      expect(formatDateISO(leapDay)).toBe('2024-02-29')
+
+      // Feb 28 on a non-leap year (2025)
+      const nonLeapFeb28 = new Date(2025, 1, 28)
+      expect(formatDateISO(nonLeapFeb28)).toBe('2025-02-28')
+    })
+
+    it('should handle dates far in the past and future', () => {
+      const pastDate = new Date(2000, 0, 1)
+      expect(formatDateISO(pastDate)).toBe('2000-01-01')
+
+      const futureDate = new Date(2099, 11, 31)
+      expect(formatDateISO(futureDate)).toBe('2099-12-31')
     })
   })
 

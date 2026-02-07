@@ -93,6 +93,7 @@ class DashboardServiceTest {
             when(subscriptionRepository.countByUserIdAndStatus(1L, SubscriptionStatus.active)).thenReturn(5L);
             when(subscriptionRepository.countByUserIdAndStatus(1L, SubscriptionStatus.cancelled)).thenReturn(2L);
             when(paymentRecordRepository.sumByCategory(1L, startDate, endDate)).thenReturn(new ArrayList<>());
+            when(subscriptionRepository.findEarliestStartDateByUserId(1L)).thenReturn(Optional.empty());
 
             DashboardSummaryResponse result = dashboardService.getSummary(1L, startDate, endDate);
 
@@ -115,6 +116,7 @@ class DashboardServiceTest {
                     .thenReturn(new BigDecimal("300.00"));
             when(subscriptionRepository.countByUserIdAndStatus(anyLong(), any())).thenReturn(0L);
             when(paymentRecordRepository.sumByCategory(anyLong(), any(), any())).thenReturn(new ArrayList<>());
+            when(subscriptionRepository.findEarliestStartDateByUserId(1L)).thenReturn(Optional.empty());
 
             DashboardSummaryResponse result = dashboardService.getSummary(1L, startDate, endDate);
 
@@ -148,6 +150,7 @@ class DashboardServiceTest {
                     .thenReturn(new BigDecimal("80.00"));
             when(subscriptionRepository.countByUserIdAndStatus(anyLong(), any())).thenReturn(0L);
             when(paymentRecordRepository.sumByCategory(1L, startDate, endDate)).thenReturn(categoryData);
+            when(subscriptionRepository.findEarliestStartDateByUserId(1L)).thenReturn(Optional.empty());
 
             DashboardSummaryResponse result = dashboardService.getSummary(1L, startDate, endDate);
 
@@ -167,11 +170,51 @@ class DashboardServiceTest {
                     .thenReturn(BigDecimal.ZERO);
             when(subscriptionRepository.countByUserIdAndStatus(anyLong(), any())).thenReturn(0L);
             when(paymentRecordRepository.sumByCategory(anyLong(), any(), any())).thenReturn(new ArrayList<>());
+            when(subscriptionRepository.findEarliestStartDateByUserId(1L)).thenReturn(Optional.empty());
 
             DashboardSummaryResponse result = dashboardService.getSummary(1L, startDate, endDate);
 
             assertNotNull(result);
             assertEquals(BigDecimal.ZERO, result.getSummary().getTotalSpent());
+        }
+
+        @Test
+        @DisplayName("should return earliest subscription date when subscriptions exist")
+        void shouldReturnEarliestSubscriptionDateWhenSubscriptionsExist() {
+            LocalDate startDate = LocalDate.now().minusMonths(3);
+            LocalDate endDate = LocalDate.now();
+            LocalDate earliestDate = LocalDate.of(2023, 1, 15);
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(paymentRecordRepository.sumAmountInBaseCurrencyByUserIdAndDateRange(1L, startDate, endDate))
+                    .thenReturn(new BigDecimal("100.00"));
+            when(subscriptionRepository.countByUserIdAndStatus(anyLong(), any())).thenReturn(0L);
+            when(paymentRecordRepository.sumByCategory(anyLong(), any(), any())).thenReturn(new ArrayList<>());
+            when(subscriptionRepository.findEarliestStartDateByUserId(1L)).thenReturn(Optional.of(earliestDate));
+
+            DashboardSummaryResponse result = dashboardService.getSummary(1L, startDate, endDate);
+
+            assertNotNull(result);
+            assertEquals(earliestDate, result.getEarliestSubscriptionDate());
+        }
+
+        @Test
+        @DisplayName("should return null earliest subscription date when no subscriptions exist")
+        void shouldReturnNullEarliestSubscriptionDateWhenNoSubscriptionsExist() {
+            LocalDate startDate = LocalDate.now().minusMonths(3);
+            LocalDate endDate = LocalDate.now();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(paymentRecordRepository.sumAmountInBaseCurrencyByUserIdAndDateRange(1L, startDate, endDate))
+                    .thenReturn(BigDecimal.ZERO);
+            when(subscriptionRepository.countByUserIdAndStatus(anyLong(), any())).thenReturn(0L);
+            when(paymentRecordRepository.sumByCategory(anyLong(), any(), any())).thenReturn(new ArrayList<>());
+            when(subscriptionRepository.findEarliestStartDateByUserId(1L)).thenReturn(Optional.empty());
+
+            DashboardSummaryResponse result = dashboardService.getSummary(1L, startDate, endDate);
+
+            assertNotNull(result);
+            assertNull(result.getEarliestSubscriptionDate());
         }
     }
 

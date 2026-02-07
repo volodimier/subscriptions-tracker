@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 
@@ -613,6 +614,39 @@ class PaymentGeneratorSchedulerTest {
             // Only the second subscription should have been processed
             verify(paymentRecordRepository, times(1)).save(any(PaymentRecord.class));
             verify(subscriptionRepository, times(1)).save(any(Subscription.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("UTC timezone handling")
+    class UtcTimezoneHandling {
+
+        @Test
+        @DisplayName("should use UTC timezone for date comparison")
+        void shouldUseUtcTimezoneForDateComparison() {
+            // Arrange
+            LocalDate utcToday = LocalDate.now(ZoneOffset.UTC);
+            testSubscription.setNextBillingDate(utcToday);
+
+            when(subscriptionRepository.findActiveSubscriptionsDueBefore(utcToday.plusDays(1)))
+                    .thenReturn(List.of(testSubscription));
+            when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
+                    .thenReturn(BigDecimal.ONE);
+            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            when(subscriptionRepository.save(any(Subscription.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            // Act
+            paymentGeneratorScheduler.generatePaymentRecords();
+
+            // Assert - verify that the scheduler queries using UTC date
+            verify(subscriptionRepository).findActiveSubscriptionsDueBefore(utcToday.plusDays(1));
+
+            // Verify payment record is created with the UTC date
+            ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
+            verify(paymentRecordRepository).save(paymentCaptor.capture());
+            assertEquals(utcToday, paymentCaptor.getValue().getPaymentDate());
         }
     }
 

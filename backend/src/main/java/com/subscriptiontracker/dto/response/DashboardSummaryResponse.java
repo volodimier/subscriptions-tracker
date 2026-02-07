@@ -48,6 +48,13 @@ public class DashboardSummaryResponse {
     private List<TopService> topServices;
 
     /**
+     * The earliest subscription start date for the user.
+     * Null if the user has no subscriptions.
+     */
+    @Schema(description = "Earliest subscription start date for the user", example = "2023-01-15")
+    private LocalDate earliestSubscriptionDate;
+
+    /**
      * Represents a date period for the summary.
      */
     @Data

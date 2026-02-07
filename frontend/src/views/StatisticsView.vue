@@ -51,10 +51,17 @@ function setPreset(preset: string) {
       startDate.value = formatDateISO(new Date(thisYear, 0, 1))
       endDate.value = formatDateISO(today)
       break
-    case 'allTime':
-      startDate.value = formatDateISO(new Date(2020, 0, 1))
+    case 'allTime': {
+      const earliest = dashboardStore.summary?.earliestSubscriptionDate
+      if (earliest) {
+        startDate.value = earliest
+      } else {
+        // Fallback to a far-back date if no earliest date is available
+        startDate.value = formatDateISO(new Date(2000, 0, 1))
+      }
       endDate.value = formatDateISO(today)
       break
+    }
   }
 }
 </script>

@@ -28,6 +28,7 @@ export interface DashboardSummary {
   }
   byCategory: CategoryBreakdown[]
   topServices: TopService[]
+  earliestSubscriptionDate: string | null
 }
 
 export interface CategoryBreakdown {
