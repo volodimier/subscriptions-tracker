@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,10 @@ import java.util.List;
  *
  * <p>Each user has a role that determines their access level within the system.
  * The default role is {@link Role#USER}.</p>
+ *
+ * <p>Users can enable two-factor authentication (2FA) using TOTP (Time-based One-Time Password)
+ * for enhanced account security. When 2FA is enabled, users must provide a verification code
+ * from their authenticator app in addition to their password during login.</p>
  *
  * @author Generated
  * @since 1.0
@@ -78,6 +83,29 @@ public class User {
     @Column(name = "role", nullable = false)
     @Builder.Default
     private Role role = Role.USER;
+
+    /**
+     * Whether two-factor authentication is enabled for this user.
+     * When enabled, the user must provide a TOTP code during login.
+     */
+    @Column(name = "two_factor_enabled", nullable = false)
+    @Builder.Default
+    private boolean twoFactorEnabled = false;
+
+    /**
+     * The encrypted TOTP secret key for two-factor authentication.
+     * This secret is used to generate and verify TOTP codes.
+     * Stored encrypted using AES-256-GCM for security.
+     */
+    @Column(name = "two_factor_secret")
+    private String twoFactorSecret;
+
+    /**
+     * Timestamp when two-factor authentication was enabled.
+     * Null if 2FA has never been enabled or has been disabled.
+     */
+    @Column(name = "two_factor_enabled_at")
+    private Instant twoFactorEnabledAt;
 
     /**
      * Timestamp when the user account was created.

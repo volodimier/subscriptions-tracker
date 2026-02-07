@@ -122,6 +122,8 @@ open https://your-frontend.up.railway.app
 | `SWAGGER_ENABLED` | No | Enable/disable Swagger UI (default: `true`) |
 | `REGISTRATION_ENABLED` | No | Enable/disable user registration (default: `true`). Set to `false` to prevent new user registrations. |
 | `FX_RATE_API_KEY` | No | API key for exchange rates |
+| `TOTP_ENCRYPTION_KEY` | **Yes (prod)** | Encryption key for 2FA secrets. Generate with `openssl rand -base64 32`. Must be at least 32 characters. |
+| `TOTP_ISSUER` | No | Name shown in authenticator apps (default: `Subscription Tracker`). Use different values for staging/prod. |
 
 **Note:** Use `${{Postgres.VARIABLE}}` syntax to reference the PostgreSQL service variables. Additional debug variables (logging levels, JPA settings) are available in `application.yml` but rarely need overriding.
 
@@ -195,3 +197,30 @@ In Railway dashboard → Service → Settings → Networking → Custom Domain:
 | Backend | `api-staging.yourdomain.com` | `api.yourdomain.com` |
 
 Remember to update `CORS_ALLOWED_ORIGINS` and `VITE_API_BASE_URL` when using custom domains.
+
+---
+
+## Two-Factor Authentication (2FA)
+
+The application supports optional TOTP-based two-factor authentication using authenticator apps like Google Authenticator, Authy, or 1Password.
+
+### Configuration
+
+Set the `TOTP_ENCRYPTION_KEY` environment variable in production. This key is used to encrypt 2FA secrets at rest using AES-256-GCM.
+
+```bash
+# Generate a secure key
+openssl rand -base64 32
+```
+
+**Important:** Use a different key for each environment (staging vs production). If you lose this key, users will need to reset and re-enable 2FA.
+
+### Features
+
+- **Setup**: Users scan a QR code with their authenticator app
+- **Recovery Codes**: 10 single-use backup codes provided during setup
+- **Rate Limiting**: 5 TOTP attempts per 30 seconds to prevent brute force
+
+### Account Recovery
+
+If a user loses access to their authenticator app, they can use one of their 10 recovery codes to log in. Users should store recovery codes securely during initial 2FA setup.

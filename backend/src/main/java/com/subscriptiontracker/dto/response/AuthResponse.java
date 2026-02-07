@@ -13,6 +13,11 @@ import lombok.NoArgsConstructor;
  * The access token is short-lived and used for API authentication.
  * The refresh token is long-lived and used to obtain new access tokens.</p>
  *
+ * <p>When two-factor authentication is enabled for the user, the initial
+ * login response will have {@code twoFactorRequired} set to true and will
+ * contain a partial token instead of a full access token. The user must
+ * then verify their TOTP code to complete authentication.</p>
+ *
  * @author Generated
  * @since 1.0
  */
@@ -67,4 +72,26 @@ public class AuthResponse {
             example = "86400"
     )
     private Long expiresIn;
+
+    /**
+     * Indicates whether two-factor authentication is required to complete login.
+     * When true, the token field contains a partial token that can only be used
+     * to verify the TOTP code.
+     */
+    @Schema(
+            description = "Whether 2FA verification is required to complete login",
+            example = "false"
+    )
+    private Boolean twoFactorRequired;
+
+    /**
+     * The partial authentication token for 2FA verification.
+     * Only present when twoFactorRequired is true.
+     * This token has limited scope and short expiration (5 minutes).
+     */
+    @Schema(
+            description = "Partial token for 2FA verification (only present when twoFactorRequired is true)",
+            example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    )
+    private String partialToken;
 }

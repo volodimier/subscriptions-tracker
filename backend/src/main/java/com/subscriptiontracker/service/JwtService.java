@@ -26,6 +26,13 @@ import java.util.function.Function;
  * <p>The token contains the user's email as the subject, their role,
  * and has a configurable expiration time.</p>
  *
+ * <p>Supports two types of tokens:</p>
+ * <ul>
+ *   <li><strong>Full tokens</strong>: Standard JWT for authenticated users</li>
+ *   <li><strong>Partial tokens</strong>: Limited JWT for users with 2FA pending,
+ *       containing a {@code twoFactorPending} claim set to true</li>
+ * </ul>
+ *
  * @author Generated
  * @since 1.0
  * @see JwtConfig
@@ -38,6 +45,12 @@ public class JwtService {
 
     /** Claim name for storing the user's role in the JWT token. */
     private static final String ROLE_CLAIM = "role";
+
+    /** Claim name for indicating two-factor authentication is pending. */
+    private static final String TWO_FACTOR_PENDING_CLAIM = "twoFactorPending";
+
+    /** Claim name for storing the user's ID in partial tokens. */
+    private static final String USER_ID_CLAIM = "userId";
 
     /**
      * Extracts the username (email) from a JWT token.
@@ -123,6 +136,64 @@ public class JwtService {
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+    }
+
+    /**
+     * Generates a partial authentication token for 2FA verification.
+     *
+     * <p>This token has limited scope and short expiration (5 minutes by default).
+     * It contains a {@code twoFactorPending} claim set to true and can only be
+     * used to complete the 2FA verification process.</p>
+     *
+     * @param userId the user's ID
+     * @param email  the user's email address
+     * @param partialTokenExpirationMs the expiration time in milliseconds
+     * @return the partial JWT token string
+     */
+    public String generatePartialToken(Long userId, String email, long partialTokenExpirationMs) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(TWO_FACTOR_PENDING_CLAIM, true);
+        claims.put(USER_ID_CLAIM, userId);
+
+        return Jwts.builder()
+                .claims(claims)
+                .subject(email)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + partialTokenExpirationMs))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    /**
+     * Checks if a token is a partial token with 2FA pending.
+     *
+     * @param token the JWT token to check
+     * @return true if this is a partial token requiring 2FA verification
+     */
+    public boolean isTwoFactorPending(String token) {
+        try {
+            Boolean pending = extractClaim(token, claims ->
+                    claims.get(TWO_FACTOR_PENDING_CLAIM, Boolean.class));
+            return Boolean.TRUE.equals(pending);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Extracts the user ID from a partial token.
+     *
+     * @param token the JWT token
+     * @return the user ID, or null if not present
+     */
+    public Long extractUserId(String token) {
+        return extractClaim(token, claims -> {
+            Object userId = claims.get(USER_ID_CLAIM);
+            if (userId instanceof Number) {
+                return ((Number) userId).longValue();
+            }
+            return null;
+        });
     }
 
     private boolean isTokenExpired(String token) {

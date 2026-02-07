@@ -46,6 +46,10 @@ public class UserResponse {
     @Schema(description = "Timestamp when the user account was created")
     private LocalDateTime createdAt;
 
+    /** Whether two-factor authentication is enabled for this user. */
+    @Schema(description = "Whether 2FA is enabled for this user", example = "false")
+    private Boolean twoFactorEnabled;
+
     /**
      * Creates a UserResponse from a User entity.
      *
@@ -59,6 +63,7 @@ public class UserResponse {
                 .baseCurrencyCode(user.getBaseCurrencyCode())
                 .role(user.getRole())
                 .createdAt(user.getCreatedAt())
+                .twoFactorEnabled(user.isTwoFactorEnabled())
                 .build();
     }
 }

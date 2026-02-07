@@ -144,6 +144,36 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles TOTP-related exceptions (400).
+     *
+     * <p>Returned when a TOTP operation fails, such as invalid code,
+     * encryption failure, or QR code generation failure.</p>
+     */
+    @ExceptionHandler(TotpException.class)
+    public ResponseEntity<ErrorResponse> handleTotpException(TotpException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .error("TOTP_ERROR")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Handles TOTP rate limit exceeded exceptions (429).
+     *
+     * <p>Returned when a user has exceeded the maximum number of
+     * TOTP verification attempts within the rate limit window.</p>
+     */
+    @ExceptionHandler(TotpRateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTotpRateLimitExceededException(TotpRateLimitExceededException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .error("RATE_LIMIT_EXCEEDED")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
+    }
+
+    /**
      * Handles validation exceptions from @Valid annotations (400).
      *
      * <p>Extracts field-level errors and includes them in the response details.</p>
