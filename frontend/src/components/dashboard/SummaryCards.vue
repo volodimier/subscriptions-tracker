@@ -2,7 +2,7 @@
 import type { DashboardSummary, Projection } from '@/types'
 import { formatCurrency } from '@/utils/formatters'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DollarSign, TrendingUp, CreditCard, XCircle } from 'lucide-vue-next'
+import { Coins, TrendingUp, CreditCard, XCircle } from 'lucide-vue-next'
 
 defineProps<{
   summary: DashboardSummary['summary']
@@ -17,7 +17,7 @@ defineProps<{
         <CardTitle class="text-sm font-medium text-muted-foreground">
           Monthly Burn Rate
         </CardTitle>
-        <DollarSign class="h-4 w-4 text-muted-foreground" />
+        <Coins class="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
         <div class="text-2xl font-bold">
