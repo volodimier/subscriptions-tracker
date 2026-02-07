@@ -155,7 +155,7 @@ function handleNavClick() {
         @click="handleNavClick"
       >
         <CreditCard class="h-6 w-6 shrink-0 text-primary" />
-        <span v-if="!isCollapsed || isMobile" class="truncate">SubscriptionTracker</span>
+        <span v-if="!isCollapsed || isMobile" class="truncate">PennyWise</span>
       </router-link>
 
       <!-- Mobile close button -->
