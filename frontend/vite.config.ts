@@ -6,6 +6,8 @@ import { resolve } from 'path'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiBaseUrl = env.VITE_API_BASE_URL || ''
+  // Extract origin (protocol + host) for CSP - path not needed
+  const apiOrigin = apiBaseUrl ? new URL(apiBaseUrl).origin : ''
 
   return {
     plugins: [
@@ -23,7 +25,7 @@ export default defineConfig(({ mode }) => {
           'style-src-elem': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           'img-src': ["'self'", 'data:', 'https:'],
           'font-src': ["'self'", 'https://fonts.gstatic.com'],
-          'connect-src': ["'self'", apiBaseUrl].filter(Boolean),
+          'connect-src': ["'self'", apiOrigin].filter(Boolean),
         },
       }),
     ],

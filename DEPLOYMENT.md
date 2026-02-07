@@ -128,7 +128,7 @@ open https://your-frontend.up.railway.app
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_API_BASE_URL` | Yes | Backend URL - must include `https://` (e.g., `https://your-backend.up.railway.app`) |
+| `VITE_API_BASE_URL` | Yes | Backend URL - must include `https://` and `/api/v1` (e.g., `https://your-backend.up.railway.app/api/v1`) |
 | `PORT` | Yes | `80` (Caddy static server port) |
 
 ---
