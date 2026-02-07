@@ -43,7 +43,7 @@ The application is deployed as three services on Railway:
 │   (no domain)              (port 8080)                  │
 │                                                         │
 │                            Frontend ◄──public──► Users  │
-│                            (port 3000)                  │
+│                            (port 80)                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -88,8 +88,8 @@ The application is deployed as three services on Railway:
    - Branch: `staging` or `master` (depending on environment)
 4. **Settings → Networking**:
    - Click **Generate Domain**
-   - Enter port: `3000`
-5. **Variables** → Add frontend variable (see table below)
+   - Enter port: `80`
+5. **Variables** → Add frontend variables (see table below)
 
 ### Step 5: Update Backend CORS
 
@@ -129,6 +129,7 @@ open https://your-frontend.up.railway.app
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `VITE_API_BASE_URL` | Yes | Backend URL (e.g., `https://your-backend.up.railway.app`) |
+| `PORT` | Yes | `80` (Caddy static server port) |
 
 ---
 
@@ -139,7 +140,7 @@ Both services use `railway.json` for build configuration:
 | File | Purpose |
 |------|---------|
 | `backend/railway.json` | Gradle build, health check on `/api/v1/actuator/health`, restart policy |
-| `frontend/railway.json` | Static site build with `npm ci && npm run build` |
+| `frontend/railway.json` | Static site build with `npm install && npm run build` |
 
 ---
 
