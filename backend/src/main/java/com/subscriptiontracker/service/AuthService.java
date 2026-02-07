@@ -1,8 +1,10 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.config.AuthConfig;
 import com.subscriptiontracker.config.JwtConfig;
 import com.subscriptiontracker.constant.DomainConstants;
 import com.subscriptiontracker.constant.ErrorMessages;
+import com.subscriptiontracker.exception.RegistrationDisabledException;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
@@ -52,6 +54,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final JwtConfig jwtConfig;
+    private final AuthConfig authConfig;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final RefreshTokenService refreshTokenService;
@@ -65,10 +68,16 @@ public class AuthService {
      *
      * @param request the registration request containing email and password
      * @return authentication response with user details, access token, and refresh token
+     * @throws RegistrationDisabledException if registration is disabled in the configuration
      * @throws BadRequestException if the email is already registered
      */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        if (!authConfig.isRegistrationEnabled()) {
+            log.warn("Registration attempt rejected: registration is disabled");
+            throw new RegistrationDisabledException();
+        }
+
         if (userRepository.existsByEmail(request.getEmail())) {
             // Use generic message to prevent user enumeration
             throw new BadRequestException(ErrorMessages.REGISTRATION_FAILED);

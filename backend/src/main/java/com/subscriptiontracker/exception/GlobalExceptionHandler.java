@@ -129,6 +129,21 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles registration disabled exceptions (403).
+     *
+     * <p>Returned when a user attempts to register but registration
+     * has been disabled in the application configuration.</p>
+     */
+    @ExceptionHandler(RegistrationDisabledException.class)
+    public ResponseEntity<ErrorResponse> handleRegistrationDisabledException(RegistrationDisabledException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .error("FORBIDDEN")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    /**
      * Handles validation exceptions from @Valid annotations (400).
      *
      * <p>Extracts field-level errors and includes them in the response details.</p>

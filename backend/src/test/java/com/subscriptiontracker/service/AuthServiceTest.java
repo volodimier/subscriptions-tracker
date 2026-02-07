@@ -1,5 +1,6 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.config.AuthConfig;
 import com.subscriptiontracker.config.JwtConfig;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RefreshTokenRequest;
@@ -9,6 +10,7 @@ import com.subscriptiontracker.entity.RefreshToken;
 import com.subscriptiontracker.entity.Role;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.BadRequestException;
+import com.subscriptiontracker.exception.RegistrationDisabledException;
 import com.subscriptiontracker.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,6 +53,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtConfig jwtConfig;
+
+    @Mock
+    private AuthConfig authConfig;
 
     @Mock
     private AuthenticationManager authenticationManager;
@@ -114,6 +119,7 @@ class AuthServiceTest {
         @Test
         @DisplayName("should create new user when email is unique")
         void shouldCreateNewUserWhenEmailIsUnique() {
+            when(authConfig.isRegistrationEnabled()).thenReturn(true);
             when(userRepository.existsByEmail(anyString())).thenReturn(false);
             when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
             when(userRepository.save(any(User.class))).thenReturn(testUser);
@@ -145,6 +151,7 @@ class AuthServiceTest {
         @Test
         @DisplayName("should throw exception when email already exists")
         void shouldThrowExceptionWhenEmailAlreadyExists() {
+            when(authConfig.isRegistrationEnabled()).thenReturn(true);
             when(userRepository.existsByEmail(anyString())).thenReturn(true);
 
             BadRequestException exception = assertThrows(BadRequestException.class,
@@ -155,8 +162,22 @@ class AuthServiceTest {
         }
 
         @Test
+        @DisplayName("should throw RegistrationDisabledException when registration is disabled")
+        void shouldThrowRegistrationDisabledException_WhenRegistrationIsDisabled() {
+            when(authConfig.isRegistrationEnabled()).thenReturn(false);
+
+            RegistrationDisabledException exception = assertThrows(RegistrationDisabledException.class,
+                    () -> authService.register(registerRequest));
+
+            assertEquals("Registration is currently disabled", exception.getMessage());
+            verify(userRepository, never()).existsByEmail(anyString());
+            verify(userRepository, never()).save(any(User.class));
+        }
+
+        @Test
         @DisplayName("should encode password before saving")
         void shouldEncodePasswordBeforeSaving() {
+            when(authConfig.isRegistrationEnabled()).thenReturn(true);
             when(userRepository.existsByEmail(anyString())).thenReturn(false);
             when(passwordEncoder.encode("Password123")).thenReturn("encodedPassword");
             when(userRepository.save(any(User.class))).thenReturn(testUser);
