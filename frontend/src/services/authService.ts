@@ -17,7 +17,7 @@ export const authService = {
     return response.data
   },
 
-  async logout(): Promise<void> {
-    await api.post('/auth/logout')
+    async logout(refreshToken: string): Promise<void> {
+    await api.post('/auth/logout', { refreshToken })
   },
 }

@@ -99,7 +99,8 @@ describe('Auth Store', () => {
   describe('login', () => {
     const mockUser = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' as const }
     const mockToken = 'mock-jwt-token'
-    const mockResponse = { user: mockUser, token: mockToken }
+    const mockRefreshToken = 'mock-refresh-token'
+    const mockResponse = { user: mockUser, token: mockToken, refreshToken: mockRefreshToken }
 
     it('should set user and token on successful login', async () => {
       vi.mocked(authService.login).mockResolvedValue(mockResponse)
@@ -112,13 +113,14 @@ describe('Auth Store', () => {
       expect(store.isAuthenticated).toBe(true)
     })
 
-    it('should store token and user in localStorage', async () => {
+    it('should store token, refreshToken, and user in localStorage', async () => {
       vi.mocked(authService.login).mockResolvedValue(mockResponse)
 
       const store = useAuthStore()
       await store.login({ email: 'test@example.com', password: 'password123' })
 
       expect(localStorage.getItem('token')).toBe(mockToken)
+      expect(localStorage.getItem('refreshToken')).toBe(mockRefreshToken)
       expect(localStorage.getItem('user')).toBe(JSON.stringify(mockUser))
     })
 
@@ -187,7 +189,8 @@ describe('Auth Store', () => {
   describe('register', () => {
     const mockUser = { id: 1, email: 'new@example.com', baseCurrencyCode: 'USD', role: 'USER' as const }
     const mockToken = 'mock-jwt-token'
-    const mockResponse = { user: mockUser, token: mockToken }
+    const mockRefreshToken = 'mock-refresh-token'
+    const mockResponse = { user: mockUser, token: mockToken, refreshToken: mockRefreshToken }
 
     it('should set user and token on successful registration', async () => {
       vi.mocked(authService.register).mockResolvedValue(mockResponse)
@@ -200,13 +203,14 @@ describe('Auth Store', () => {
       expect(store.isAuthenticated).toBe(true)
     })
 
-    it('should store token and user in localStorage', async () => {
+    it('should store token, refreshToken, and user in localStorage', async () => {
       vi.mocked(authService.register).mockResolvedValue(mockResponse)
 
       const store = useAuthStore()
       await store.register({ email: 'new@example.com', password: 'password123' })
 
       expect(localStorage.getItem('token')).toBe(mockToken)
+      expect(localStorage.getItem('refreshToken')).toBe(mockRefreshToken)
       expect(localStorage.getItem('user')).toBe(JSON.stringify(mockUser))
     })
 
@@ -250,6 +254,7 @@ describe('Auth Store', () => {
       const store = useAuthStore()
       store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
       store.token = 'some-token'
+      localStorage.setItem('refreshToken', 'some-refresh-token')
 
       vi.mocked(authService.logout).mockResolvedValue(undefined)
       await store.logout()
@@ -259,8 +264,19 @@ describe('Auth Store', () => {
       expect(store.isAuthenticated).toBe(false)
     })
 
-    it('should remove token and user from localStorage', async () => {
+    it('should send refreshToken to logout API', async () => {
+      const store = useAuthStore()
+      localStorage.setItem('refreshToken', 'some-refresh-token')
+
+      vi.mocked(authService.logout).mockResolvedValue(undefined)
+      await store.logout()
+
+      expect(authService.logout).toHaveBeenCalledWith('some-refresh-token')
+    })
+
+    it('should remove token, refreshToken, and user from localStorage', async () => {
       localStorage.setItem('token', 'some-token')
+      localStorage.setItem('refreshToken', 'some-refresh-token')
       localStorage.setItem('user', JSON.stringify({ id: 1 }))
 
       const store = useAuthStore()
@@ -268,11 +284,13 @@ describe('Auth Store', () => {
       await store.logout()
 
       expect(localStorage.getItem('token')).toBeNull()
+      expect(localStorage.getItem('refreshToken')).toBeNull()
       expect(localStorage.getItem('user')).toBeNull()
     })
 
     it('should navigate to login page', async () => {
       const store = useAuthStore()
+      localStorage.setItem('refreshToken', 'some-refresh-token')
       vi.mocked(authService.logout).mockResolvedValue(undefined)
       await store.logout()
 
@@ -284,6 +302,7 @@ describe('Auth Store', () => {
       store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
       store.token = 'some-token'
       localStorage.setItem('token', 'some-token')
+      localStorage.setItem('refreshToken', 'some-refresh-token')
 
       vi.mocked(authService.logout).mockRejectedValue(new Error('Network error'))
       await store.logout()
@@ -291,6 +310,21 @@ describe('Auth Store', () => {
       expect(store.user).toBeNull()
       expect(store.token).toBeNull()
       expect(localStorage.getItem('token')).toBeNull()
+      expect(localStorage.getItem('refreshToken')).toBeNull()
+      expect(router.push).toHaveBeenCalledWith('/login')
+    })
+
+    it('should not call logout API if no refreshToken is available', async () => {
+      const store = useAuthStore()
+      store.user = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' }
+      store.token = 'some-token'
+      // No refreshToken in localStorage or store
+
+      await store.logout()
+
+      expect(authService.logout).not.toHaveBeenCalled()
+      expect(store.user).toBeNull()
+      expect(store.token).toBeNull()
       expect(router.push).toHaveBeenCalledWith('/login')
     })
   })
@@ -299,8 +333,10 @@ describe('Auth Store', () => {
     it('should restore auth state from localStorage', async () => {
       const mockUser = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' as const }
       const mockToken = 'stored-token'
+      const mockRefreshToken = 'stored-refresh-token'
 
       localStorage.setItem('token', mockToken)
+      localStorage.setItem('refreshToken', mockRefreshToken)
       localStorage.setItem('user', JSON.stringify(mockUser))
 
       vi.mocked(authService.getCurrentUser).mockResolvedValue(mockUser)
@@ -339,6 +375,7 @@ describe('Auth Store', () => {
 
     it('should logout if getCurrentUser fails', async () => {
       localStorage.setItem('token', 'invalid-token')
+      localStorage.setItem('refreshToken', 'invalid-refresh-token')
       localStorage.setItem('user', JSON.stringify({ id: 1 }))
 
       vi.mocked(authService.getCurrentUser).mockRejectedValue(new Error('Unauthorized'))
@@ -350,6 +387,7 @@ describe('Auth Store', () => {
       expect(store.token).toBeNull()
       expect(store.user).toBeNull()
       expect(localStorage.getItem('token')).toBeNull()
+      expect(localStorage.getItem('refreshToken')).toBeNull()
     })
   })
 
