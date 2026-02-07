@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="T extends Record<string, any>">
+<script setup lang="ts" generic="T extends Record<string, unknown>">
 import type { BulletLegendItemInterface } from "@unovis/ts"
 import type { Component } from "vue"
 import type { BaseChartProps } from "."
@@ -26,6 +26,7 @@ const props = withDefaults(defineProps<BaseChartProps<T> & {
    */
   showGradient?: boolean
 }>(), {
+  customTooltip: undefined,
   curveType: CurveType.MonotoneX,
   filterOpacity: 0.2,
   margin: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),

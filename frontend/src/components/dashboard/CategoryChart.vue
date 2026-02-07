@@ -23,6 +23,7 @@ const colors = [
 interface ChartDataPoint {
   category: string
   total: number
+  [key: string]: string | number
 }
 
 const chartData = computed<ChartDataPoint[]>(() => {

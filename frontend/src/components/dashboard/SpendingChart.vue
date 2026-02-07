@@ -12,6 +12,7 @@ const props = defineProps<{
 interface ChartDataPoint {
   month: string
   spending: number
+  [key: string]: string | number
 }
 
 const chartData = computed<ChartDataPoint[]>(() => {

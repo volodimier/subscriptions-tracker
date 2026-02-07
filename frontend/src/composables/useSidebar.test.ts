@@ -12,6 +12,7 @@ vi.mock('@vueuse/core', () => ({
 
 // Create a wrapper component that provides the sidebar context
 const createWrapperComponent = () => {
+  // eslint-disable-next-line vue/one-component-per-file
   return defineComponent({
     setup() {
       const context = provideSidebar()
@@ -24,6 +25,7 @@ const createWrapperComponent = () => {
 }
 
 // Create a child component that uses the sidebar
+// eslint-disable-next-line vue/one-component-per-file
 const ChildComponent = defineComponent({
   setup() {
     const sidebar = useSidebar()
@@ -158,6 +160,7 @@ describe('useSidebar', () => {
 
   describe('useSidebar without provider', () => {
     it('should throw error when used outside provider', () => {
+      // eslint-disable-next-line vue/one-component-per-file
       const ComponentWithoutProvider = defineComponent({
         setup() {
           useSidebar()
