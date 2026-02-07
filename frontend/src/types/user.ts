@@ -5,6 +5,7 @@ export interface User {
   email: string
   baseCurrencyCode?: string
   role: UserRole
+  twoFactorEnabled?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -13,6 +14,9 @@ export interface AuthResponse {
   user: User
   token: string
   refreshToken: string
+  twoFactorRequired?: boolean
+  partialToken?: string
+  expiresIn?: number
 }
 
 export interface LoginRequest {

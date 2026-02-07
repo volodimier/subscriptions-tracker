@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from './auth'
 import { authService } from '@/services/authService'
+import { twoFaService } from '@/services/twoFaService'
 import router from '@/router'
 
 vi.mock('@/services/authService', () => ({
@@ -10,6 +11,13 @@ vi.mock('@/services/authService', () => ({
     register: vi.fn(),
     logout: vi.fn(),
     getCurrentUser: vi.fn(),
+  },
+}))
+
+vi.mock('@/services/twoFaService', () => ({
+  twoFaService: {
+    verifyCode: vi.fn(),
+    verifyRecoveryCode: vi.fn(),
   },
 }))
 
@@ -50,6 +58,16 @@ describe('Auth Store', () => {
     it('should have error set to null', () => {
       const store = useAuthStore()
       expect(store.error).toBeNull()
+    })
+
+    it('should have twoFactorRequired set to false', () => {
+      const store = useAuthStore()
+      expect(store.twoFactorRequired).toBe(false)
+    })
+
+    it('should have partialToken set to null', () => {
+      const store = useAuthStore()
+      expect(store.partialToken).toBeNull()
     })
   })
 
@@ -183,6 +201,37 @@ describe('Auth Store', () => {
       await store.login({ email: 'test@example.com', password: 'password123' })
 
       expect(store.error).toBeNull()
+    })
+
+    it('should set partial auth state when 2FA is required', async () => {
+      const twoFaResponse = {
+        user: mockUser,
+        token: '',
+        refreshToken: '',
+        twoFactorRequired: true,
+        partialToken: 'partial-token-123',
+      }
+      vi.mocked(authService.login).mockResolvedValue(twoFaResponse)
+
+      const store = useAuthStore()
+      const response = await store.login({ email: 'test@example.com', password: 'password123' })
+
+      expect(store.twoFactorRequired).toBe(true)
+      expect(store.partialToken).toBe('partial-token-123')
+      expect(store.token).toBeNull()
+      expect(store.user).toBeNull()
+      expect(response.twoFactorRequired).toBe(true)
+      expect(router.push).not.toHaveBeenCalled()
+    })
+
+    it('should not set partial auth state when 2FA is not required', async () => {
+      vi.mocked(authService.login).mockResolvedValue(mockResponse)
+
+      const store = useAuthStore()
+      await store.login({ email: 'test@example.com', password: 'password123' })
+
+      expect(store.twoFactorRequired).toBe(false)
+      expect(store.partialToken).toBeNull()
     })
   })
 
@@ -408,6 +457,148 @@ describe('Auth Store', () => {
       store.updateUser(updatedUser)
 
       expect(localStorage.getItem('user')).toBe(JSON.stringify(updatedUser))
+    })
+  })
+
+  describe('setPartialAuth', () => {
+    it('should set partial token and twoFactorRequired', () => {
+      const store = useAuthStore()
+
+      store.setPartialAuth('partial-token-123')
+
+      expect(store.partialToken).toBe('partial-token-123')
+      expect(store.twoFactorRequired).toBe(true)
+    })
+  })
+
+  describe('clearPartialAuth', () => {
+    it('should clear partial token and twoFactorRequired', () => {
+      const store = useAuthStore()
+      store.partialToken = 'partial-token-123'
+      store.twoFactorRequired = true
+
+      store.clearPartialAuth()
+
+      expect(store.partialToken).toBeNull()
+      expect(store.twoFactorRequired).toBe(false)
+    })
+  })
+
+  describe('verifyTotp', () => {
+    const mockUser = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' as const }
+    const mockToken = 'mock-jwt-token'
+    const mockRefreshToken = 'mock-refresh-token'
+    const mockResponse = { user: mockUser, token: mockToken, refreshToken: mockRefreshToken }
+
+    it('should complete login on successful TOTP verification', async () => {
+      vi.mocked(twoFaService.verifyCode).mockResolvedValue(mockResponse)
+
+      const store = useAuthStore()
+      store.partialToken = 'partial-token-123'
+      store.twoFactorRequired = true
+
+      await store.verifyTotp('123456')
+
+      expect(twoFaService.verifyCode).toHaveBeenCalledWith('123456', 'partial-token-123')
+      expect(store.user).toEqual(mockUser)
+      expect(store.token).toBe(mockToken)
+      expect(store.twoFactorRequired).toBe(false)
+      expect(store.partialToken).toBeNull()
+      expect(router.push).toHaveBeenCalledWith('/')
+    })
+
+    it('should throw error if no partial token', async () => {
+      const store = useAuthStore()
+      store.partialToken = null
+
+      await expect(store.verifyTotp('123456')).rejects.toThrow('No partial token available')
+    })
+
+    it('should set error on failed TOTP verification', async () => {
+      const errorMessage = 'Invalid code'
+      vi.mocked(twoFaService.verifyCode).mockRejectedValue({
+        response: { data: { message: errorMessage } },
+      })
+
+      const store = useAuthStore()
+      store.partialToken = 'partial-token-123'
+
+      await expect(store.verifyTotp('123456')).rejects.toBeDefined()
+
+      expect(store.error).toBe(errorMessage)
+      expect(store.twoFactorRequired).toBe(false)
+      expect(store.partialToken).toBe('partial-token-123')
+    })
+
+    it('should use default error message when no message in response', async () => {
+      vi.mocked(twoFaService.verifyCode).mockRejectedValue({
+        response: { data: {} },
+      })
+
+      const store = useAuthStore()
+      store.partialToken = 'partial-token-123'
+
+      await expect(store.verifyTotp('123456')).rejects.toBeDefined()
+
+      expect(store.error).toBe('Invalid code')
+    })
+  })
+
+  describe('verifyRecoveryCode', () => {
+    const mockUser = { id: 1, email: 'test@example.com', baseCurrencyCode: 'USD', role: 'USER' as const }
+    const mockToken = 'mock-jwt-token'
+    const mockRefreshToken = 'mock-refresh-token'
+    const mockResponse = { user: mockUser, token: mockToken, refreshToken: mockRefreshToken }
+
+    it('should complete login on successful recovery code verification', async () => {
+      vi.mocked(twoFaService.verifyRecoveryCode).mockResolvedValue(mockResponse)
+
+      const store = useAuthStore()
+      store.partialToken = 'partial-token-123'
+      store.twoFactorRequired = true
+
+      await store.verifyRecoveryCode('ABCD-1234')
+
+      expect(twoFaService.verifyRecoveryCode).toHaveBeenCalledWith('ABCD-1234', 'partial-token-123')
+      expect(store.user).toEqual(mockUser)
+      expect(store.token).toBe(mockToken)
+      expect(store.twoFactorRequired).toBe(false)
+      expect(store.partialToken).toBeNull()
+      expect(router.push).toHaveBeenCalledWith('/')
+    })
+
+    it('should throw error if no partial token', async () => {
+      const store = useAuthStore()
+      store.partialToken = null
+
+      await expect(store.verifyRecoveryCode('ABCD-1234')).rejects.toThrow('No partial token available')
+    })
+
+    it('should set error on failed recovery code verification', async () => {
+      const errorMessage = 'Invalid recovery code'
+      vi.mocked(twoFaService.verifyRecoveryCode).mockRejectedValue({
+        response: { data: { message: errorMessage } },
+      })
+
+      const store = useAuthStore()
+      store.partialToken = 'partial-token-123'
+
+      await expect(store.verifyRecoveryCode('INVALID')).rejects.toBeDefined()
+
+      expect(store.error).toBe(errorMessage)
+    })
+
+    it('should use default error message when no message in response', async () => {
+      vi.mocked(twoFaService.verifyRecoveryCode).mockRejectedValue({
+        response: { data: {} },
+      })
+
+      const store = useAuthStore()
+      store.partialToken = 'partial-token-123'
+
+      await expect(store.verifyRecoveryCode('INVALID')).rejects.toBeDefined()
+
+      expect(store.error).toBe('Invalid recovery code')
     })
   })
 })

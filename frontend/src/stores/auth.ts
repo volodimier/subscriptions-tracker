@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authService } from '@/services/authService'
-import type { User, LoginRequest, RegisterRequest } from '@/types'
+import { twoFaService } from '@/services/twoFaService'
+import type { User, LoginRequest, RegisterRequest, AuthResponse } from '@/types'
 import router from '@/router'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -10,25 +11,89 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshToken = ref<string | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const twoFactorRequired = ref<boolean>(false)
+  const partialToken = ref<string | null>(null)
 
   const isAuthenticated = computed(() => !!token.value && !!user.value)
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
 
-  async function login(data: LoginRequest) {
+  async function login(data: LoginRequest): Promise<AuthResponse> {
     loading.value = true
     error.value = null
     try {
       const response = await authService.login(data)
-      token.value = response.token
-      refreshToken.value = response.refreshToken
-      user.value = response.user
-      localStorage.setItem('token', response.token)
-      localStorage.setItem('refreshToken', response.refreshToken)
-      localStorage.setItem('user', JSON.stringify(response.user))
-      router.push('/')
+
+      // Check if 2FA is required
+      if (response.twoFactorRequired && response.partialToken) {
+        setPartialAuth(response.partialToken)
+        return response
+      }
+
+      // Complete login normally
+      completeLogin(response)
+      return response
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } }
       error.value = axiosError.response?.data?.message || 'Login failed'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function setPartialAuth(token: string) {
+    partialToken.value = token
+    twoFactorRequired.value = true
+  }
+
+  function clearPartialAuth() {
+    partialToken.value = null
+    twoFactorRequired.value = false
+  }
+
+  function completeLogin(response: AuthResponse) {
+    token.value = response.token
+    refreshToken.value = response.refreshToken
+    user.value = response.user
+    localStorage.setItem('token', response.token)
+    localStorage.setItem('refreshToken', response.refreshToken)
+    localStorage.setItem('user', JSON.stringify(response.user))
+    clearPartialAuth()
+    router.push('/')
+  }
+
+  async function verifyTotp(code: string): Promise<void> {
+    if (!partialToken.value) {
+      throw new Error('No partial token available')
+    }
+
+    loading.value = true
+    error.value = null
+    try {
+      const response = await twoFaService.verifyCode(code, partialToken.value)
+      completeLogin(response)
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } }
+      error.value = axiosError.response?.data?.message || 'Invalid code'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function verifyRecoveryCode(code: string): Promise<void> {
+    if (!partialToken.value) {
+      throw new Error('No partial token available')
+    }
+
+    loading.value = true
+    error.value = null
+    try {
+      const response = await twoFaService.verifyRecoveryCode(code, partialToken.value)
+      completeLogin(response)
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } }
+      error.value = axiosError.response?.data?.message || 'Invalid recovery code'
       throw err
     } finally {
       loading.value = false
@@ -107,10 +172,16 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     isAuthenticated,
     isAdmin,
+    twoFactorRequired,
+    partialToken,
     login,
     register,
     logout,
     checkAuth,
     updateUser,
+    setPartialAuth,
+    clearPartialAuth,
+    verifyTotp,
+    verifyRecoveryCode,
   }
 })

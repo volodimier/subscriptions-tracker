@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import TwoFaSection from '@/components/settings/TwoFaSection.vue'
 
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
@@ -150,6 +151,9 @@ function closeDeleteDialog() {
               Change Password
             </Button>
           </div>
+
+          <!-- Two-Factor Authentication Section -->
+          <TwoFaSection />
         </CardContent>
       </Card>
 
