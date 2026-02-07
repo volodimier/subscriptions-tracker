@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
@@ -23,6 +23,8 @@ const authStore = useAuthStore()
 const { isCollapsed, isMobile, isMobileOpen, toggle, closeMobile } = useSidebar()
 
 const showUserMenu = ref(false)
+const userMenuRef = ref<HTMLElement | null>(null)
+const userMenuButtonRef = ref<HTMLElement | null>(null)
 
 function toggleUserMenu() {
   showUserMenu.value = !showUserMenu.value
@@ -31,6 +33,42 @@ function toggleUserMenu() {
 function closeUserMenu() {
   showUserMenu.value = false
 }
+
+function handleClickOutside(event: MouseEvent) {
+  if (!showUserMenu.value) return
+
+  const target = event.target as Node
+  // Check if click is outside both the menu and the trigger button
+  if (
+    userMenuRef.value && !userMenuRef.value.contains(target) &&
+    userMenuButtonRef.value && !userMenuButtonRef.value.contains(target)
+  ) {
+    closeUserMenu()
+  }
+}
+
+function handleEscapeKey(event: KeyboardEvent) {
+  if (event.key === 'Escape' && showUserMenu.value) {
+    closeUserMenu()
+  }
+}
+
+// Add/remove event listeners based on menu state
+watch(showUserMenu, (isOpen) => {
+  if (isOpen) {
+    document.addEventListener('click', handleClickOutside)
+    document.addEventListener('keydown', handleEscapeKey)
+  } else {
+    document.removeEventListener('click', handleClickOutside)
+    document.removeEventListener('keydown', handleEscapeKey)
+  }
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleEscapeKey)
+})
 
 async function handleLogout() {
   closeUserMenu()
@@ -49,6 +87,7 @@ const navItems: NavItem[] = [
   { title: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
   { title: 'Services', href: '/services', icon: Layers },
   { title: 'Statistics', href: '/statistics', icon: BarChart3 },
+  { title: 'Settings', href: '/settings', icon: Settings },
 ]
 
 const adminNavItems: NavItem[] = [
@@ -68,6 +107,7 @@ function isActive(href: string): boolean {
 }
 
 function handleNavClick() {
+  closeUserMenu()
   if (isMobile.value) {
     closeMobile()
   }
@@ -215,6 +255,7 @@ function handleNavClick() {
     <!-- User section at bottom -->
     <div class="border-t p-2 relative">
       <button
+        ref="userMenuButtonRef"
         :title="isCollapsed && !isMobile ? (authStore.user?.email || 'User menu') : undefined"
         :class="cn(
           'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent',
@@ -245,19 +286,12 @@ function handleNavClick() {
       >
         <div
           v-if="showUserMenu"
+          ref="userMenuRef"
           :class="cn(
             'absolute bottom-full mb-2 w-48 origin-bottom-left rounded-lg border bg-card py-1 shadow-lg ring-1 ring-black/5',
             isCollapsed && !isMobile ? 'left-2' : 'left-2 right-2 w-auto'
           )"
         >
-          <router-link
-            to="/settings"
-            class="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
-            @click="closeUserMenu"
-          >
-            <Settings class="h-4 w-4" />
-            Settings
-          </router-link>
           <button
             class="flex w-full items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-accent transition-colors"
             @click="handleLogout"
@@ -267,13 +301,6 @@ function handleNavClick() {
           </button>
         </div>
       </Transition>
-
-      <!-- Click outside to close -->
-      <div
-        v-if="showUserMenu"
-        class="fixed inset-0 z-[-1]"
-        @click="closeUserMenu"
-      />
     </div>
   </aside>
 </template>
