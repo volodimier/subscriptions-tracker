@@ -120,6 +120,7 @@ open https://your-frontend.up.railway.app
 | `RAILPACK_JDK_VERSION` | Yes | `17` (project requires Java 17) |
 | `CORS_ALLOWED_ORIGINS` | Yes | Frontend URL - must include `https://` (e.g., `https://your-frontend.up.railway.app`) |
 | `SWAGGER_ENABLED` | No | Enable/disable Swagger UI (default: `true`) |
+| `REGISTRATION_ENABLED` | No | Enable/disable user registration (default: `true`). Set to `false` to prevent new user registrations. |
 | `FX_RATE_API_KEY` | No | API key for exchange rates |
 
 **Note:** Use `${{Postgres.VARIABLE}}` syntax to reference the PostgreSQL service variables. Additional debug variables (logging levels, JPA settings) are available in `application.yml` but rarely need overriding.

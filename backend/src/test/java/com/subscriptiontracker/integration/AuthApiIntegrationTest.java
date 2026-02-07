@@ -1,5 +1,6 @@
 package com.subscriptiontracker.integration;
 
+import com.subscriptiontracker.config.AuthConfig;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
@@ -11,12 +12,14 @@ import com.subscriptiontracker.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -33,6 +36,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @DisplayName("Auth API Integration Tests")
 class AuthApiIntegrationTest extends BaseIntegrationTest {
+
+    @Autowired
+    private AuthConfig authConfig;
 
     @Nested
     @DisplayName("User Registration")
@@ -141,6 +147,41 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+
+        @Test
+        @DisplayName("should return 403 Forbidden when registration is disabled")
+        void shouldReturnForbidden_WhenRegistrationIsDisabled() {
+            // Arrange - temporarily disable registration
+            boolean originalValue = authConfig.isRegistrationEnabled();
+            ReflectionTestUtils.setField(authConfig, "registrationEnabled", false);
+
+            try {
+                RegisterRequest request = RegisterRequest.builder()
+                        .email("newuser@example.com")
+                        .password("SecurePass123")
+                        .build();
+
+                // Act
+                ResponseEntity<ErrorResponse> response = restTemplate.postForEntity(
+                        getBaseUrl("/auth/register"),
+                        request,
+                        ErrorResponse.class
+                );
+
+                // Assert
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+                assertThat(response.getBody()).isNotNull();
+                assertThat(response.getBody().getError()).isEqualTo("FORBIDDEN");
+                assertThat(response.getBody().getMessage()).isEqualTo("Registration is currently disabled");
+
+                // Verify user was NOT created
+                Optional<User> user = userRepository.findByEmail("newuser@example.com");
+                assertThat(user).isEmpty();
+            } finally {
+                // Restore original value
+                ReflectionTestUtils.setField(authConfig, "registrationEnabled", originalValue);
+            }
         }
     }
 
