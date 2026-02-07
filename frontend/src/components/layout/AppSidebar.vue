@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
@@ -15,11 +15,27 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from 'lucide-vue-next'
 
 const route = useRoute()
 const authStore = useAuthStore()
 const { isCollapsed, isMobile, isMobileOpen, toggle, closeMobile } = useSidebar()
+
+const showUserMenu = ref(false)
+
+function toggleUserMenu() {
+  showUserMenu.value = !showUserMenu.value
+}
+
+function closeUserMenu() {
+  showUserMenu.value = false
+}
+
+async function handleLogout() {
+  closeUserMenu()
+  await authStore.logout()
+}
 
 interface NavItem {
   title: string
@@ -33,7 +49,6 @@ const navItems: NavItem[] = [
   { title: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
   { title: 'Services', href: '/services', icon: Layers },
   { title: 'Statistics', href: '/statistics', icon: BarChart3 },
-  { title: 'Settings', href: '/settings', icon: Settings },
 ]
 
 const adminNavItems: NavItem[] = [
@@ -196,19 +211,20 @@ function handleNavClick() {
     </nav>
 
     <!-- User section at bottom -->
-    <div class="border-t p-2">
-      <div
+    <div class="border-t p-2 relative">
+      <button
         :class="cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm',
+          'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent',
           isCollapsed && !isMobile && 'justify-center px-2'
         )"
+        @click="toggleUserMenu"
       >
         <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
           <span class="text-sm font-medium">
             {{ authStore.user?.email?.charAt(0).toUpperCase() || 'U' }}
           </span>
         </div>
-        <div v-if="!isCollapsed || isMobile" class="flex-1 truncate">
+        <div v-if="!isCollapsed || isMobile" class="flex-1 truncate text-left">
           <p class="truncate text-sm font-medium text-foreground">
             {{ authStore.user?.email || 'User' }}
           </p>
@@ -216,7 +232,48 @@ function handleNavClick() {
             {{ authStore.user?.role || 'Member' }}
           </p>
         </div>
-      </div>
+      </button>
+
+      <!-- User dropdown menu -->
+      <Transition
+        enter-active-class="transition duration-100 ease-out"
+        enter-from-class="transform scale-95 opacity-0"
+        enter-to-class="transform scale-100 opacity-100"
+        leave-active-class="transition duration-75 ease-in"
+        leave-from-class="transform scale-100 opacity-100"
+        leave-to-class="transform scale-95 opacity-0"
+      >
+        <div
+          v-if="showUserMenu"
+          :class="cn(
+            'absolute bottom-full mb-2 w-48 origin-bottom-left rounded-lg border bg-card py-1 shadow-lg ring-1 ring-black/5',
+            isCollapsed && !isMobile ? 'left-2' : 'left-2 right-2 w-auto'
+          )"
+        >
+          <router-link
+            to="/settings"
+            class="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+            @click="closeUserMenu"
+          >
+            <Settings class="h-4 w-4" />
+            Settings
+          </router-link>
+          <button
+            class="flex w-full items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-accent transition-colors"
+            @click="handleLogout"
+          >
+            <LogOut class="h-4 w-4" />
+            Logout
+          </button>
+        </div>
+      </Transition>
+
+      <!-- Click outside to close -->
+      <div
+        v-if="showUserMenu"
+        class="fixed inset-0 z-[-1]"
+        @click="closeUserMenu"
+      />
     </div>
   </aside>
 </template>

@@ -7,7 +7,7 @@ provideSidebar()
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-background">
+  <div class="flex h-screen overflow-hidden bg-background">
     <AppSidebar />
     <div class="flex flex-1 flex-col">
       <AppLayoutHeader />
