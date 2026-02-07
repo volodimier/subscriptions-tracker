@@ -153,6 +153,7 @@ function handleNavClick() {
         v-for="item in filteredNavItems"
         :key="item.href"
         :to="item.href"
+        :title="isCollapsed && !isMobile ? item.title : undefined"
         :class="cn(
           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
           isActive(item.href)
@@ -189,6 +190,7 @@ function handleNavClick() {
             v-for="item in filteredAdminItems"
             :key="item.href"
             :to="item.href"
+            :title="isCollapsed && !isMobile ? item.title : undefined"
             :class="cn(
               'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               isActive(item.href)
@@ -213,6 +215,7 @@ function handleNavClick() {
     <!-- User section at bottom -->
     <div class="border-t p-2 relative">
       <button
+        :title="isCollapsed && !isMobile ? (authStore.user?.email || 'User menu') : undefined"
         :class="cn(
           'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent',
           isCollapsed && !isMobile && 'justify-center px-2'
@@ -227,9 +230,6 @@ function handleNavClick() {
         <div v-if="!isCollapsed || isMobile" class="flex-1 truncate text-left">
           <p class="truncate text-sm font-medium text-foreground">
             {{ authStore.user?.email || 'User' }}
-          </p>
-          <p class="truncate text-xs text-muted-foreground">
-            {{ authStore.user?.role || 'Member' }}
           </p>
         </div>
       </button>
