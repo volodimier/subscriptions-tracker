@@ -58,7 +58,7 @@ totp:
   max-attempts: 5
   attempt-window-seconds: 30
   recovery-code-count: 10
-  issuer: ${TOTP_ISSUER:Subscription Tracker}
+  issuer: ${TOTP_ISSUER:PennyWise}
 
 fx-rate:
   api-key: ${FX_RATE_API_KEY:}

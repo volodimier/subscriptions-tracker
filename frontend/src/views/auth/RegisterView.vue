@@ -59,8 +59,8 @@ async function handleSubmit() {
   <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100/80 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
       <div class="text-center">
-        <h1 class="text-3xl font-semibold text-foreground tracking-tight">SubscriptionTracker</h1>
-        <p class="mt-2 text-muted-foreground">Track your subscriptions simply</p>
+        <h1 class="text-3xl font-semibold text-foreground tracking-tight">PennyWise</h1>
+        <p class="mt-2 text-muted-foreground">Be wise with your money</p>
       </div>
 
       <Card>
@@ -184,6 +184,10 @@ async function handleSubmit() {
           </div>
         </CardContent>
       </Card>
+
+      <p class="mt-8 text-center text-sm text-muted-foreground">
+        pennywise.cheap
+      </p>
     </div>
   </div>
 </template>
