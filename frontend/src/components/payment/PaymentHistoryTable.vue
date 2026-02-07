@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { usePaymentsStore } from '@/stores/payments'
+import { useSettingsStore } from '@/stores/settings'
 import type { PaymentRecord, CreatePaymentRequest } from '@/types'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import PaymentRecordForm from './PaymentRecordForm.vue'
@@ -21,6 +22,7 @@ const props = defineProps<{
 }>()
 
 const paymentsStore = usePaymentsStore()
+const settingsStore = useSettingsStore()
 
 const showForm = ref(false)
 const editingPayment = ref<PaymentRecord | null>(null)
@@ -149,7 +151,7 @@ function cancelDelete() {
               {{ payment.fxRateToBase.toFixed(4) }}
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-              {{ formatCurrency(payment.amountInBaseCurrency, 'USD') }}
+              {{ formatCurrency(payment.amountInBaseCurrency, settingsStore.settings?.baseCurrency || 'USD') }}
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-right text-sm space-x-1">
               <Button variant="ghost" size="sm" @click="openEditForm(payment)">

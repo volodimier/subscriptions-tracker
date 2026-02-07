@@ -8,13 +8,6 @@ export const BILLING_CYCLES = [
   { value: 'custom', label: 'Custom' },
 ] as const
 
-export const CURRENCY_SYMBOLS: Record<string, string> = {
-  USD: '$',
-  EUR: '\u20AC',
-  GBP: '\u00A3',
-  PLN: 'z\u0142',
-}
-
 export const CATEGORY_SUGGESTIONS = [
   'Entertainment',
   'Media',

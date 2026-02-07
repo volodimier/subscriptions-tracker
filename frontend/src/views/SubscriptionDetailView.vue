@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useSubscriptionsStore } from '@/stores/subscriptions'
+import { useSettingsStore } from '@/stores/settings'
 import { formatCurrency, formatDate, formatDateTime, getBillingCycleLabel, daysUntil } from '@/utils/formatters'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -23,6 +24,7 @@ import {
 const router = useRouter()
 const route = useRoute()
 const subscriptionsStore = useSubscriptionsStore()
+const settingsStore = useSettingsStore()
 
 const showCancelDialog = ref(false)
 const showDeleteDialog = ref(false)
@@ -185,7 +187,7 @@ async function handleDelete() {
               <dl class="space-y-3">
                 <div class="flex justify-between">
                   <dt class="text-gray-500">Total Paid</dt>
-                  <dd class="font-medium">{{ formatCurrency(subscriptionsStore.currentSubscription.stats.totalPaid, 'USD') }}</dd>
+                  <dd class="font-medium">{{ formatCurrency(subscriptionsStore.currentSubscription.stats.totalPaid, settingsStore.settings?.baseCurrency || 'USD') }}</dd>
                 </div>
                 <div class="flex justify-between">
                   <dt class="text-gray-500">Total Payments</dt>
@@ -193,7 +195,7 @@ async function handleDelete() {
                 </div>
                 <div class="flex justify-between">
                   <dt class="text-gray-500">Avg per Month</dt>
-                  <dd class="font-medium">{{ formatCurrency(subscriptionsStore.currentSubscription.stats.averagePerMonth, 'USD') }}</dd>
+                  <dd class="font-medium">{{ formatCurrency(subscriptionsStore.currentSubscription.stats.averagePerMonth, settingsStore.settings?.baseCurrency || 'USD') }}</dd>
                 </div>
                 <div class="flex justify-between">
                   <dt class="text-gray-500">Active Since</dt>
