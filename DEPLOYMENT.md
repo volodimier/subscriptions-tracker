@@ -118,7 +118,7 @@ open https://your-frontend.up.railway.app
 | `SPRING_DATASOURCE_PASSWORD` | Yes | `${{Postgres.PGPASSWORD}}` |
 | `JWT_SECRET` | Yes | Secret for JWT signing (generate with `openssl rand -base64 32`) |
 | `RAILPACK_JDK_VERSION` | Yes | `17` (project requires Java 17) |
-| `CORS_ALLOWED_ORIGINS` | Yes | Frontend URL (e.g., `https://your-frontend.up.railway.app`) |
+| `CORS_ALLOWED_ORIGINS` | Yes | Frontend URL - must include `https://` (e.g., `https://your-frontend.up.railway.app`) |
 | `SWAGGER_ENABLED` | No | Enable/disable Swagger UI (default: `true`) |
 | `FX_RATE_API_KEY` | No | API key for exchange rates |
 
@@ -128,7 +128,7 @@ open https://your-frontend.up.railway.app
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_API_BASE_URL` | Yes | Backend URL (e.g., `https://your-backend.up.railway.app`) |
+| `VITE_API_BASE_URL` | Yes | Backend URL - must include `https://` (e.g., `https://your-backend.up.railway.app`) |
 | `PORT` | Yes | `80` (Caddy static server port) |
 
 ---
