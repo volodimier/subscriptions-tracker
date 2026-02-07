@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +37,7 @@ import java.util.Map;
  * @see ErrorResponse
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /**
@@ -156,10 +159,12 @@ public class GlobalExceptionHandler {
     /**
      * Handles all unhandled exceptions (500).
      *
-     * <p>Returns a generic error message to avoid exposing internal details.</p>
+     * <p>Logs the full exception for debugging while returning a generic
+     * error message to avoid exposing internal details to clients.</p>
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        log.error("Unhandled exception occurred: {}", ex.getMessage(), ex);
         ErrorResponse error = ErrorResponse.builder()
                 .error("INTERNAL_SERVER_ERROR")
                 .message("An unexpected error occurred")
