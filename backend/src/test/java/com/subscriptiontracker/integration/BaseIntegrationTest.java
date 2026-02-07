@@ -9,9 +9,11 @@ import com.subscriptiontracker.dto.response.ServiceResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.BillingCycle;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
+import com.subscriptiontracker.repository.RecoveryCodeRepository;
 import com.subscriptiontracker.repository.RefreshTokenRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
+import com.subscriptiontracker.repository.TotpAttemptRepository;
 import com.subscriptiontracker.repository.UserRepository;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -95,6 +97,12 @@ public abstract class BaseIntegrationTest {
     @Autowired
     protected RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    protected RecoveryCodeRepository recoveryCodeRepository;
+
+    @Autowired
+    protected TotpAttemptRepository totpAttemptRepository;
+
     /**
      * Configures the Spring datasource to use the Testcontainers PostgreSQL instance.
      *
@@ -172,6 +180,8 @@ public abstract class BaseIntegrationTest {
      * Cleans up the database to ensure test isolation.
      */
     private void cleanDatabase() {
+        totpAttemptRepository.deleteAll();
+        recoveryCodeRepository.deleteAll();
         paymentRecordRepository.deleteAll();
         subscriptionRepository.deleteAll();
         serviceRepository.deleteAll();

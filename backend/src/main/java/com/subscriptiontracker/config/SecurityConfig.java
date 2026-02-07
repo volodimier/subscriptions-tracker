@@ -27,6 +27,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * <p>Configures JWT-based authentication, stateless session management,
  * and method-level security with role-based access control.</p>
  *
+ * <p>Two-Factor Authentication endpoints have special access rules:</p>
+ * <ul>
+ *   <li>Setup endpoints require full authentication</li>
+ *   <li>Verification endpoints accept partial tokens (TWO_FACTOR_PENDING authority)</li>
+ *   <li>Admin reset endpoint requires ADMIN role</li>
+ * </ul>
+ *
  * @author Generated
  * @since 1.0
  */
@@ -49,6 +56,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Auth endpoints that require authentication
                         .requestMatchers("/auth/me").authenticated()
+                        // TOTP verification endpoints - allow partial tokens (TWO_FACTOR_PENDING)
+                        .requestMatchers("/auth/totp/verify", "/auth/totp/recovery").hasAuthority("TWO_FACTOR_PENDING")
+                        // TOTP setup/management endpoints - require full authentication (handled by method security)
+                        .requestMatchers("/auth/totp/**").authenticated()
                         // Public auth endpoints (register, login, refresh, logout, health)
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()

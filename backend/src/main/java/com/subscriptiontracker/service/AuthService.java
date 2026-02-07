@@ -2,6 +2,7 @@ package com.subscriptiontracker.service;
 
 import com.subscriptiontracker.config.AuthConfig;
 import com.subscriptiontracker.config.JwtConfig;
+import com.subscriptiontracker.config.TotpConfig;
 import com.subscriptiontracker.constant.DomainConstants;
 import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.exception.RegistrationDisabledException;
@@ -13,6 +14,8 @@ import com.subscriptiontracker.dto.response.UserResponse;
 import com.subscriptiontracker.entity.RefreshToken;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.BadRequestException;
+import com.subscriptiontracker.exception.TotpException;
+import com.subscriptiontracker.exception.UnauthorizedException;
 import com.subscriptiontracker.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,12 +41,14 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>JWT access tokens with short expiration</li>
  *   <li>Refresh tokens with longer expiration for seamless re-authentication</li>
  *   <li>Token rotation on refresh for enhanced security</li>
+ *   <li>Two-factor authentication support with TOTP</li>
  * </ul>
  *
  * @author Generated
  * @since 1.0
  * @see JwtService
  * @see RefreshTokenService
+ * @see TwoFactorAuthService
  */
 @Service
 @RequiredArgsConstructor
@@ -54,6 +59,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final JwtConfig jwtConfig;
+    private final TotpConfig totpConfig;
     private final AuthConfig authConfig;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
@@ -109,12 +115,13 @@ public class AuthService {
     /**
      * Authenticates a user and generates access and refresh tokens.
      *
-     * <p>Validates the user's credentials against the stored password hash
-     * and returns both access and refresh tokens for subsequent authenticated
-     * requests and seamless token renewal.</p>
+     * <p>Validates the user's credentials against the stored password hash.
+     * If two-factor authentication is enabled for the user, returns a partial
+     * token that must be used to complete the 2FA verification. Otherwise,
+     * returns full access and refresh tokens.</p>
      *
      * @param request the login request containing email and password
-     * @return authentication response with user details, access token, and refresh token
+     * @return authentication response with user details and tokens (or partial token if 2FA enabled)
      * @throws org.springframework.security.authentication.BadCredentialsException if credentials are invalid
      */
     @Transactional
@@ -129,6 +136,24 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow();
 
+        // Check if 2FA is enabled
+        if (user.isTwoFactorEnabled()) {
+            String partialToken = jwtService.generatePartialToken(
+                    user.getId(),
+                    user.getEmail(),
+                    totpConfig.getPartialTokenExpirationMs()
+            );
+
+            log.info("2FA required for user: {}", user.getEmail());
+
+            return AuthResponse.builder()
+                    .twoFactorRequired(true)
+                    .partialToken(partialToken)
+                    .expiresIn(totpConfig.getPartialTokenExpirationMs() / 1000)
+                    .build();
+        }
+
+        // Standard login without 2FA
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String accessToken = jwtService.generateToken(userDetails);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
@@ -141,6 +166,49 @@ public class AuthService {
                 .refreshToken(refreshToken.getToken())
                 .tokenType("Bearer")
                 .expiresIn(jwtConfig.getExpiration() / 1000)
+                .twoFactorRequired(false)
+                .build();
+    }
+
+    /**
+     * Completes two-factor authentication login.
+     *
+     * <p>Validates the partial token and TOTP code, then generates full
+     * access and refresh tokens for the user.</p>
+     *
+     * @param partialToken the partial JWT token from the initial login
+     * @param userId       the user's ID extracted from the partial token
+     * @return authentication response with full tokens
+     * @throws TotpException if the partial token is invalid or 2FA is not enabled
+     */
+    @Transactional
+    public AuthResponse completeTwoFactorLogin(String partialToken, Long userId) {
+        // Verify the partial token is valid and has 2FA pending
+        if (!jwtService.isTwoFactorPending(partialToken)) {
+            throw new TotpException("Invalid or expired authentication token");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("User not found"));
+
+        if (!user.isTwoFactorEnabled()) {
+            throw new TotpException("Two-factor authentication is not enabled for this account");
+        }
+
+        // Generate full tokens
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        String accessToken = jwtService.generateToken(userDetails);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+
+        log.info("2FA verification successful for user: {}", user.getEmail());
+
+        return AuthResponse.builder()
+                .user(UserResponse.fromEntity(user))
+                .token(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .expiresIn(jwtConfig.getExpiration() / 1000)
+                .twoFactorRequired(false)
                 .build();
     }
 

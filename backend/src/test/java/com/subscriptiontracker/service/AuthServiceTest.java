@@ -2,6 +2,7 @@ package com.subscriptiontracker.service;
 
 import com.subscriptiontracker.config.AuthConfig;
 import com.subscriptiontracker.config.JwtConfig;
+import com.subscriptiontracker.config.TotpConfig;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
@@ -11,6 +12,8 @@ import com.subscriptiontracker.entity.Role;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.exception.RegistrationDisabledException;
+import com.subscriptiontracker.exception.TotpException;
+import com.subscriptiontracker.exception.UnauthorizedException;
 import com.subscriptiontracker.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -53,6 +56,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtConfig jwtConfig;
+
+    @Mock
+    private TotpConfig totpConfig;
 
     @Mock
     private AuthConfig authConfig;
@@ -328,6 +334,119 @@ class AuthServiceTest {
 
             assertEquals(3, revokedCount);
             verify(refreshTokenService).revokeAllUserTokens(1L);
+        }
+    }
+
+    @Nested
+    @DisplayName("login with 2FA")
+    class LoginWith2FA {
+
+        @Test
+        @DisplayName("should return partial token when 2FA is enabled")
+        void shouldReturnPartialTokenWhen2FAIsEnabled() {
+            User userWith2FA = User.builder()
+                    .id(1L)
+                    .email("test@example.com")
+                    .passwordHash("encodedPassword")
+                    .baseCurrencyCode("USD")
+                    .role(Role.USER)
+                    .twoFactorEnabled(true)
+                    .twoFactorSecret("encrypted-secret")
+                    .build();
+
+            when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(userWith2FA));
+            when(totpConfig.getPartialTokenExpirationMs()).thenReturn(300000L);
+            when(jwtService.generatePartialToken(eq(1L), eq("test@example.com"), eq(300000L)))
+                    .thenReturn("partial-token");
+
+            AuthResponse response = authService.login(loginRequest);
+
+            assertNotNull(response);
+            assertTrue(response.getTwoFactorRequired());
+            assertEquals("partial-token", response.getPartialToken());
+            assertNull(response.getToken());
+            assertNull(response.getRefreshToken());
+            assertEquals(300L, response.getExpiresIn()); // 300000ms / 1000 = 300s
+        }
+
+        @Test
+        @DisplayName("should return full tokens when 2FA is not enabled")
+        void shouldReturnFullTokensWhen2FAIsNotEnabled() {
+            when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(testUser));
+            when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
+            when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
+
+            AuthResponse response = authService.login(loginRequest);
+
+            assertNotNull(response);
+            assertFalse(response.getTwoFactorRequired());
+            assertNull(response.getPartialToken());
+            assertEquals("jwt-token", response.getToken());
+            assertEquals("refresh-token-uuid", response.getRefreshToken());
+        }
+    }
+
+    @Nested
+    @DisplayName("completeTwoFactorLogin")
+    class CompleteTwoFactorLogin {
+
+        @Test
+        @DisplayName("should return full tokens when partial token is valid")
+        void shouldReturnFullTokensWhenPartialTokenIsValid() {
+            when(jwtService.isTwoFactorPending("partial-token")).thenReturn(true);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(
+                    User.builder()
+                            .id(1L)
+                            .email("test@example.com")
+                            .passwordHash("encodedPassword")
+                            .baseCurrencyCode("USD")
+                            .role(Role.USER)
+                            .twoFactorEnabled(true)
+                            .build()
+            ));
+            when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
+            when(jwtService.generateToken(any(UserDetails.class))).thenReturn("full-jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
+
+            AuthResponse response = authService.completeTwoFactorLogin("partial-token", 1L);
+
+            assertNotNull(response);
+            assertFalse(response.getTwoFactorRequired());
+            assertEquals("full-jwt-token", response.getToken());
+            assertEquals("refresh-token-uuid", response.getRefreshToken());
+            assertNotNull(response.getUser());
+        }
+
+        @Test
+        @DisplayName("should throw exception when partial token is not 2FA pending")
+        void shouldThrowExceptionWhenPartialTokenIsNot2FAPending() {
+            when(jwtService.isTwoFactorPending("invalid-token")).thenReturn(false);
+
+            assertThrows(TotpException.class,
+                    () -> authService.completeTwoFactorLogin("invalid-token", 1L));
+        }
+
+        @Test
+        @DisplayName("should throw exception when user not found")
+        void shouldThrowExceptionWhenUserNotFound() {
+            when(jwtService.isTwoFactorPending("partial-token")).thenReturn(true);
+            when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThrows(UnauthorizedException.class,
+                    () -> authService.completeTwoFactorLogin("partial-token", 999L));
+        }
+
+        @Test
+        @DisplayName("should throw exception when 2FA is not enabled for user")
+        void shouldThrowExceptionWhen2FANotEnabled() {
+            when(jwtService.isTwoFactorPending("partial-token")).thenReturn(true);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser)); // testUser has 2FA disabled
+
+            assertThrows(TotpException.class,
+                    () -> authService.completeTwoFactorLogin("partial-token", 1L));
         }
     }
 }

@@ -5,8 +5,10 @@ import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.entity.JobStatus;
 import com.subscriptiontracker.entity.TriggerType;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
+import com.subscriptiontracker.service.CurrentUserService;
 import com.subscriptiontracker.service.JobRunService;
 import com.subscriptiontracker.service.JwtService;
+import com.subscriptiontracker.service.TwoFactorAuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -45,6 +47,12 @@ class AdminControllerTest {
 
     @MockBean
     private JobRunService jobRunService;
+
+    @MockBean
+    private TwoFactorAuthService twoFactorAuthService;
+
+    @MockBean
+    private CurrentUserService currentUserService;
 
     @MockBean
     private JwtService jwtService;
