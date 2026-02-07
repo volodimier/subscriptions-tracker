@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Shield, Copy, Download, Loader2, Check } from 'lucide-vue-next'
 import { twoFaService } from '@/services/twoFaService'
 import { Button } from '@/components/ui/button'
@@ -41,6 +41,13 @@ const canConfirmSaved = computed(() => copiedCodes.value || downloadedCodes.valu
 const isOpen = computed({
   get: () => props.open,
   set: (value: boolean) => emit('update:open', value),
+})
+
+// Watch for dialog opening to trigger setup
+watch(() => props.open, (newValue) => {
+  if (newValue && step.value === 'setup' && !setupData.value) {
+    initiateSetup()
+  }
 })
 
 async function initiateSetup() {
