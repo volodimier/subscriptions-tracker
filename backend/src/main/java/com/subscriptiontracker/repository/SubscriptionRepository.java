@@ -96,4 +96,16 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
      */
     @Query("SELECT DISTINCT srv.category FROM Subscription s JOIN s.service srv WHERE s.user.id = :userId AND srv.category IS NOT NULL")
     List<String> findDistinctCategoriesByUserId(@Param("userId") Long userId);
+
+    /**
+     * Finds the earliest subscription start date for a given user.
+     *
+     * <p>Returns the minimum start date from all subscriptions belonging to the user,
+     * regardless of subscription status.</p>
+     *
+     * @param userId the user ID
+     * @return an Optional containing the earliest start date, or empty if no subscriptions exist
+     */
+    @Query("SELECT MIN(s.startDate) FROM Subscription s WHERE s.user.id = :userId")
+    Optional<LocalDate> findEarliestStartDateByUserId(@Param("userId") Long userId);
 }

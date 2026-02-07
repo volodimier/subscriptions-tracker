@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Component
@@ -32,7 +33,7 @@ public class PaymentGeneratorScheduler {
     public void generatePaymentRecords() {
         log.info("Starting payment record generation job");
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
         List<Subscription> dueSubscriptions = subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1));
 
         int count = 0;

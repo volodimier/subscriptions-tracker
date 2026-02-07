@@ -107,6 +107,10 @@ public class DashboardService {
         // Get top services (simplified - would need more complex query for proper implementation)
         List<DashboardSummaryResponse.TopService> topServices = new ArrayList<>();
 
+        // Get the earliest subscription start date for the user
+        LocalDate earliestSubscriptionDate = subscriptionRepository.findEarliestStartDateByUserId(userId)
+                .orElse(null);
+
         return DashboardSummaryResponse.builder()
                 .period(DashboardSummaryResponse.Period.builder()
                         .startDate(startDate)
@@ -121,6 +125,7 @@ public class DashboardService {
                         .build())
                 .byCategory(byCategory)
                 .topServices(topServices)
+                .earliestSubscriptionDate(earliestSubscriptionDate)
                 .build();
     }
 
