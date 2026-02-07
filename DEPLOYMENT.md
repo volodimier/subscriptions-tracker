@@ -219,16 +219,7 @@ openssl rand -base64 32
 - **Setup**: Users scan a QR code with their authenticator app
 - **Recovery Codes**: 10 single-use backup codes provided during setup
 - **Rate Limiting**: 5 TOTP attempts per 30 seconds to prevent brute force
-- **Admin Reset**: Administrators can reset 2FA for locked-out users
 
-### Admin Reset
+### Account Recovery
 
-If a user loses access to their authenticator app and recovery codes, an admin can reset their 2FA:
-
-```bash
-# Via API (requires admin JWT)
-curl -X POST https://your-backend/api/v1/admin/users/{userId}/totp/reset \
-  -H "Authorization: Bearer <admin-token>"
-```
-
-After reset, the user can log in without 2FA and optionally re-enable it.
+If a user loses access to their authenticator app, they can use one of their 10 recovery codes to log in. Users should store recovery codes securely during initial 2FA setup.

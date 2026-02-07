@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>Verify: Verify TOTP code during login</li>
  *   <li>Recovery: Use recovery code as backup authentication</li>
  *   <li>Disable: Turn off 2FA (requires password and TOTP code)</li>
- *   <li>Admin Reset: Reset 2FA for a user (admin only)</li>
  * </ul>
  *
  * @author Generated
@@ -305,36 +304,6 @@ public class TwoFactorAuthService {
         List<String> newCodes = recoveryCodeService.generateRecoveryCodes(user);
         log.info("Recovery codes regenerated for user: {}", user.getEmail());
         return newCodes;
-    }
-
-    /**
-     * Admin-only method to reset 2FA for a user.
-     *
-     * <p>This disables 2FA without requiring password or TOTP verification.
-     * Should only be used by administrators when a user is locked out.</p>
-     *
-     * @param userId  the ID of the user to reset
-     * @param adminId the ID of the admin performing the reset (for audit)
-     * @throws TotpException if user not found or 2FA not enabled
-     */
-    @Transactional
-    public void adminReset(Long userId, Long adminId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new TotpException("User not found"));
-
-        if (!user.isTwoFactorEnabled()) {
-            throw new TotpException("Two-factor authentication is not enabled for this user");
-        }
-
-        user.setTwoFactorEnabled(false);
-        user.setTwoFactorSecret(null);
-        user.setTwoFactorEnabledAt(null);
-        userRepository.save(user);
-
-        recoveryCodeService.deleteAllForUser(userId);
-        rateLimitService.clearAttempts(userId);
-
-        log.warn("Admin {} reset 2FA for user {}", adminId, user.getEmail());
     }
 
     /**

@@ -2,10 +2,7 @@ package com.subscriptiontracker.controller;
 
 import com.subscriptiontracker.dto.response.JobRunResponse;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
-import com.subscriptiontracker.entity.User;
-import com.subscriptiontracker.service.CurrentUserService;
 import com.subscriptiontracker.service.JobRunService;
-import com.subscriptiontracker.service.TwoFactorAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -15,8 +12,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -38,8 +33,6 @@ import org.springframework.web.bind.annotation.*;
 public class AdminController {
 
     private final JobRunService jobRunService;
-    private final TwoFactorAuthService twoFactorAuthService;
-    private final CurrentUserService currentUserService;
 
     /**
      * Retrieves paginated job run history.
@@ -91,37 +84,5 @@ public class AdminController {
     ) {
         JobRunResponse response = jobRunService.getJobRunById(id);
         return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Resets two-factor authentication for a user.
-     *
-     * <p>This admin-only operation disables 2FA without requiring
-     * password or TOTP verification. Use when a user is locked out.</p>
-     *
-     * @param userId      the ID of the user to reset 2FA for
-     * @param userDetails the authenticated admin user
-     * @return empty response on success
-     */
-    @Operation(
-            summary = "Reset user's 2FA",
-            description = "Disables two-factor authentication for a user. "
-                    + "Use when a user is locked out of their account."
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "2FA reset successfully"),
-            @ApiResponse(responseCode = "400", description = "2FA not enabled for user"),
-            @ApiResponse(responseCode = "401", description = "Not authenticated"),
-            @ApiResponse(responseCode = "403", description = "Not authorized - requires ADMIN role"),
-            @ApiResponse(responseCode = "404", description = "User not found")
-    })
-    @PostMapping("/users/{userId}/totp/reset")
-    public ResponseEntity<Void> resetUserTotp(
-            @Parameter(description = "User ID") @PathVariable Long userId,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        User admin = currentUserService.getCurrentUser(userDetails);
-        twoFactorAuthService.adminReset(userId, admin.getId());
-        return ResponseEntity.noContent().build();
     }
 }

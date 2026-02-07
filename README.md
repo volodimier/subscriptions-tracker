@@ -144,7 +144,7 @@ The application supports two user roles:
 | Role | Capabilities |
 |------|--------------|
 | **USER** | Manage personal subscriptions, services, and view statistics |
-| **ADMIN** | All USER capabilities + view job run history, manually trigger FX rate refresh, reset user 2FA |
+| **ADMIN** | All USER capabilities + view job run history, manually trigger FX rate refresh |
 
 All new users are created with the `USER` role by default.
 
