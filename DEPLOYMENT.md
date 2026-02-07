@@ -145,6 +145,27 @@ Both services use `railway.json` for build configuration:
 
 ---
 
+## JVM Memory Tuning
+
+The backend uses optimized JVM flags to minimize RAM usage on Railway's resource-constrained environment:
+
+```
+-Xmx256m -Xms128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=16m -XX:TieredStopAtLevel=1
+```
+
+| Flag | Purpose |
+|------|---------|
+| `-Xmx256m -Xms128m` | Heap memory bounds (max 256MB, initial 128MB) |
+| `-XX:+UseSerialGC` | Single-threaded GC with lower memory overhead |
+| `-XX:MaxMetaspaceSize=80m` | Cap class metadata memory |
+| `-XX:ReservedCodeCacheSize=32m` | Cap JIT compiled code cache |
+| `-XX:MaxDirectMemorySize=16m` | Cap off-heap NIO buffers |
+| `-XX:TieredStopAtLevel=1` | Simpler JIT compilation (less memory, slightly slower peak performance) |
+
+Additionally, Spring's lazy initialization is enabled in `application.yml` to defer bean creation until first use, reducing initial memory footprint.
+
+---
+
 ## Environments
 
 Use **separate Railway projects** for staging and production to keep them fully isolated.

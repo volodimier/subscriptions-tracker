@@ -5,7 +5,7 @@
     "buildCommand": "./gradlew clean build -x test --no-daemon"
   },
   "deploy": {
-    "startCommand": "java -Xmx300m -Xms150m -XX:+UseSerialGC -jar build/libs/*.jar",
+    "startCommand": "java -Xmx256m -Xms128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=16m -XX:TieredStopAtLevel=1 -jar build/libs/*.jar",
     "healthcheckPath": "/api/v1/actuator/health",
     "healthcheckTimeout": 60,
     "restartPolicyType": "ON_FAILURE",
