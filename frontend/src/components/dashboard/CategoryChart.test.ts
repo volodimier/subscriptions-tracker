@@ -1,23 +1,54 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import CategoryChart from './CategoryChart.vue'
+import { defineComponent, h, type PropType, type Component } from 'vue'
 import type { CategoryBreakdown } from '@/types'
 
-// Mock the Unovis components to avoid rendering issues in tests
-vi.mock('@unovis/vue', () => ({
-  VisSingleContainer: { template: '<div><slot /></div>' },
-  VisDonut: { template: '<div />' },
-  VisTooltip: { template: '<div />' },
-}))
+// Mock the shadcn-vue DonutChart component to avoid Unovis rendering issues in jsdom
+vi.mock('@/components/ui/chart-donut', () => ({
+  DonutChart: defineComponent({
+    name: 'MockDonutChart',
+    props: {
+      data: { type: Array as PropType<Record<string, unknown>[]>, required: true },
+      index: { type: String, required: true },
+      category: { type: String, required: true },
+      colors: { type: Array as PropType<string[]>, default: () => [] },
+      margin: { type: Object, default: () => ({}) },
+      filterOpacity: { type: Number, default: 0.2 },
+      showTooltip: { type: Boolean, default: true },
+      showLegend: { type: Boolean, default: true },
+      type: { type: String as PropType<'donut' | 'pie'>, default: 'donut' },
+      sortFunction: { type: Function, default: () => undefined },
+      valueFormatter: { type: Function, default: undefined },
+      customTooltip: { type: Object as PropType<Component>, default: undefined },
+    },
+    setup(props) {
+      // Store props for test assertions - use global variable
+      ;(globalThis as Record<string, unknown>).__mockDonutChartProps = { ...props }
 
-vi.mock('@unovis/ts', () => ({
-  Donut: { selectors: { segment: 'segment' } },
-  omit: vi.fn((obj, keys) => {
-    const result = { ...obj }
-    keys.forEach((key: string) => delete result[key])
-    return result
+      return () => h('div', {
+        'data-testid': 'mock-donut-chart',
+        'data-index': props.index,
+        'data-category': props.category,
+        'data-type': props.type,
+        'data-data-length': props.data.length,
+      }, [
+        h('span', { class: 'mock-chart-label' }, 'DonutChart Mock'),
+      ])
+    },
   }),
 }))
+
+// Import after mocking
+import CategoryChart from './CategoryChart.vue'
+
+// Helper to get stored mock props
+function getMockDonutChartProps(): Record<string, unknown> | null {
+  return (globalThis as Record<string, unknown>).__mockDonutChartProps as Record<string, unknown> | null
+}
+
+function resetMockDonutChartProps(): void {
+  ;(globalThis as Record<string, unknown>).__mockDonutChartProps = null
+}
 
 describe('CategoryChart', () => {
   const createMockData = (): CategoryBreakdown[] => [
@@ -25,6 +56,14 @@ describe('CategoryChart', () => {
     { category: 'Music', total: 29.99, percentage: 30, count: 2 },
     { category: 'Fitness', total: 24.01, percentage: 24, count: 1 },
   ]
+
+  beforeEach(() => {
+    resetMockDonutChartProps()
+  })
+
+  afterEach(() => {
+    resetMockDonutChartProps()
+  })
 
   describe('rendering', () => {
     it('should render without crashing', () => {
@@ -86,6 +125,16 @@ describe('CategoryChart', () => {
       expect(wrapper.text()).toContain('(46.0%)')
       expect(wrapper.text()).toContain('(30.0%)')
       expect(wrapper.text()).toContain('(24.0%)')
+    })
+
+    it('should render the mocked DonutChart component', () => {
+      const wrapper = mount(CategoryChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+      expect(wrapper.find('[data-testid="mock-donut-chart"]').exists()).toBe(true)
     })
   })
 
@@ -151,6 +200,100 @@ describe('CategoryChart', () => {
 
       const vm = wrapper.vm as unknown as { chartData: { category: string; total: number }[] }
       expect(vm.chartData).toEqual([])
+    })
+  })
+
+  describe('chart props verification', () => {
+    it('should pass correct data to DonutChart', () => {
+      mount(CategoryChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockDonutChartProps()
+      expect(mockProps).not.toBeNull()
+      expect(mockProps?.data).toEqual([
+        { category: 'Entertainment', total: 45.99 },
+        { category: 'Music', total: 29.99 },
+        { category: 'Fitness', total: 24.01 },
+      ])
+    })
+
+    it('should pass correct index prop to DonutChart', () => {
+      mount(CategoryChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockDonutChartProps()
+      expect(mockProps?.index).toBe('category')
+    })
+
+    it('should pass correct category prop to DonutChart', () => {
+      mount(CategoryChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockDonutChartProps()
+      expect(mockProps?.category).toBe('total')
+    })
+
+    it('should pass type as pie to DonutChart', () => {
+      mount(CategoryChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockDonutChartProps()
+      expect(mockProps?.type).toBe('pie')
+    })
+
+    it('should pass showLegend as false to DonutChart', () => {
+      mount(CategoryChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockDonutChartProps()
+      expect(mockProps?.showLegend).toBe(false)
+    })
+
+    it('should pass correct colors to DonutChart', () => {
+      mount(CategoryChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockDonutChartProps()
+      // Should have 3 colors for 3 categories
+      expect((mockProps?.colors as string[])?.length).toBe(3)
+      expect((mockProps?.colors as string[])?.[0]).toBe('hsl(var(--primary))')
+    })
+
+    it('should pass valueFormatter function to DonutChart', () => {
+      mount(CategoryChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockDonutChartProps()
+      expect(mockProps?.valueFormatter).toBeDefined()
+      expect(typeof mockProps?.valueFormatter).toBe('function')
     })
   })
 

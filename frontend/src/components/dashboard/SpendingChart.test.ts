@@ -1,28 +1,56 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import SpendingChart from './SpendingChart.vue'
+import { defineComponent, h, type PropType, type Component } from 'vue'
 
-// Mock the Unovis components to avoid rendering issues in tests
-vi.mock('@unovis/vue', () => ({
-  VisXYContainer: { template: '<div><slot /></div>' },
-  VisArea: { template: '<div />' },
-  VisLine: { template: '<div />' },
-  VisAxis: { template: '<div />' },
-  VisCrosshair: { template: '<div />' },
-  VisTooltip: { template: '<div />' },
-}))
+// Mock the shadcn-vue AreaChart component to avoid Unovis rendering issues in jsdom
+vi.mock('@/components/ui/chart-area', () => ({
+  AreaChart: defineComponent({
+    name: 'MockAreaChart',
+    props: {
+      data: { type: Array as PropType<Record<string, unknown>[]>, required: true },
+      categories: { type: Array as PropType<string[]>, required: true },
+      index: { type: String, required: true },
+      colors: { type: Array as PropType<string[]>, default: () => [] },
+      margin: { type: Object, default: () => ({}) },
+      filterOpacity: { type: Number, default: 0.2 },
+      xFormatter: { type: Function, default: undefined },
+      yFormatter: { type: Function, default: undefined },
+      showXAxis: { type: Boolean, default: true },
+      showYAxis: { type: Boolean, default: true },
+      showTooltip: { type: Boolean, default: true },
+      showLegend: { type: Boolean, default: true },
+      showGridLine: { type: Boolean, default: true },
+      showGradient: { type: Boolean, default: true },
+      customTooltip: { type: Object as PropType<Component>, default: undefined },
+      curveType: { type: String, default: undefined },
+    },
+    setup(props) {
+      // Store props for test assertions - use global variable
+      ;(globalThis as Record<string, unknown>).__mockAreaChartProps = { ...props }
 
-vi.mock('@unovis/ts', () => ({
-  Area: { selectors: { area: 'area' } },
-  Axis: { selectors: { grid: 'grid' } },
-  Line: { selectors: { line: 'line' } },
-  CurveType: { MonotoneX: 'monotoneX' },
-  omit: vi.fn((obj, keys) => {
-    const result = { ...obj }
-    keys.forEach((key: string) => delete result[key])
-    return result
+      return () => h('div', {
+        'data-testid': 'mock-area-chart',
+        'data-index': props.index,
+        'data-categories': JSON.stringify(props.categories),
+        'data-data-length': props.data.length,
+      }, [
+        h('span', { class: 'mock-chart-label' }, 'AreaChart Mock'),
+      ])
+    },
   }),
 }))
+
+// Import after mocking
+import SpendingChart from './SpendingChart.vue'
+
+// Helper to get stored mock props
+function getMockAreaChartProps(): Record<string, unknown> | null {
+  return (globalThis as Record<string, unknown>).__mockAreaChartProps as Record<string, unknown> | null
+}
+
+function resetMockAreaChartProps(): void {
+  ;(globalThis as Record<string, unknown>).__mockAreaChartProps = null
+}
 
 describe('SpendingChart', () => {
   const createMockData = () => [
@@ -31,6 +59,14 @@ describe('SpendingChart', () => {
     { month: '2025-03', estimated: 200.00 },
     { month: '2025-04', estimated: 125.75 },
   ]
+
+  beforeEach(() => {
+    resetMockAreaChartProps()
+  })
+
+  afterEach(() => {
+    resetMockAreaChartProps()
+  })
 
   describe('rendering', () => {
     it('should render without crashing', () => {
@@ -51,6 +87,16 @@ describe('SpendingChart', () => {
         },
       })
       expect(wrapper.find('.h-64').exists()).toBe(true)
+    })
+
+    it('should render the mocked AreaChart component', () => {
+      const wrapper = mount(SpendingChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+      expect(wrapper.find('[data-testid="mock-area-chart"]').exists()).toBe(true)
     })
   })
 
@@ -128,6 +174,111 @@ describe('SpendingChart', () => {
       vm.chartData.forEach((dataPoint, index) => {
         expect(dataPoint.month).toBe(expectedMonths[index])
       })
+    })
+  })
+
+  describe('chart props verification', () => {
+    it('should pass correct data to AreaChart', () => {
+      mount(SpendingChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockAreaChartProps()
+      expect(mockProps).not.toBeNull()
+      expect(mockProps?.data).toEqual([
+        { month: 'Jan', spending: 150.00 },
+        { month: 'Feb', spending: 175.50 },
+        { month: 'Mar', spending: 200.00 },
+        { month: 'Apr', spending: 125.75 },
+      ])
+    })
+
+    it('should pass correct index prop to AreaChart', () => {
+      mount(SpendingChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockAreaChartProps()
+      expect(mockProps?.index).toBe('month')
+    })
+
+    it('should pass correct categories to AreaChart', () => {
+      mount(SpendingChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockAreaChartProps()
+      expect(mockProps?.categories).toEqual(['spending'])
+    })
+
+    it('should pass showLegend as false to AreaChart', () => {
+      mount(SpendingChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockAreaChartProps()
+      expect(mockProps?.showLegend).toBe(false)
+    })
+
+    it('should pass showGradient as true to AreaChart', () => {
+      mount(SpendingChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockAreaChartProps()
+      expect(mockProps?.showGradient).toBe(true)
+    })
+
+    it('should pass primary color to AreaChart', () => {
+      mount(SpendingChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockAreaChartProps()
+      expect(mockProps?.colors).toEqual(['hsl(var(--primary))'])
+    })
+
+    it('should pass custom tooltip component to AreaChart', () => {
+      mount(SpendingChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockAreaChartProps()
+      expect(mockProps?.customTooltip).toBeDefined()
+    })
+
+    it('should pass yFormatter function to AreaChart', () => {
+      mount(SpendingChart, {
+        props: {
+          data: createMockData(),
+          currency: 'USD',
+        },
+      })
+
+      const mockProps = getMockAreaChartProps()
+      expect(mockProps?.yFormatter).toBeDefined()
+      expect(typeof mockProps?.yFormatter).toBe('function')
     })
   })
 
