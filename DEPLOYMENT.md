@@ -150,15 +150,15 @@ Both services use `railway.json` for build configuration:
 The backend uses optimized JVM flags to minimize RAM usage on Railway's resource-constrained environment:
 
 ```
--Xmx256m -Xms128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=80m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=16m -XX:TieredStopAtLevel=1
+-Xmx256m -Xms128m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=40m -XX:MaxDirectMemorySize=16m -XX:TieredStopAtLevel=1
 ```
 
 | Flag | Purpose |
 |------|---------|
 | `-Xmx256m -Xms128m` | Heap memory bounds (max 256MB, initial 128MB) |
 | `-XX:+UseSerialGC` | Single-threaded GC with lower memory overhead |
-| `-XX:MaxMetaspaceSize=80m` | Cap class metadata memory |
-| `-XX:ReservedCodeCacheSize=32m` | Cap JIT compiled code cache |
+| `-XX:MaxMetaspaceSize=128m` | Cap class metadata memory (Spring Boot needs ~100-120MB) |
+| `-XX:ReservedCodeCacheSize=40m` | Cap JIT compiled code cache |
 | `-XX:MaxDirectMemorySize=16m` | Cap off-heap NIO buffers |
 | `-XX:TieredStopAtLevel=1` | Simpler JIT compilation (less memory, slightly slower peak performance) |
 
