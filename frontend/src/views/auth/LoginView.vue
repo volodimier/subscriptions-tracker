@@ -296,6 +296,10 @@ function toggleRecoveryMode() {
           </CardContent>
         </template>
       </Card>
+
+      <p class="mt-8 text-center text-sm text-muted-foreground">
+        pennywise.cheap
+      </p>
     </div>
   </div>
 </template>

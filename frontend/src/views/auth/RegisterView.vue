@@ -184,6 +184,10 @@ async function handleSubmit() {
           </div>
         </CardContent>
       </Card>
+
+      <p class="mt-8 text-center text-sm text-muted-foreground">
+        pennywise.cheap
+      </p>
     </div>
   </div>
 </template>
