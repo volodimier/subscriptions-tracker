@@ -123,6 +123,7 @@ open https://your-frontend.up.railway.app
 | `REGISTRATION_ENABLED` | No | Enable/disable user registration (default: `true`). Set to `false` to prevent new user registrations. |
 | `FX_RATE_API_KEY` | No | API key for exchange rates |
 | `TOTP_ENCRYPTION_KEY` | **Yes (prod)** | Encryption key for 2FA secrets. Generate with `openssl rand -base64 32`. Must be at least 32 characters. |
+| `TOTP_ISSUER` | No | Name shown in authenticator apps (default: `Subscription Tracker`). Use different values for staging/prod. |
 
 **Note:** Use `${{Postgres.VARIABLE}}` syntax to reference the PostgreSQL service variables. Additional debug variables (logging levels, JPA settings) are available in `application.yml` but rarely need overriding.
 
