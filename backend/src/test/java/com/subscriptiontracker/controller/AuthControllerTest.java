@@ -1,6 +1,7 @@
 package com.subscriptiontracker.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.subscriptiontracker.config.EmailConfig;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
@@ -54,6 +55,9 @@ class AuthControllerTest {
 
     @MockBean
     private com.subscriptiontracker.service.CurrentUserService currentUserService;
+
+    @MockBean
+    private EmailConfig emailConfig;
 
     private RegisterRequest validRegisterRequest;
     private LoginRequest validLoginRequest;

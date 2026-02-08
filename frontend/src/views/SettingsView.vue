@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import TwoFaSection from '@/components/settings/TwoFaSection.vue'
+import EmailVerificationSection from '@/components/settings/EmailVerificationSection.vue'
 
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
@@ -151,6 +152,9 @@ function closeDeleteDialog() {
               Change Password
             </Button>
           </div>
+
+          <!-- Email Verification Section -->
+          <EmailVerificationSection v-if="authStore.user?.emailVerificationEnabled" />
 
           <!-- Two-Factor Authentication Section -->
           <TwoFaSection />

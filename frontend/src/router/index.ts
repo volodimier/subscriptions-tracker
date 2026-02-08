@@ -38,6 +38,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/verify-email',
+    name: 'verify-email',
+    component: () => import('@/views/auth/VerifyEmailView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/',
     name: 'dashboard',
     component: () => import('@/views/DashboardView.vue'),

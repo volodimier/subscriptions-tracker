@@ -9,8 +9,10 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +32,10 @@ import java.util.List;
  * <p>Users can enable two-factor authentication (2FA) using TOTP (Time-based One-Time Password)
  * for enhanced account security. When 2FA is enabled, users must provide a verification code
  * from their authenticator app in addition to their password during login.</p>
+ *
+ * <p>Email verification is required for new accounts. Users have a grace period (default 7 days)
+ * during which they can access the application without verifying their email. After the grace
+ * period expires, login is blocked until the email is verified.</p>
  *
  * @author Generated
  * @since 1.0
@@ -108,6 +114,21 @@ public class User {
     private Instant twoFactorEnabledAt;
 
     /**
+     * Whether the user's email address has been verified.
+     * Users have a grace period to verify their email after registration.
+     */
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    /**
+     * Timestamp when the user's email was verified.
+     * Null if email has not been verified yet.
+     */
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+
+    /**
      * Timestamp when the user account was created.
      * Automatically set on entity creation.
      */
@@ -138,4 +159,62 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Subscription> subscriptions = new ArrayList<>();
+
+    /**
+     * Checks if the user is within the email verification grace period.
+     *
+     * <p>During the grace period, unverified users can still access
+     * the application with full functionality.</p>
+     *
+     * @param gracePeriodDays the number of days for the grace period
+     * @return true if within grace period, false otherwise
+     */
+    public boolean isWithinGracePeriod(int gracePeriodDays) {
+        if (emailVerified) {
+            return true; // Verified users are always "within grace period"
+        }
+        if (createdAt == null) {
+            return true; // New user, not yet persisted
+        }
+        LocalDateTime gracePeriodEnd = createdAt.plusDays(gracePeriodDays);
+        return LocalDateTime.now(ZoneOffset.UTC).isBefore(gracePeriodEnd);
+    }
+
+    /**
+     * Calculates when the grace period ends for this user.
+     *
+     * @param gracePeriodDays the number of days for the grace period
+     * @return the timestamp when the grace period ends
+     */
+    public Instant getGracePeriodEndsAt(int gracePeriodDays) {
+        if (createdAt == null) {
+            return Instant.now().plus(Duration.ofDays(gracePeriodDays));
+        }
+        return createdAt.plusDays(gracePeriodDays).toInstant(ZoneOffset.UTC);
+    }
+
+    /**
+     * Checks if the user can login based on email verification status.
+     *
+     * <p>A user can login if:</p>
+     * <ul>
+     *   <li>Their email is verified, OR</li>
+     *   <li>They are within the grace period</li>
+     * </ul>
+     *
+     * @param gracePeriodDays the number of days for the grace period
+     * @return true if the user can login, false otherwise
+     */
+    public boolean canLogin(int gracePeriodDays) {
+        return emailVerified || isWithinGracePeriod(gracePeriodDays);
+    }
+
+    /**
+     * Marks the user's email as verified.
+     * Sets the emailVerified flag to true and records the verification timestamp.
+     */
+    public void markEmailAsVerified() {
+        this.emailVerified = true;
+        this.emailVerifiedAt = Instant.now();
+    }
 }

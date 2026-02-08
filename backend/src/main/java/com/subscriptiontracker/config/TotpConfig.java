@@ -42,14 +42,14 @@ public class TotpConfig {
      *
      * <p>IMPORTANT: Change this in production! The default key is for development only.</p>
      */
-    private String encryptionKey = "default-dev-key-change-in-prod!!";
+    private String encryptionKey;
 
     /**
      * The expiration time in seconds for the setup token.
      * Users must complete 2FA setup within this time window.
      * Default: 600 seconds (10 minutes).
      */
-    private int setupTokenExpirationSeconds = 600;
+    private int setupTokenExpirationSeconds;
 
     /**
      * The expiration time in milliseconds for partial authentication tokens.
@@ -57,33 +57,33 @@ public class TotpConfig {
      * amount of time to provide their TOTP code.
      * Default: 300000 milliseconds (5 minutes).
      */
-    private long partialTokenExpirationMs = 300000L;
+    private long partialTokenExpirationMs;
 
     /**
      * Maximum number of failed TOTP verification attempts allowed within the attempt window.
      * Exceeding this limit triggers rate limiting.
      * Default: 5 attempts.
      */
-    private int maxAttempts = 5;
+    private int maxAttempts;
 
     /**
      * The time window in seconds for counting failed TOTP attempts.
      * Failed attempts older than this window are not counted toward rate limiting.
      * Default: 30 seconds.
      */
-    private int attemptWindowSeconds = 30;
+    private int attemptWindowSeconds;
 
     /**
      * The number of recovery codes to generate when enabling 2FA.
      * These codes can be used as backup when the user doesn't have access to their TOTP device.
      * Default: 10 codes.
      */
-    private int recoveryCodeCount = 10;
+    private int recoveryCodeCount;
 
     /**
      * The issuer name displayed in authenticator apps (e.g., Google Authenticator).
      * This helps users identify which service the TOTP code is for.
      * Default: "Subscription Tracker".
      */
-    private String issuer = "Subscription Tracker";
+    private String issuer;
 }

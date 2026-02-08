@@ -1,6 +1,7 @@
 package com.subscriptiontracker.service;
 
 import com.subscriptiontracker.config.AuthConfig;
+import com.subscriptiontracker.config.EmailConfig;
 import com.subscriptiontracker.config.JwtConfig;
 import com.subscriptiontracker.config.TotpConfig;
 import com.subscriptiontracker.dto.request.LoginRequest;
@@ -40,6 +41,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthService")
@@ -64,6 +66,9 @@ class AuthServiceTest {
     private AuthConfig authConfig;
 
     @Mock
+    private EmailConfig emailConfig;
+
+    @Mock
     private AuthenticationManager authenticationManager;
 
     @Mock
@@ -71,6 +76,9 @@ class AuthServiceTest {
 
     @Mock
     private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private EmailVerificationService emailVerificationService;
 
     @InjectMocks
     private AuthService authService;
@@ -101,6 +109,8 @@ class AuthServiceTest {
                 .passwordHash("encodedPassword")
                 .baseCurrencyCode("USD")
                 .role(Role.USER)
+                .emailVerified(true) // Verified by default for existing tests
+                .createdAt(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC))
                 .build();
 
         userDetails = org.springframework.security.core.userdetails.User
@@ -116,6 +126,10 @@ class AuthServiceTest {
                 .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS))
                 .revoked(false)
                 .build();
+
+        // Setup email config mock for grace period and verification
+        lenient().when(emailConfig.getGracePeriodDays()).thenReturn(7);
+        lenient().when(emailConfig.isVerificationEnabled()).thenReturn(true);
     }
 
     @Nested

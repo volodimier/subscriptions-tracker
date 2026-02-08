@@ -60,6 +60,16 @@ totp:
   recovery-code-count: 10
   issuer: ${TOTP_ISSUER:PennyWise}
 
+email:
+  resend-api-key: ${RESEND_API_KEY:}
+  from-address: ${EMAIL_FROM_ADDRESS:noreply@pennywise.app}
+  from-name: ${EMAIL_FROM_NAME:PennyWise}
+  token-expiration-hours: 48
+  resend-rate-limit-seconds: 120
+  verification-base-url: ${EMAIL_VERIFICATION_BASE_URL:http://localhost:5173}
+  grace-period-days: 7
+  verification-enabled: ${EMAIL_VERIFICATION_ENABLED:false}
+
 fx-rate:
   api-key: ${FX_RATE_API_KEY:}
   base-url: https://v6.exchangerate-api.com/v6

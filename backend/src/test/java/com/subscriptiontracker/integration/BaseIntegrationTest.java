@@ -8,6 +8,7 @@ import com.subscriptiontracker.dto.response.AuthResponse;
 import com.subscriptiontracker.dto.response.ServiceResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.BillingCycle;
+import com.subscriptiontracker.repository.EmailVerificationTokenRepository;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.RecoveryCodeRepository;
 import com.subscriptiontracker.repository.RefreshTokenRepository;
@@ -103,6 +104,9 @@ public abstract class BaseIntegrationTest {
     @Autowired
     protected TotpAttemptRepository totpAttemptRepository;
 
+    @Autowired
+    protected EmailVerificationTokenRepository emailVerificationTokenRepository;
+
     /**
      * Configures the Spring datasource to use the Testcontainers PostgreSQL instance.
      *
@@ -179,7 +183,8 @@ public abstract class BaseIntegrationTest {
     /**
      * Cleans up the database to ensure test isolation.
      */
-    private void cleanDatabase() {
+    protected void cleanDatabase() {
+        emailVerificationTokenRepository.deleteAll();
         totpAttemptRepository.deleteAll();
         recoveryCodeRepository.deleteAll();
         paymentRecordRepository.deleteAll();
