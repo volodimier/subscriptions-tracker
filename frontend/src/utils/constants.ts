@@ -8,6 +8,12 @@ export const BILLING_CYCLES = [
   { value: 'custom', label: 'Custom' },
 ] as const
 
+// Billing cycles available for selection in forms (bi_annual and custom are hidden from UI)
+export const SELECTABLE_BILLING_CYCLES = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
+] as const
+
 export const CATEGORY_SUGGESTIONS = [
   'Entertainment',
   'Media',

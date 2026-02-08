@@ -1,6 +1,8 @@
 package com.subscriptiontracker.dto.request;
 
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.entity.BillingCycle;
+import com.subscriptiontracker.validation.AllowedBillingCycle;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -49,9 +51,18 @@ public class CreateSubscriptionRequest {
 
     /**
      * The billing cycle type.
+     *
+     * <p>Only {@code monthly} and {@code yearly} billing cycles are currently supported.
+     * The {@code bi_annual} and {@code custom} billing cycles are not allowed.</p>
      */
-    @Schema(description = "Billing cycle type", example = "MONTHLY", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Billing cycle type (only 'monthly' and 'yearly' are supported)",
+            example = "monthly",
+            requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "Billing cycle is required")
+    @AllowedBillingCycle(
+            allowed = {BillingCycle.monthly, BillingCycle.yearly},
+            message = ErrorMessages.BILLING_CYCLE_NOT_SUPPORTED
+    )
     private BillingCycle billingCycle;
 
     /**

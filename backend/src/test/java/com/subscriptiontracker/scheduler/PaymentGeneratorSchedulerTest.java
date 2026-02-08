@@ -42,6 +42,14 @@ import static org.mockito.Mockito.*;
 @DisplayName("PaymentGeneratorScheduler")
 class PaymentGeneratorSchedulerTest {
 
+    /**
+     * Returns the current date in UTC timezone.
+     * This matches the behavior of PaymentGeneratorScheduler.
+     */
+    private static LocalDate utcToday() {
+        return LocalDate.now(ZoneOffset.UTC);
+    }
+
     @Mock
     private SubscriptionRepository subscriptionRepository;
 
@@ -87,7 +95,7 @@ class PaymentGeneratorSchedulerTest {
                 .billingCycle(BillingCycle.monthly)
                 .paymentMethod("Credit Card")
                 .startDate(LocalDate.of(2024, 1, 1))
-                .nextBillingDate(LocalDate.now())
+                .nextBillingDate(utcToday())
                 .status(SubscriptionStatus.active)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -101,7 +109,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should generate payment for subscription due today")
         void shouldGeneratePaymentForSubscriptionDueToday() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             testSubscription.setNextBillingDate(today);
 
             when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
@@ -122,7 +130,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should create payment record with correct FX conversion")
         void shouldCreatePaymentRecordWithCorrectFxConversion() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             testSubscription.setNextBillingDate(today);
             testSubscription.setCurrencyCode("EUR");
             testSubscription.setAmount(new BigDecimal("10.00"));
@@ -158,7 +166,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should not create payments when no subscriptions are due")
         void shouldNotCreatePaymentsWhenNoSubscriptionsAreDue() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
 
             when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
                     .thenReturn(Collections.emptyList());
@@ -172,7 +180,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should continue processing when one subscription fails")
         void shouldContinueProcessingWhenOneSubscriptionFails() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
 
             Subscription subscription1 = Subscription.builder()
                     .id(1L)
@@ -231,7 +239,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should process multiple subscriptions successfully")
         void shouldProcessMultipleSubscriptionsSuccessfully() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
 
             Subscription subscription1 = Subscription.builder()
                     .id(1L)
@@ -278,7 +286,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should update next billing date for monthly subscription")
         void shouldUpdateNextBillingDateForMonthlySubscription() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             LocalDate expectedNextBillingDate = today.plusMonths(1);
             testSubscription.setNextBillingDate(today);
             testSubscription.setBillingCycle(BillingCycle.monthly);
@@ -303,7 +311,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should update next billing date for yearly subscription")
         void shouldUpdateNextBillingDateForYearlySubscription() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             LocalDate expectedNextBillingDate = today.plusYears(1);
             testSubscription.setNextBillingDate(today);
             testSubscription.setBillingCycle(BillingCycle.yearly);
@@ -328,7 +336,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should update next billing date for bi-annual subscription")
         void shouldUpdateNextBillingDateForBiAnnualSubscription() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             LocalDate expectedNextBillingDate = today.plusMonths(6);
             testSubscription.setNextBillingDate(today);
             testSubscription.setBillingCycle(BillingCycle.bi_annual);
@@ -353,7 +361,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should update next billing date for custom subscription with specified days")
         void shouldUpdateNextBillingDateForCustomSubscriptionWithSpecifiedDays() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             int customDays = 14;
             LocalDate expectedNextBillingDate = today.plusDays(customDays);
             testSubscription.setNextBillingDate(today);
@@ -380,7 +388,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should default to 30 days for custom subscription when billingCycleDays is null")
         void shouldDefaultTo30DaysForCustomSubscriptionWhenBillingCycleDaysIsNull() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             LocalDate expectedNextBillingDate = today.plusDays(30);
             testSubscription.setNextBillingDate(today);
             testSubscription.setBillingCycle(BillingCycle.custom);
@@ -406,7 +414,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should use custom days of 7 for weekly billing")
         void shouldUseCustomDaysOf7ForWeeklyBilling() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             int weeklyDays = 7;
             LocalDate expectedNextBillingDate = today.plusDays(weeklyDays);
             testSubscription.setNextBillingDate(today);
@@ -438,7 +446,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should use rate 1.0 when currencies are the same")
         void shouldUseRateOneWhenCurrenciesAreSame() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             testSubscription.setNextBillingDate(today);
             testSubscription.setCurrencyCode("USD");
             testUser.setBaseCurrencyCode("USD");
@@ -467,7 +475,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should correctly convert GBP to USD with exchange rate")
         void shouldCorrectlyConvertGbpToUsdWithExchangeRate() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             BigDecimal amount = new BigDecimal("100.00");
             BigDecimal fxRate = new BigDecimal("1.25");
             BigDecimal expectedAmountInBase = new BigDecimal("125.00");
@@ -498,7 +506,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should round amount in base currency to 2 decimal places")
         void shouldRoundAmountInBaseCurrencyTo2DecimalPlaces() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             BigDecimal amount = new BigDecimal("33.33");
             BigDecimal fxRate = new BigDecimal("1.333333");
             BigDecimal expectedAmountInBase = new BigDecimal("44.44"); // 33.33 * 1.333333 = 44.4399... rounded to 44.44
@@ -533,7 +541,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should not throw exception when fxRateService fails")
         void shouldNotThrowExceptionWhenFxRateServiceFails() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             testSubscription.setNextBillingDate(today);
 
             when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
@@ -549,7 +557,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should not throw exception when paymentRecordRepository fails")
         void shouldNotThrowExceptionWhenPaymentRecordRepositoryFails() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             testSubscription.setNextBillingDate(today);
 
             when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
@@ -565,7 +573,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should process remaining subscriptions after individual failure")
         void shouldProcessRemainingSubscriptionsAfterIndividualFailure() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
 
             User user2 = User.builder()
                     .id(2L)
@@ -657,7 +665,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should set subscription reference in payment record")
         void shouldSetSubscriptionReferenceInPaymentRecord() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             testSubscription.setNextBillingDate(today);
 
             when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
@@ -680,7 +688,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should set original amount and currency in payment record")
         void shouldSetOriginalAmountAndCurrencyInPaymentRecord() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             testSubscription.setNextBillingDate(today);
             testSubscription.setAmount(new BigDecimal("49.99"));
             testSubscription.setCurrencyCode("GBP");
@@ -706,7 +714,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should set payment date as today")
         void shouldSetPaymentDateAsToday() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             testSubscription.setNextBillingDate(today);
 
             when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
@@ -729,7 +737,7 @@ class PaymentGeneratorSchedulerTest {
         @Test
         @DisplayName("should publish PaymentRecordCreatedEvent after creating payment")
         void shouldPublishPaymentRecordCreatedEventAfterCreatingPayment() {
-            LocalDate today = LocalDate.now();
+            LocalDate today = utcToday();
             testSubscription.setNextBillingDate(today);
 
             PaymentRecord savedPayment = PaymentRecord.builder()

@@ -1,6 +1,8 @@
 package com.subscriptiontracker.dto.request;
 
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.entity.BillingCycle;
+import com.subscriptiontracker.validation.AllowedBillingCycle;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
@@ -37,7 +39,16 @@ public class UpdateSubscriptionRequest {
     @Size(min = 3, max = 3, message = "Currency code must be 3 characters")
     private String currencyCode;
 
-    /** New billing cycle type. */
+    /**
+     * New billing cycle type.
+     *
+     * <p>Only {@code monthly} and {@code yearly} billing cycles are currently supported.
+     * The {@code bi_annual} and {@code custom} billing cycles are not allowed.</p>
+     */
+    @AllowedBillingCycle(
+            allowed = {BillingCycle.monthly, BillingCycle.yearly},
+            message = ErrorMessages.BILLING_CYCLE_NOT_SUPPORTED
+    )
     private BillingCycle billingCycle;
 
     /** New custom billing cycle length in days (for CUSTOM billing cycle). */

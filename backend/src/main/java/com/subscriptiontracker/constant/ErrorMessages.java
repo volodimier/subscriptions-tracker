@@ -103,6 +103,12 @@ public final class ErrorMessages {
      */
     public static final String BILLING_CYCLE_CANNOT_BE_NULL = "Billing cycle cannot be null";
 
+    /**
+     * Error message when an unsupported billing cycle is used.
+     */
+    public static final String BILLING_CYCLE_NOT_SUPPORTED =
+            "Billing cycle is not supported. Only monthly and yearly billing cycles are allowed";
+
     // =========================================================================
     // Authentication and User Error Messages
     // =========================================================================
