@@ -35,5 +35,5 @@ public class AuthConfig {
      *
      * <p>Defaults to {@code true} to preserve existing behavior.</p>
      */
-    private boolean registrationEnabled = true;
+    private boolean registrationEnabled;
 }

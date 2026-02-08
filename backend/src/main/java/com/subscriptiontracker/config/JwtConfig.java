@@ -42,5 +42,5 @@ public class JwtConfig {
      * The refresh token expiration time in milliseconds.
      * Defaults to 7 days (604800000ms) if not specified.
      */
-    private long refreshExpiration = 604800000L; // 7 days default
+    private long refreshExpiration;
 }

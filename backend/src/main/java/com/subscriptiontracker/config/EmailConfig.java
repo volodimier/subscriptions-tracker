@@ -40,31 +40,31 @@ public class EmailConfig {
      * The email address used as the sender for verification emails.
      * Must be verified in Resend.
      */
-    private String fromAddress = "noreply@pennywise.app";
+    private String fromAddress;
 
     /**
      * The display name used as the sender for verification emails.
      */
-    private String fromName = "PennyWise";
+    private String fromName;
 
     /**
      * Number of hours until a verification token expires.
      * Defaults to 48 hours.
      */
-    private int tokenExpirationHours = 48;
+    private int tokenExpirationHours;
 
     /**
      * Number of seconds between allowed verification email resend requests.
      * Used for rate limiting to prevent abuse.
      * Defaults to 120 seconds (2 minutes).
      */
-    private int resendRateLimitSeconds = 120;
+    private int resendRateLimitSeconds;
 
     /**
      * Base URL for the verification link.
      * This should be the frontend URL that handles email verification.
      */
-    private String verificationBaseUrl = "http://localhost:5173";
+    private String verificationBaseUrl;
 
     /**
      * Number of days for the grace period during which unverified users
@@ -72,7 +72,7 @@ public class EmailConfig {
      * After this period, login will be blocked until email is verified.
      * Defaults to 7 days.
      */
-    private int gracePeriodDays = 7;
+    private int gracePeriodDays;
 
     /**
      * Whether email verification is enabled.
@@ -80,7 +80,7 @@ public class EmailConfig {
      * no verification emails are sent, and grace period enforcement is skipped.
      * Defaults to false.
      */
-    private boolean verificationEnabled = false;
+    private boolean verificationEnabled;
 
     /**
      * Checks if the email service is configured with a valid API key.
