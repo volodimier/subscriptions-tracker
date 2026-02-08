@@ -7,6 +7,7 @@ import type {
   CancelSubscriptionRequest,
   ReactivateSubscriptionRequest,
   SubscriptionFilters,
+  SubscriptionHistoryEntry,
   PaginatedResponse,
 } from '@/types'
 
@@ -60,6 +61,11 @@ export const subscriptionService = {
 
   async getCategories(): Promise<string[]> {
     const response = await api.get<string[]>('/subscriptions/categories')
+    return response.data
+  },
+
+  async getSubscriptionHistory(id: number): Promise<SubscriptionHistoryEntry[]> {
+    const response = await api.get<SubscriptionHistoryEntry[]>(`/subscriptions/${id}/history`)
     return response.data
   },
 }

@@ -1,11 +1,13 @@
 package com.subscriptiontracker.service;
 
+import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.dto.request.CancelSubscriptionRequest;
 import com.subscriptiontracker.dto.request.CreateSubscriptionRequest;
 import com.subscriptiontracker.dto.request.ReactivateSubscriptionRequest;
 import com.subscriptiontracker.dto.request.UpdateSubscriptionRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.SubscriptionDetailResponse;
+import com.subscriptiontracker.dto.response.SubscriptionHistoryResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.*;
 import com.subscriptiontracker.event.SubscriptionCancelledEvent;
@@ -15,6 +17,7 @@ import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
+import com.subscriptiontracker.repository.SubscriptionHistoryRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +50,9 @@ class SubscriptionServiceTest {
 
     @Mock
     private SubscriptionRepository subscriptionRepository;
+
+    @Mock
+    private SubscriptionHistoryRepository subscriptionHistoryRepository;
 
     @Mock
     private ServiceRepository serviceRepository;
@@ -192,6 +198,37 @@ class SubscriptionServiceTest {
             assertNotNull(result);
             assertEquals(1L, result.getId());
             verify(subscriptionRepository).save(any(Subscription.class));
+        }
+
+        @Test
+        @DisplayName("should create initial history snapshot on subscription creation")
+        void shouldCreateInitialHistorySnapshotOnCreation() {
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .startDate(LocalDate.now())
+                    .nextBillingDate(LocalDate.now().plusMonths(1))
+                    .paymentMethod("Credit Card")
+                    .notes("Premium plan")
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenReturn(testSubscription);
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<SubscriptionHistory> historyCaptor = ArgumentCaptor.forClass(SubscriptionHistory.class);
+            verify(subscriptionHistoryRepository).save(historyCaptor.capture());
+
+            SubscriptionHistory snapshot = historyCaptor.getValue();
+            assertEquals(testSubscription, snapshot.getSubscription());
+            assertEquals(testSubscription.getAmount(), snapshot.getAmount());
+            assertEquals(testSubscription.getCurrencyCode(), snapshot.getCurrencyCode());
+            assertEquals(testSubscription.getPaymentMethod(), snapshot.getPaymentMethod());
+            assertNotNull(snapshot.getChangedAt());
         }
 
         @Test
@@ -496,6 +533,29 @@ class SubscriptionServiceTest {
         }
 
         @Test
+        @DisplayName("should create history snapshot before applying update")
+        void shouldCreateHistorySnapshotBeforeApplyingUpdate() {
+            UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
+                    .amount(new BigDecimal("19.99"))
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenReturn(testSubscription);
+
+            subscriptionService.updateSubscription(1L, 1L, request);
+
+            ArgumentCaptor<SubscriptionHistory> historyCaptor = ArgumentCaptor.forClass(SubscriptionHistory.class);
+            verify(subscriptionHistoryRepository).save(historyCaptor.capture());
+
+            SubscriptionHistory snapshot = historyCaptor.getValue();
+            // Snapshot should contain the ORIGINAL values (before update)
+            assertEquals(new BigDecimal("15.99"), snapshot.getAmount());
+            assertEquals("USD", snapshot.getCurrencyCode());
+            assertEquals("Credit Card", snapshot.getPaymentMethod());
+            assertNotNull(snapshot.getChangedAt());
+        }
+
+        @Test
         @DisplayName("should throw exception when subscription not found")
         void shouldThrowExceptionWhenSubscriptionNotFound() {
             UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
@@ -510,10 +570,10 @@ class SubscriptionServiceTest {
         }
 
         @Test
-        @DisplayName("should throw exception when updating to custom billing without days")
-        void shouldThrowExceptionWhenUpdatingToCustomBillingWithoutDays() {
+        @DisplayName("should reject billing cycle change on existing subscription")
+        void shouldRejectBillingCycleChangeOnExistingSubscription() {
             UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
-                    .billingCycle(BillingCycle.custom)
+                    .billingCycle(BillingCycle.yearly)
                     .build();
 
             when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
@@ -522,7 +582,25 @@ class SubscriptionServiceTest {
                     subscriptionService.updateSubscription(1L, 1L, request)
             );
 
-            assertEquals("Billing cycle days is required for custom billing cycle", exception.getMessage());
+            assertEquals(ErrorMessages.BILLING_CYCLE_CHANGE_NOT_ALLOWED, exception.getMessage());
+            verify(subscriptionHistoryRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should reject billing cycle days change on existing subscription")
+        void shouldRejectBillingCycleDaysChangeOnExistingSubscription() {
+            UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
+                    .billingCycleDays(30)
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.updateSubscription(1L, 1L, request)
+            );
+
+            assertEquals(ErrorMessages.BILLING_CYCLE_CHANGE_NOT_ALLOWED, exception.getMessage());
+            verify(subscriptionHistoryRepository, never()).save(any());
         }
 
         @Test
@@ -533,26 +611,6 @@ class SubscriptionServiceTest {
 
             UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
                     .nextBillingDate(newNextBillingDate)
-                    .build();
-
-            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
-            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-            subscriptionService.updateSubscription(1L, 1L, request);
-
-            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
-            verify(subscriptionRepository).save(captor.capture());
-            assertEquals(expectedStartDate, captor.getValue().getStartDate());
-        }
-
-        @Test
-        @DisplayName("should recalculate startDate when billingCycle changes")
-        void shouldRecalculateStartDateWhenBillingCycleChanges() {
-            // Original subscription has monthly cycle and next billing date 2024-02-01
-            LocalDate expectedStartDate = LocalDate.of(2023, 2, 1); // yearly: subtract 1 year
-
-            UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
-                    .billingCycle(BillingCycle.yearly)
                     .build();
 
             when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
@@ -583,41 +641,6 @@ class SubscriptionServiceTest {
             verify(subscriptionRepository).save(captor.capture());
             assertEquals(originalStartDate, captor.getValue().getStartDate());
         }
-
-        @Test
-        @DisplayName("should recalculate startDate when billingCycleDays changes for custom cycle")
-        void shouldRecalculateStartDateWhenBillingCycleDaysChanges() {
-            // Create a subscription with custom billing cycle
-            Subscription customSubscription = Subscription.builder()
-                    .id(1L)
-                    .user(testUser)
-                    .service(testService)
-                    .amount(new BigDecimal("15.99"))
-                    .currencyCode("USD")
-                    .billingCycle(BillingCycle.custom)
-                    .billingCycleDays(14)
-                    .startDate(LocalDate.of(2024, 1, 1))
-                    .nextBillingDate(LocalDate.of(2024, 1, 15))
-                    .status(SubscriptionStatus.active)
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
-                    .build();
-
-            LocalDate expectedStartDate = LocalDate.of(2023, 12, 16); // 30 days before 2024-01-15
-
-            UpdateSubscriptionRequest request = UpdateSubscriptionRequest.builder()
-                    .billingCycleDays(30)
-                    .build();
-
-            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(customSubscription));
-            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-            subscriptionService.updateSubscription(1L, 1L, request);
-
-            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
-            verify(subscriptionRepository).save(captor.capture());
-            assertEquals(expectedStartDate, captor.getValue().getStartDate());
-        }
     }
 
     @Nested
@@ -640,6 +663,21 @@ class SubscriptionServiceTest {
             verify(subscriptionRepository).save(captor.capture());
             assertEquals(SubscriptionStatus.cancelled, captor.getValue().getStatus());
             assertNotNull(captor.getValue().getCancelledAt());
+        }
+
+        @Test
+        @DisplayName("should not create history snapshot on cancel")
+        void shouldNotCreateHistorySnapshotOnCancel() {
+            CancelSubscriptionRequest request = CancelSubscriptionRequest.builder()
+                    .cancelledAt(LocalDate.now())
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenReturn(testSubscription);
+
+            subscriptionService.cancelSubscription(1L, 1L, request);
+
+            verify(subscriptionHistoryRepository, never()).save(any());
         }
 
         @Test
@@ -719,6 +757,24 @@ class SubscriptionServiceTest {
             verify(subscriptionRepository).save(captor.capture());
             assertEquals(SubscriptionStatus.active, captor.getValue().getStatus());
             assertNull(captor.getValue().getCancelledAt());
+        }
+
+        @Test
+        @DisplayName("should not create history snapshot on reactivation")
+        void shouldNotCreateHistorySnapshotOnReactivation() {
+            testSubscription.setStatus(SubscriptionStatus.cancelled);
+            testSubscription.setCancelledAt(LocalDateTime.now());
+
+            ReactivateSubscriptionRequest request = ReactivateSubscriptionRequest.builder()
+                    .nextBillingDate(LocalDate.now().plusMonths(1))
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionRepository.save(any(Subscription.class))).thenReturn(testSubscription);
+
+            subscriptionService.reactivateSubscription(1L, 1L, request);
+
+            verify(subscriptionHistoryRepository, never()).save(any());
         }
 
         @Test
@@ -830,6 +886,71 @@ class SubscriptionServiceTest {
             assertTrue(result.contains("Entertainment"));
             assertTrue(result.contains("Productivity"));
             assertTrue(result.contains("Music"));
+        }
+    }
+
+    @Nested
+    @DisplayName("getSubscriptionHistory")
+    class GetSubscriptionHistory {
+
+        @Test
+        @DisplayName("should return history entries ordered by changedAt descending")
+        void shouldReturnHistoryEntriesOrderedByChangedAtDescending() {
+            SubscriptionHistory entry1 = SubscriptionHistory.builder()
+                    .id(1L)
+                    .subscription(testSubscription)
+                    .changedAt(LocalDateTime.of(2024, 1, 1, 10, 0))
+                    .amount(new BigDecimal("9.99"))
+                    .currencyCode("USD")
+                    .paymentMethod("Credit Card")
+                    .notes("Initial")
+                    .build();
+
+            SubscriptionHistory entry2 = SubscriptionHistory.builder()
+                    .id(2L)
+                    .subscription(testSubscription)
+                    .changedAt(LocalDateTime.of(2024, 2, 1, 10, 0))
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .paymentMethod("Credit Card")
+                    .notes("Upgraded")
+                    .build();
+
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionHistoryRepository.findBySubscriptionIdOrderByChangedAtDesc(1L))
+                    .thenReturn(List.of(entry2, entry1));
+
+            List<SubscriptionHistoryResponse> result = subscriptionService.getSubscriptionHistory(1L, 1L);
+
+            assertNotNull(result);
+            assertEquals(2, result.size());
+            assertEquals(2L, result.get(0).getId());
+            assertEquals(1L, result.get(1).getId());
+            assertEquals(new BigDecimal("15.99"), result.get(0).getAmount());
+            assertEquals(new BigDecimal("9.99"), result.get(1).getAmount());
+        }
+
+        @Test
+        @DisplayName("should return empty list when no history exists")
+        void shouldReturnEmptyListWhenNoHistoryExists() {
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testSubscription));
+            when(subscriptionHistoryRepository.findBySubscriptionIdOrderByChangedAtDesc(1L))
+                    .thenReturn(List.of());
+
+            List<SubscriptionHistoryResponse> result = subscriptionService.getSubscriptionHistory(1L, 1L);
+
+            assertNotNull(result);
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        @DisplayName("should throw exception when subscription not found")
+        void shouldThrowExceptionWhenSubscriptionNotFound() {
+            when(subscriptionRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () ->
+                    subscriptionService.getSubscriptionHistory(1L, 1L)
+            );
         }
     }
 }

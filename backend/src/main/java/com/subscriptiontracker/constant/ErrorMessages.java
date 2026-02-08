@@ -109,6 +109,14 @@ public final class ErrorMessages {
     public static final String BILLING_CYCLE_NOT_SUPPORTED =
             "Billing cycle is not supported. Only monthly and yearly billing cycles are allowed";
 
+    /**
+     * Error message when attempting to change the billing cycle on an existing subscription.
+     * Users must cancel the current subscription and create a new one to change billing cycle.
+     */
+    public static final String BILLING_CYCLE_CHANGE_NOT_ALLOWED =
+            "Billing cycle cannot be changed on an existing subscription. "
+            + "Please cancel this subscription and create a new one with the desired billing cycle.";
+
     // =========================================================================
     // Authentication and User Error Messages
     // =========================================================================

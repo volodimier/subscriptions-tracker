@@ -184,6 +184,13 @@ public class Subscription {
     private List<PaymentRecord> paymentRecords = new ArrayList<>();
 
     /**
+     * Collection of history snapshots for this subscription.
+     * History entries are deleted when the subscription is deleted (cascade).
+     */
+    @OneToMany(mappedBy = "subscription", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SubscriptionHistory> historyEntries = new ArrayList<>();
+
+    /**
      * Builder for creating Subscription instances.
      *
      * <p>Supports both the new Value Object style and legacy primitive fields

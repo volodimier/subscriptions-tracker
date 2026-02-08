@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { formatCurrency, formatDate, formatDateTime, getBillingCycleLabel, daysUntil } from '@/utils/formatters'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import SubscriptionHistory from '@/components/subscription/SubscriptionHistory.vue'
 import { formatDateISO } from '@/utils/formatters'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -222,6 +223,8 @@ async function handleDelete() {
           </div>
         </CardContent>
       </Card>
+
+      <SubscriptionHistory :subscription-id="subscriptionId" />
     </div>
 
     <div v-else class="text-center py-12">
@@ -243,7 +246,7 @@ async function handleDelete() {
     <ConfirmDialog
       v-if="showDeleteDialog"
       title="Delete Subscription"
-      :message="`Are you sure you want to permanently delete this subscription? This will also delete all payment history. This action cannot be undone.`"
+      :message="`Are you sure you want to permanently delete this subscription? This will also delete all payment records and change history. This action cannot be undone.`"
       confirm-text="Delete"
       type="danger"
       @confirm="handleDelete"

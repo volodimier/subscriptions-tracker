@@ -13,6 +13,7 @@ import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.RecoveryCodeRepository;
 import com.subscriptiontracker.repository.RefreshTokenRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
+import com.subscriptiontracker.repository.SubscriptionHistoryRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.repository.TotpAttemptRepository;
 import com.subscriptiontracker.repository.UserRepository;
@@ -94,6 +95,9 @@ public abstract class BaseIntegrationTest {
 
     @Autowired
     protected PaymentRecordRepository paymentRecordRepository;
+
+    @Autowired
+    protected SubscriptionHistoryRepository subscriptionHistoryRepository;
 
     @Autowired
     protected RefreshTokenRepository refreshTokenRepository;
@@ -188,6 +192,7 @@ public abstract class BaseIntegrationTest {
         totpAttemptRepository.deleteAll();
         recoveryCodeRepository.deleteAll();
         paymentRecordRepository.deleteAll();
+        subscriptionHistoryRepository.deleteAll();
         subscriptionRepository.deleteAll();
         serviceRepository.deleteAll();
         refreshTokenRepository.deleteAll();

@@ -7,6 +7,7 @@ import com.subscriptiontracker.dto.response.ErrorResponse;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.ServiceResponse;
 import com.subscriptiontracker.dto.response.SubscriptionDetailResponse;
+import com.subscriptiontracker.dto.response.SubscriptionHistoryResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.BillingCycle;
 import com.subscriptiontracker.entity.Subscription;
@@ -344,8 +345,8 @@ class SubscriptionApiIntegrationTest extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("should update subscription billing cycle")
-        void shouldUpdateSubscriptionBillingCycle() {
+        @DisplayName("should reject billing cycle change on existing subscription")
+        void shouldRejectBillingCycleChangeOnExistingSubscription() {
             // Arrange
             SubscriptionResponse created = createTestSubscription(
                     testUser.getToken(),
@@ -361,17 +362,15 @@ class SubscriptionApiIntegrationTest extends BaseIntegrationTest {
                     .build();
 
             // Act
-            ResponseEntity<SubscriptionResponse> response = authenticatedPut(
+            ResponseEntity<ErrorResponse> response = authenticatedPut(
                     "/subscriptions/" + created.getId(),
                     testUser.getToken(),
                     updateRequest,
-                    SubscriptionResponse.class
+                    ErrorResponse.class
             );
 
             // Assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody().getBillingCycle()).isEqualTo(BillingCycle.yearly);
-            assertThat(response.getBody().getAmount()).isEqualByComparingTo(new BigDecimal("99.99"));
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -495,6 +494,151 @@ class SubscriptionApiIntegrationTest extends BaseIntegrationTest {
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("Subscription History")
+    class SubscriptionHistoryTests {
+
+        @Test
+        @DisplayName("should have initial history entry after creation")
+        void shouldHaveInitialHistoryEntryAfterCreation() {
+            // Arrange
+            SubscriptionResponse created = createTestSubscription(
+                    testUser.getToken(),
+                    testService.getId(),
+                    new BigDecimal("15.99"),
+                    "USD",
+                    BillingCycle.monthly
+            );
+
+            // Act
+            ResponseEntity<SubscriptionHistoryResponse[]> response = authenticatedGet(
+                    "/subscriptions/" + created.getId() + "/history",
+                    testUser.getToken(),
+                    SubscriptionHistoryResponse[].class
+            );
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody()).hasSize(1);
+            assertThat(response.getBody()[0].getAmount()).isEqualByComparingTo(new BigDecimal("15.99"));
+            assertThat(response.getBody()[0].getCurrencyCode()).isEqualTo("USD");
+            assertThat(response.getBody()[0].getSubscriptionId()).isEqualTo(created.getId());
+            assertThat(response.getBody()[0].getChangedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should add history entry when subscription is updated")
+        void shouldAddHistoryEntryWhenSubscriptionIsUpdated() {
+            // Arrange
+            SubscriptionResponse created = createTestSubscription(
+                    testUser.getToken(),
+                    testService.getId(),
+                    new BigDecimal("9.99"),
+                    "USD",
+                    BillingCycle.monthly
+            );
+
+            UpdateSubscriptionRequest updateRequest = UpdateSubscriptionRequest.builder()
+                    .amount(new BigDecimal("14.99"))
+                    .notes("Upgraded to premium")
+                    .build();
+
+            authenticatedPut(
+                    "/subscriptions/" + created.getId(),
+                    testUser.getToken(),
+                    updateRequest,
+                    SubscriptionResponse.class
+            );
+
+            // Act
+            ResponseEntity<SubscriptionHistoryResponse[]> response = authenticatedGet(
+                    "/subscriptions/" + created.getId() + "/history",
+                    testUser.getToken(),
+                    SubscriptionHistoryResponse[].class
+            );
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            // 1 initial snapshot on create + 1 pre-update snapshot
+            assertThat(response.getBody()).hasSize(2);
+            // Most recent first: pre-update snapshot with original values
+            assertThat(response.getBody()[0].getAmount()).isEqualByComparingTo(new BigDecimal("9.99"));
+        }
+
+        @Test
+        @DisplayName("should return 404 for history of non-existent subscription")
+        void shouldReturn404ForHistoryOfNonExistentSubscription() {
+            // Act
+            ResponseEntity<ErrorResponse> response = authenticatedGet(
+                    "/subscriptions/99999/history",
+                    testUser.getToken(),
+                    ErrorResponse.class
+            );
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("should not access another user's subscription history")
+        void shouldNotAccessAnotherUsersSubscriptionHistory() {
+            // Arrange
+            SubscriptionResponse created = createTestSubscription(
+                    testUser.getToken(),
+                    testService.getId(),
+                    new BigDecimal("9.99"),
+                    "USD",
+                    BillingCycle.monthly
+            );
+
+            TestUser otherUser = createTestUser();
+
+            // Act
+            ResponseEntity<ErrorResponse> response = authenticatedGet(
+                    "/subscriptions/" + created.getId() + "/history",
+                    otherUser.getToken(),
+                    ErrorResponse.class
+            );
+
+            // Assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("should delete history when subscription is deleted")
+        void shouldDeleteHistoryWhenSubscriptionIsDeleted() {
+            // Arrange
+            SubscriptionResponse created = createTestSubscription(
+                    testUser.getToken(),
+                    testService.getId(),
+                    new BigDecimal("9.99"),
+                    "USD",
+                    BillingCycle.monthly
+            );
+
+            // Verify history exists
+            ResponseEntity<SubscriptionHistoryResponse[]> historyBefore = authenticatedGet(
+                    "/subscriptions/" + created.getId() + "/history",
+                    testUser.getToken(),
+                    SubscriptionHistoryResponse[].class
+            );
+            assertThat(historyBefore.getBody()).isNotEmpty();
+
+            // Act - delete subscription
+            authenticatedDelete(
+                    "/subscriptions/" + created.getId(),
+                    testUser.getToken(),
+                    Void.class
+            );
+
+            // Assert - subscription and history should be gone
+            assertThat(subscriptionRepository.findById(created.getId())).isEmpty();
+            assertThat(subscriptionHistoryRepository.findBySubscriptionIdOrderByChangedAtDesc(created.getId())).isEmpty();
         }
     }
 
