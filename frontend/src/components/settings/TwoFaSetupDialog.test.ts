@@ -367,6 +367,29 @@ describe('TwoFaSetupDialog', () => {
       expect(wrapper.emitted('update:open')).toBeTruthy()
       expect(wrapper.emitted('update:open')?.[0]).toEqual([false])
     })
+
+    it('should emit update:open when dialog closes from verify step', async () => {
+      const wrapper = mount(TwoFaSetupDialog, {
+        props: {
+          open: true,
+        },
+        global: {
+          stubs: globalStubs,
+        },
+      })
+
+      // Wait for initiateSetup to complete and transition to verify step
+      await flushPromises()
+      await nextTick()
+
+      // handleClose should work from verify step
+      const vm = wrapper.vm as unknown as { step: string; handleClose: () => void }
+      expect(vm.step).toBe('verify')
+      vm.handleClose()
+
+      expect(wrapper.emitted('update:open')).toBeTruthy()
+      expect(wrapper.emitted('update:open')?.[0]).toEqual([false])
+    })
   })
 
   describe('completeSetup', () => {

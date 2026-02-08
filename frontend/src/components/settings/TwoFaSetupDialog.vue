@@ -132,8 +132,9 @@ function resetState() {
 }
 
 function handleClose() {
-  // Only allow closing if we're on setup step or completed recovery step
-  if (step.value === 'setup' || (step.value === 'recovery' && savedCodesConfirmed.value)) {
+  // Allow closing on 'setup' and 'verify' steps (user can cancel before completing verification)
+  // Only block closing on 'recovery' step unless codes are saved (to prevent users from losing recovery codes)
+  if (step.value === 'setup' || step.value === 'verify' || (step.value === 'recovery' && savedCodesConfirmed.value)) {
     resetState()
     isOpen.value = false
   }
