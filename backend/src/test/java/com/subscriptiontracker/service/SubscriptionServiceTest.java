@@ -86,7 +86,7 @@ class SubscriptionServiceTest {
                 .id(1L)
                 .user(testUser)
                 .name("Netflix")
-                .category("Entertainment")
+                .category(Category.builder().id(1L).name("Entertainment").build())
                 .websiteUrl("https://netflix.com")
                 .build();
 

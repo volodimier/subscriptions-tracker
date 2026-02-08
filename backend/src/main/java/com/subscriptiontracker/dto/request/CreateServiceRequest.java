@@ -28,10 +28,10 @@ public class CreateServiceRequest {
     private String name;
 
     /**
-     * Optional category for organizing services (e.g., "Entertainment", "Fitness").
+     * Optional category ID for organizing services.
+     * References a category from the categories table.
      */
-    @Size(max = 100, message = "Category must not exceed 100 characters")
-    private String category;
+    private Long categoryId;
 
     /**
      * Optional website URL for the service.

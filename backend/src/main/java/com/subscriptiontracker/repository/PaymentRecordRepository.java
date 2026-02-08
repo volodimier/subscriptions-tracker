@@ -84,10 +84,10 @@ public interface PaymentRecordRepository extends JpaRepository<PaymentRecord, Lo
      *
      * @return list of [category, total] pairs
      */
-    @Query("SELECT pr.subscription.service.category, COALESCE(SUM(pr.amountInBaseCurrency), 0) " +
+    @Query("SELECT pr.subscription.service.category.name, COALESCE(SUM(pr.amountInBaseCurrency), 0) " +
            "FROM PaymentRecord pr WHERE pr.subscription.user.id = :userId " +
            "AND pr.paymentDate BETWEEN :startDate AND :endDate " +
-           "GROUP BY pr.subscription.service.category")
+           "GROUP BY pr.subscription.service.category.name")
     List<Object[]> sumByCategory(
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,

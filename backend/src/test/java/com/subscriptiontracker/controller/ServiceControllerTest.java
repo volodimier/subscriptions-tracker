@@ -87,13 +87,13 @@ class ServiceControllerTest {
 
         validCreateRequest = CreateServiceRequest.builder()
                 .name("Spotify")
-                .category("Music")
+                .categoryId(2L)
                 .websiteUrl("https://spotify.com")
                 .build();
 
         validUpdateRequest = UpdateServiceRequest.builder()
                 .name("Spotify Premium")
-                .category("Music Streaming")
+                .categoryId(3L)
                 .build();
     }
 
@@ -281,7 +281,7 @@ class ServiceControllerTest {
         void shouldReturn400WhenServiceNameIsBlank() throws Exception {
             CreateServiceRequest invalidRequest = CreateServiceRequest.builder()
                     .name("")
-                    .category("Music")
+                    .categoryId(2L)
                     .build();
 
             mockMvc.perform(post("/services")
@@ -295,7 +295,7 @@ class ServiceControllerTest {
         @DisplayName("should return 400 when service name is missing")
         void shouldReturn400WhenServiceNameIsMissing() throws Exception {
             CreateServiceRequest invalidRequest = CreateServiceRequest.builder()
-                    .category("Music")
+                    .categoryId(2L)
                     .build();
 
             mockMvc.perform(post("/services")
@@ -311,23 +311,7 @@ class ServiceControllerTest {
             String longName = "A".repeat(256);
             CreateServiceRequest invalidRequest = CreateServiceRequest.builder()
                     .name(longName)
-                    .category("Music")
-                    .build();
-
-            mockMvc.perform(post("/services")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(invalidRequest)))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
-        }
-
-        @Test
-        @DisplayName("should return 400 when category exceeds max length")
-        void shouldReturn400WhenCategoryExceedsMaxLength() throws Exception {
-            String longCategory = "A".repeat(101);
-            CreateServiceRequest invalidRequest = CreateServiceRequest.builder()
-                    .name("Spotify")
-                    .category(longCategory)
+                    .categoryId(2L)
                     .build();
 
             mockMvc.perform(post("/services")

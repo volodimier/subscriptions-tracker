@@ -52,6 +52,11 @@ public final class ErrorMessages {
      */
     public static final String RESOURCE_PAYMENT_RECORD = "PaymentRecord";
 
+    /**
+     * Resource name for Category entity.
+     */
+    public static final String RESOURCE_CATEGORY = "Category";
+
     // =========================================================================
     // Subscription Error Messages
     // =========================================================================
@@ -202,6 +207,22 @@ public final class ErrorMessages {
      */
     public static final String SERVICE_HAS_SUBSCRIPTIONS_TEMPLATE =
             "Cannot delete service. It is used in %d subscription(s).";
+
+    // =========================================================================
+    // Category Error Messages
+    // =========================================================================
+
+    /**
+     * Error message when a category with the same name already exists.
+     */
+    public static final String CATEGORY_NAME_ALREADY_EXISTS = "Category with this name already exists";
+
+    /**
+     * Error message template when attempting to delete a category used by services.
+     * Use with {@link String#format(String, Object...)} passing the service count.
+     */
+    public static final String CATEGORY_HAS_SERVICES_TEMPLATE =
+            "Cannot delete category. It is used by %d service(s).";
 
     // =========================================================================
     // Validation Error Messages

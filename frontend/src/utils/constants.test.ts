@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { BILLING_CYCLES, SELECTABLE_BILLING_CYCLES, CURRENCIES, CATEGORY_SUGGESTIONS } from './constants'
+import { BILLING_CYCLES, SELECTABLE_BILLING_CYCLES, CURRENCIES } from './constants'
 
 describe('constants', () => {
   describe('BILLING_CYCLES', () => {
@@ -49,14 +49,6 @@ describe('constants', () => {
       expect(CURRENCIES).toContain('EUR')
       expect(CURRENCIES).toContain('GBP')
       expect(CURRENCIES).toContain('PLN')
-    })
-  })
-
-  describe('CATEGORY_SUGGESTIONS', () => {
-    it('should contain category suggestions', () => {
-      expect(CATEGORY_SUGGESTIONS.length).toBeGreaterThan(0)
-      expect(CATEGORY_SUGGESTIONS).toContain('Entertainment')
-      expect(CATEGORY_SUGGESTIONS).toContain('Software')
     })
   })
 })

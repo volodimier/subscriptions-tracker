@@ -58,7 +58,7 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     /**
      * Finds all unique categories from a user's services.
      */
-    @Query("SELECT DISTINCT s.category FROM Service s WHERE s.user.id = :userId AND s.category IS NOT NULL ORDER BY s.category")
+    @Query("SELECT DISTINCT s.category.name FROM Service s WHERE s.user.id = :userId AND s.category IS NOT NULL ORDER BY s.category.name")
     List<String> findDistinctCategoriesByUserId(@Param("userId") Long userId);
 
     /**

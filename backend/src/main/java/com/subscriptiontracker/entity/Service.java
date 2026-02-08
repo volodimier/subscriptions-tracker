@@ -62,8 +62,9 @@ public class Service {
      * Optional category for grouping services (e.g., "Entertainment", "Fitness").
      * Used for spending analytics and filtering.
      */
-    @Column(length = 100)
-    private String category;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     /**
      * Optional website URL for the service.

@@ -5,9 +5,12 @@ import com.subscriptiontracker.dto.request.CreateSubscriptionRequest;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
+import com.subscriptiontracker.dto.response.CategoryResponse;
 import com.subscriptiontracker.dto.response.ServiceResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.BillingCycle;
+import com.subscriptiontracker.entity.Category;
+import com.subscriptiontracker.repository.CategoryRepository;
 import com.subscriptiontracker.repository.EmailVerificationTokenRepository;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.RecoveryCodeRepository;
@@ -107,6 +110,9 @@ public abstract class BaseIntegrationTest {
 
     @Autowired
     protected TotpAttemptRepository totpAttemptRepository;
+
+    @Autowired
+    protected CategoryRepository categoryRepository;
 
     @Autowired
     protected EmailVerificationTokenRepository emailVerificationTokenRepository;
@@ -384,15 +390,27 @@ public abstract class BaseIntegrationTest {
     /**
      * Creates a test service for the authenticated user.
      *
+     * <p>Resolves the category name to a system category ID. If no matching
+     * system category is found, the service is created without a category.</p>
+     *
      * @param token the JWT token for authentication
      * @param name the service name
-     * @param category the service category
+     * @param category the service category name
      * @return the created ServiceResponse
      */
     protected ServiceResponse createTestService(String token, String name, String category) {
+        Long categoryId = null;
+        if (category != null) {
+            categoryId = categoryRepository.findByUserIsNullOrderByNameAsc().stream()
+                    .filter(c -> c.getName().equalsIgnoreCase(category))
+                    .map(Category::getId)
+                    .findFirst()
+                    .orElse(null);
+        }
+
         CreateServiceRequest request = CreateServiceRequest.builder()
                 .name(name)
-                .category(category)
+                .categoryId(categoryId)
                 .websiteUrl("https://" + name.toLowerCase().replace(" ", "") + ".com")
                 .build();
 

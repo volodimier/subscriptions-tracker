@@ -90,6 +90,12 @@ function closeUserMenu() {
                 >
                   Job Runs
                 </router-link>
+                <router-link
+                  to="/admin/categories"
+                  class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Categories
+                </router-link>
               </div>
             </div>
           </nav>

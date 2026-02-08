@@ -29,6 +29,7 @@ function createTestRouter() {
     { path: '/', name: 'dashboard', component: MockComponent, meta: { requiresAuth: true } },
     { path: '/settings', name: 'settings', component: MockComponent, meta: { requiresAuth: true } },
     { path: '/admin/job-runs', name: 'admin-job-runs', component: MockComponent, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/categories', name: 'admin-categories', component: MockComponent, meta: { requiresAuth: true, requiresAdmin: true } },
   ]
 
   const router = createRouter({
@@ -166,6 +167,24 @@ describe('Router Guards', () => {
 
       const router = createTestRouter()
       await router.push('/admin/job-runs')
+      expect(router.currentRoute.value.path).toBe('/')
+    })
+
+    it('should allow admin users to access admin categories route', async () => {
+      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('user', JSON.stringify({ role: 'ADMIN' }))
+
+      const router = createTestRouter()
+      await router.push('/admin/categories')
+      expect(router.currentRoute.value.path).toBe('/admin/categories')
+    })
+
+    it('should redirect non-admin users from admin categories route', async () => {
+      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('user', JSON.stringify({ role: 'USER' }))
+
+      const router = createTestRouter()
+      await router.push('/admin/categories')
       expect(router.currentRoute.value.path).toBe('/')
     })
   })

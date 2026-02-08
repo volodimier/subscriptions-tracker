@@ -98,6 +98,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/admin/JobRunsView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: '/admin/categories',
+    name: 'admin-categories',
+    component: () => import('@/views/admin/CategoriesView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
 ]
 
 const router = createRouter({

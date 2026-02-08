@@ -6,11 +6,13 @@ import com.subscriptiontracker.dto.request.CreateServiceRequest;
 import com.subscriptiontracker.dto.request.UpdateServiceRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.ServiceResponse;
+import com.subscriptiontracker.entity.Category;
 import com.subscriptiontracker.entity.Service;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.exception.DuplicateResourceException;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
+import com.subscriptiontracker.repository.CategoryRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
 import com.subscriptiontracker.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +51,7 @@ public class ServiceService {
 
     private final ServiceRepository serviceRepository;
     private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
     private final FaviconService faviconService;
 
     /**
@@ -139,7 +142,11 @@ public class ServiceService {
         Service service = Service.builder()
                 .user(user)
                 .name(request.getName())
-                .category(request.getCategory())
+                .category(request.getCategoryId() != null
+                        ? categoryRepository.findById(request.getCategoryId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                        ErrorMessages.RESOURCE_CATEGORY, DomainConstants.FIELD_ID, request.getCategoryId()))
+                        : null)
                 .websiteUrl(request.getWebsiteUrl())
                 .build();
 
@@ -182,8 +189,11 @@ public class ServiceService {
             service.setName(request.getName());
         }
 
-        if (request.getCategory() != null) {
-            service.setCategory(request.getCategory());
+        if (request.getCategoryId() != null) {
+            Category cat = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            ErrorMessages.RESOURCE_CATEGORY, DomainConstants.FIELD_ID, request.getCategoryId()));
+            service.setCategory(cat);
         }
 
         if (request.getWebsiteUrl() != null) {

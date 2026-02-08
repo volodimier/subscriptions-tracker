@@ -29,8 +29,11 @@ public class ServiceResponse {
     /** Display name of the service. */
     private String name;
 
-    /** Category for grouping services. */
+    /** Category name for grouping services (backwards-compatible display). */
     private String category;
+
+    /** Category ID referencing the categories table. */
+    private Long categoryId;
 
     /** Favicon as a base64 data URL (e.g., "data:image/png;base64,..."). */
     private String faviconUrl;
@@ -58,7 +61,8 @@ public class ServiceResponse {
         return ServiceResponse.builder()
                 .id(service.getId())
                 .name(service.getName())
-                .category(service.getCategory())
+                .category(service.getCategory() != null ? service.getCategory().getName() : null)
+                .categoryId(service.getCategory() != null ? service.getCategory().getId() : null)
                 .faviconUrl(FaviconService.toDataUrl(service.getFavicon(), service.getFaviconContentType()))
                 .websiteUrl(service.getWebsiteUrl())
                 .subscriptionCount(subscriptionCount)

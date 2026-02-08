@@ -1,5 +1,5 @@
 import api from './api'
-import type { JobRun, PaginatedResponse } from '@/types'
+import type { JobRun, PaginatedResponse, Category, CreateCategoryRequest, UpdateCategoryRequest } from '@/types'
 
 export interface AdminError {
   status: number
@@ -52,6 +52,41 @@ export const adminService = {
         '/fx-rates/refresh'
       )
       return response.data
+    } catch (error) {
+      handleAdminError(error)
+    }
+  },
+
+  async getCategories(): Promise<Category[]> {
+    try {
+      const response = await api.get<Category[]>('/admin/categories')
+      return response.data
+    } catch (error) {
+      handleAdminError(error)
+    }
+  },
+
+  async createCategory(data: CreateCategoryRequest): Promise<Category> {
+    try {
+      const response = await api.post<Category>('/admin/categories', data)
+      return response.data
+    } catch (error) {
+      handleAdminError(error)
+    }
+  },
+
+  async updateCategory(id: number, data: UpdateCategoryRequest): Promise<Category> {
+    try {
+      const response = await api.put<Category>(`/admin/categories/${id}`, data)
+      return response.data
+    } catch (error) {
+      handleAdminError(error)
+    }
+  },
+
+  async deleteCategory(id: number): Promise<void> {
+    try {
+      await api.delete(`/admin/categories/${id}`)
     } catch (error) {
       handleAdminError(error)
     }
