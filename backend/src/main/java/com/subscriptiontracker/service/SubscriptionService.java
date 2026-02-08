@@ -8,6 +8,7 @@ import com.subscriptiontracker.dto.request.ReactivateSubscriptionRequest;
 import com.subscriptiontracker.dto.request.UpdateSubscriptionRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.SubscriptionDetailResponse;
+import com.subscriptiontracker.dto.response.SubscriptionHistoryResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.*;
 import com.subscriptiontracker.event.SubscriptionCancelledEvent;
@@ -18,6 +19,7 @@ import com.subscriptiontracker.exception.ResourceNotFoundException;
 import com.subscriptiontracker.domain.valueobject.BillingPeriod;
 import com.subscriptiontracker.repository.PaymentRecordRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
+import com.subscriptiontracker.repository.SubscriptionHistoryRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +60,7 @@ import java.util.stream.Collectors;
 public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionHistoryRepository subscriptionHistoryRepository;
     private final ServiceRepository serviceRepository;
     private final UserRepository userRepository;
     private final PaymentRecordRepository paymentRecordRepository;
@@ -202,6 +205,8 @@ public class SubscriptionService {
 
         subscription = subscriptionRepository.save(subscription);
 
+        createHistorySnapshot(subscription);
+
         eventPublisher.publishEvent(new SubscriptionCreatedEvent(
                 subscription.getId(),
                 userId,
@@ -219,21 +224,36 @@ public class SubscriptionService {
      * <p>Only non-null fields in the request are updated. The subscription
      * must belong to the specified user.</p>
      *
-     * <p>If the billing cycle or next billing date is changed, the start date
-     * is automatically recalculated to maintain consistency.</p>
+     * <p>Billing cycle and billing cycle days cannot be changed on an existing
+     * subscription. If the user needs a different billing cycle, they must cancel
+     * the current subscription and create a new one.</p>
+     *
+     * <p>Before applying changes, a history snapshot of the current state is saved
+     * to preserve the audit trail of changes over time.</p>
+     *
+     * <p>If the next billing date is changed, the start date is automatically
+     * recalculated to maintain consistency.</p>
      *
      * @param userId         the ID of the user who owns the subscription
      * @param subscriptionId the ID of the subscription to update
      * @param request        the update request with fields to modify
      * @return the updated subscription response
      * @throws ResourceNotFoundException if the subscription or service is not found
-     * @throws BadRequestException       if custom billing cycle is selected without days specified
+     * @throws BadRequestException       if an attempt is made to change billing cycle or billing cycle days
      */
     @Transactional
     public SubscriptionResponse updateSubscription(Long userId, Long subscriptionId, UpdateSubscriptionRequest request) {
         Subscription subscription = subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, subscriptionId));
+
+        // Billing cycle changes are not allowed on existing subscriptions
+        if (request.getBillingCycle() != null || request.getBillingCycleDays() != null) {
+            throw new BadRequestException(ErrorMessages.BILLING_CYCLE_CHANGE_NOT_ALLOWED);
+        }
+
+        // Snapshot the current state before applying changes
+        createHistorySnapshot(subscription);
 
         if (request.getServiceId() != null) {
             Service service = serviceRepository.findByIdAndUserId(request.getServiceId(), userId)
@@ -250,25 +270,12 @@ public class SubscriptionService {
             subscription.setCurrencyCode(request.getCurrencyCode());
         }
 
-        // Track if billing-related fields changed to trigger start date recalculation
-        boolean billingChanged = false;
-
-        if (request.getBillingCycle() != null) {
-            subscription.setBillingCycle(request.getBillingCycle());
-            if (request.getBillingCycle() == BillingCycle.custom && request.getBillingCycleDays() == null) {
-                throw new BadRequestException(ErrorMessages.BILLING_CYCLE_DAYS_REQUIRED);
-            }
-            billingChanged = true;
-        }
-
-        if (request.getBillingCycleDays() != null) {
-            subscription.setBillingCycleDays(request.getBillingCycleDays());
-            billingChanged = true;
-        }
-
         if (request.getPaymentMethod() != null) {
             subscription.setPaymentMethod(request.getPaymentMethod());
         }
+
+        // Track if billing-related fields changed to trigger start date recalculation
+        boolean billingChanged = false;
 
         if (request.getNextBillingDate() != null) {
             subscription.setNextBillingDate(request.getNextBillingDate());
@@ -394,5 +401,49 @@ public class SubscriptionService {
      */
     public List<String> getCategories(Long userId) {
         return subscriptionRepository.findDistinctCategoriesByUserId(userId);
+    }
+
+    /**
+     * Retrieves the change history for a subscription.
+     *
+     * <p>Returns a list of history snapshots ordered by changed_at descending
+     * (most recent first). Verifies that the subscription belongs to the specified user.</p>
+     *
+     * @param userId         the ID of the user who owns the subscription
+     * @param subscriptionId the ID of the subscription
+     * @return list of history response DTOs ordered by changedAt descending
+     * @throws ResourceNotFoundException if the subscription is not found or does not belong to the user
+     */
+    public List<SubscriptionHistoryResponse> getSubscriptionHistory(Long userId, Long subscriptionId) {
+        subscriptionRepository.findByIdAndUserId(subscriptionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorMessages.RESOURCE_SUBSCRIPTION, DomainConstants.FIELD_ID, subscriptionId));
+
+        return subscriptionHistoryRepository.findBySubscriptionIdOrderByChangedAtDesc(subscriptionId)
+                .stream()
+                .map(SubscriptionHistoryResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Creates a history snapshot of the subscription's current mutable fields.
+     *
+     * <p>Records the current values of amount, currency code, payment method,
+     * and notes for the given subscription. This method is called during
+     * subscription creation (initial snapshot) and before updates (pre-change snapshot).</p>
+     *
+     * @param subscription the subscription to snapshot
+     */
+    private void createHistorySnapshot(Subscription subscription) {
+        SubscriptionHistory snapshot = SubscriptionHistory.builder()
+                .subscription(subscription)
+                .changedAt(LocalDateTime.now())
+                .amount(subscription.getAmount())
+                .currencyCode(subscription.getCurrencyCode())
+                .paymentMethod(subscription.getPaymentMethod())
+                .notes(subscription.getNotes())
+                .build();
+
+        subscriptionHistoryRepository.save(snapshot);
     }
 }

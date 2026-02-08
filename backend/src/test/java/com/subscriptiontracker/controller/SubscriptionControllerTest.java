@@ -8,6 +8,7 @@ import com.subscriptiontracker.dto.request.UpdateSubscriptionRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.ServiceResponse;
 import com.subscriptiontracker.dto.response.SubscriptionDetailResponse;
+import com.subscriptiontracker.dto.response.SubscriptionHistoryResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.BillingCycle;
 import com.subscriptiontracker.entity.SubscriptionStatus;
@@ -706,6 +707,72 @@ class SubscriptionControllerTest {
                     .when(subscriptionService).deleteSubscription(USER_ID, 999L);
 
             mockMvc.perform(delete("/subscriptions/{id}", 999L))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error").value("NOT_FOUND"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /subscriptions/{id}/history")
+    class GetSubscriptionHistory {
+
+        @Test
+        @DisplayName("should return 200 with history entries")
+        void shouldReturn200WithHistoryEntries() throws Exception {
+            SubscriptionHistoryResponse entry1 = SubscriptionHistoryResponse.builder()
+                    .id(2L)
+                    .subscriptionId(SUBSCRIPTION_ID)
+                    .changedAt(LocalDateTime.of(2024, 2, 1, 10, 0))
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .paymentMethod("Credit Card")
+                    .notes("Upgraded")
+                    .build();
+
+            SubscriptionHistoryResponse entry2 = SubscriptionHistoryResponse.builder()
+                    .id(1L)
+                    .subscriptionId(SUBSCRIPTION_ID)
+                    .changedAt(LocalDateTime.of(2024, 1, 1, 10, 0))
+                    .amount(new BigDecimal("9.99"))
+                    .currencyCode("USD")
+                    .paymentMethod("Credit Card")
+                    .notes("Initial")
+                    .build();
+
+            when(subscriptionService.getSubscriptionHistory(USER_ID, SUBSCRIPTION_ID))
+                    .thenReturn(List.of(entry1, entry2));
+
+            mockMvc.perform(get("/subscriptions/{id}/history", SUBSCRIPTION_ID))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isArray())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[0].id").value(2))
+                    .andExpect(jsonPath("$[0].amount").value(15.99))
+                    .andExpect(jsonPath("$[0].currencyCode").value("USD"))
+                    .andExpect(jsonPath("$[0].paymentMethod").value("Credit Card"))
+                    .andExpect(jsonPath("$[0].notes").value("Upgraded"))
+                    .andExpect(jsonPath("$[1].id").value(1))
+                    .andExpect(jsonPath("$[1].amount").value(9.99));
+        }
+
+        @Test
+        @DisplayName("should return 200 with empty list when no history exists")
+        void shouldReturn200WithEmptyListWhenNoHistoryExists() throws Exception {
+            when(subscriptionService.getSubscriptionHistory(USER_ID, SUBSCRIPTION_ID))
+                    .thenReturn(List.of());
+
+            mockMvc.perform(get("/subscriptions/{id}/history", SUBSCRIPTION_ID))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isEmpty());
+        }
+
+        @Test
+        @DisplayName("should return 404 when subscription not found")
+        void shouldReturn404WhenSubscriptionNotFound() throws Exception {
+            when(subscriptionService.getSubscriptionHistory(USER_ID, 999L))
+                    .thenThrow(new ResourceNotFoundException("Subscription", "id", 999L));
+
+            mockMvc.perform(get("/subscriptions/{id}/history", 999L))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error").value("NOT_FOUND"));
         }

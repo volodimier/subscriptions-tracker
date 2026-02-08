@@ -6,6 +6,7 @@ import com.subscriptiontracker.dto.request.ReactivateSubscriptionRequest;
 import com.subscriptiontracker.dto.request.UpdateSubscriptionRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.SubscriptionDetailResponse;
+import com.subscriptiontracker.dto.response.SubscriptionHistoryResponse;
 import com.subscriptiontracker.dto.response.SubscriptionResponse;
 import com.subscriptiontracker.entity.SubscriptionStatus;
 import com.subscriptiontracker.service.CurrentUserService;
@@ -260,6 +261,36 @@ public class SubscriptionController {
         Long userId = currentUserService.getCurrentUserId(userDetails);
         subscriptionService.deleteSubscription(userId, id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Retrieves the change history for a specific subscription.
+     *
+     * <p>Returns a timeline of historical snapshots showing how the subscription's
+     * tracked fields changed over time, ordered by most recent first.</p>
+     *
+     * @param userDetails the authenticated user details
+     * @param id the subscription ID
+     * @return list of history entries
+     */
+    @Operation(
+            summary = "Get subscription history",
+            description = "Retrieves the change history timeline for a specific subscription, "
+                    + "showing how tracked fields changed over time."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "History retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "404", description = "Subscription not found")
+    })
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<SubscriptionHistoryResponse>> getSubscriptionHistory(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(description = "Subscription ID") @PathVariable Long id
+    ) {
+        Long userId = currentUserService.getCurrentUserId(userDetails);
+        List<SubscriptionHistoryResponse> history = subscriptionService.getSubscriptionHistory(userId, id);
+        return ResponseEntity.ok(history);
     }
 
     /**

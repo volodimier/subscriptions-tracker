@@ -24,6 +24,8 @@ const emit = defineEmits<{
 
 const settingsStore = useSettingsStore()
 
+const isEditing = computed(() => !!props.subscription)
+
 const serviceId = ref<number | null>(null)
 const amount = ref('')
 const currencyCode = ref(settingsStore.settings?.baseCurrency || 'USD')
@@ -158,24 +160,31 @@ function handleSubmit() {
           v-for="cycle in availableBillingCycles"
           :key="cycle.value"
           :class="[
-            'flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-colors',
+            'flex items-center justify-center p-3 border rounded-lg transition-colors',
+            isEditing
+              ? 'cursor-not-allowed opacity-50'
+              : 'cursor-pointer',
             billingCycle === cycle.value
               ? 'border-primary bg-primary/5 text-primary'
-              : 'border-input hover:border-gray-400'
+              : isEditing ? 'border-input' : 'border-input hover:border-gray-400'
           ]"
         >
           <input
             v-model="billingCycle"
             type="radio"
             :value="cycle.value"
+            :disabled="isEditing"
             class="sr-only"
           />
           <span class="text-sm font-medium">{{ cycle.label }}</span>
         </label>
       </div>
+      <p v-if="isEditing" class="text-xs text-muted-foreground mt-2">
+        Billing cycle cannot be changed. To use a different billing cycle, cancel this subscription and create a new one.
+      </p>
     </div>
 
-    <div v-if="billingCycle === 'custom'">
+    <div v-if="billingCycle === 'custom' && !isEditing">
       <Label for="billingCycleDays">Every how many days? *</Label>
       <Input
         id="billingCycleDays"

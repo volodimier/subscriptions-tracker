@@ -66,3 +66,13 @@ export interface SubscriptionFilters {
   sort?: 'nextBillingDate' | 'amount' | 'name'
   order?: 'asc' | 'desc'
 }
+
+export interface SubscriptionHistoryEntry {
+  id: number
+  subscriptionId: number
+  changedAt: string
+  amount: number
+  currencyCode: string
+  paymentMethod?: string
+  notes?: string
+}
