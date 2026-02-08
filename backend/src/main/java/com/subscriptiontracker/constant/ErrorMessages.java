@@ -135,6 +135,51 @@ public final class ErrorMessages {
             "Please type DELETE to confirm account deletion";
 
     // =========================================================================
+    // Email Verification Error Messages
+    // =========================================================================
+
+    /**
+     * Error message when email is already verified.
+     */
+    public static final String EMAIL_ALREADY_VERIFIED = "Email is already verified";
+
+    /**
+     * Error message when verification token has expired.
+     */
+    public static final String EMAIL_VERIFICATION_TOKEN_EXPIRED =
+            "Verification token has expired. Please request a new verification email.";
+
+    /**
+     * Error message when verification token is invalid.
+     */
+    public static final String EMAIL_VERIFICATION_TOKEN_INVALID =
+            "Invalid verification token. Please request a new verification email.";
+
+    /**
+     * Error message when rate limit for resending verification email is exceeded.
+     */
+    public static final String EMAIL_VERIFICATION_RATE_LIMITED =
+            "Please wait before requesting another verification email";
+
+    /**
+     * Error message when email is not verified and grace period has expired.
+     */
+    public static final String EMAIL_NOT_VERIFIED =
+            "Please verify your email address to continue. Check your inbox for the verification link.";
+
+    /**
+     * Error message when grace period has expired and login is blocked.
+     */
+    public static final String EMAIL_GRACE_PERIOD_EXPIRED =
+            "Your email verification grace period has expired. Please verify your email to login.";
+
+    /**
+     * Error message when email service is not configured.
+     */
+    public static final String EMAIL_SERVICE_NOT_CONFIGURED =
+            "Email service is not configured. Please contact support.";
+
+    // =========================================================================
     // Service Error Messages
     // =========================================================================
 

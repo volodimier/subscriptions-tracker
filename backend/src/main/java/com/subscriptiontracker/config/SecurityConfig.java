@@ -60,6 +60,10 @@ public class SecurityConfig {
                         .requestMatchers("/auth/totp/verify", "/auth/totp/recovery").hasAuthority("TWO_FACTOR_PENDING")
                         // TOTP setup/management endpoints - require full authentication (handled by method security)
                         .requestMatchers("/auth/totp/**").authenticated()
+                        // Email verification status and resend require authentication
+                        .requestMatchers("/auth/email/status", "/auth/email/resend").authenticated()
+                        // Email verification endpoint is public (accessed via email link)
+                        .requestMatchers("/auth/email/verify").permitAll()
                         // Public auth endpoints (register, login, refresh, logout, health)
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()

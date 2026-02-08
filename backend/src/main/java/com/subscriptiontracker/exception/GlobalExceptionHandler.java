@@ -174,6 +174,52 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles email verification exceptions (400).
+     *
+     * <p>Returned when an email verification operation fails, such as
+     * invalid token, expired token, or email already verified.</p>
+     */
+    @ExceptionHandler(EmailVerificationException.class)
+    public ResponseEntity<ErrorResponse> handleEmailVerificationException(EmailVerificationException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .error("EMAIL_VERIFICATION_ERROR")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Handles email verification rate limit exceptions (429).
+     *
+     * <p>Returned when a user has exceeded the rate limit for requesting
+     * verification email resends.</p>
+     */
+    @ExceptionHandler(EmailVerificationRateLimitException.class)
+    public ResponseEntity<ErrorResponse> handleEmailVerificationRateLimitException(
+            EmailVerificationRateLimitException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .error("RATE_LIMIT_EXCEEDED")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
+    }
+
+    /**
+     * Handles email not verified exceptions (403).
+     *
+     * <p>Returned when a user attempts to login but their email is not verified
+     * and the grace period has expired.</p>
+     */
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<ErrorResponse> handleEmailNotVerifiedException(EmailNotVerifiedException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .error("EMAIL_NOT_VERIFIED")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    /**
      * Handles validation exceptions from @Valid annotations (400).
      *
      * <p>Extracts field-level errors and includes them in the response details.</p>

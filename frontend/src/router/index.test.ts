@@ -25,6 +25,7 @@ function createTestRouter() {
   const routes: RouteRecordRaw[] = [
     { path: '/login', name: 'login', component: MockComponent, meta: { requiresAuth: false } },
     { path: '/register', name: 'register', component: MockComponent, meta: { requiresAuth: false } },
+    { path: '/verify-email', name: 'verify-email', component: MockComponent, meta: { requiresAuth: false } },
     { path: '/', name: 'dashboard', component: MockComponent, meta: { requiresAuth: true } },
     { path: '/settings', name: 'settings', component: MockComponent, meta: { requiresAuth: true } },
     { path: '/admin/job-runs', name: 'admin-job-runs', component: MockComponent, meta: { requiresAuth: true, requiresAdmin: true } },
@@ -80,6 +81,21 @@ describe('Router Guards', () => {
       const router = createTestRouter()
       await router.push('/login')
       expect(router.currentRoute.value.path).toBe('/login')
+    })
+
+    it('should allow access to verify-email page without auth', async () => {
+      const router = createTestRouter()
+      await router.push('/verify-email')
+      expect(router.currentRoute.value.path).toBe('/verify-email')
+    })
+
+    it('should allow access to verify-email page even with auth', async () => {
+      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('user', JSON.stringify({ role: 'USER' }))
+
+      const router = createTestRouter()
+      await router.push('/verify-email')
+      expect(router.currentRoute.value.path).toBe('/verify-email')
     })
 
     it('should allow access to protected routes with auth', async () => {

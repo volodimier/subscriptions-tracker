@@ -6,6 +6,9 @@ export interface User {
   baseCurrencyCode?: string
   role: UserRole
   twoFactorEnabled?: boolean
+  emailVerified?: boolean
+  emailVerifiedAt?: string
+  withinGracePeriod?: boolean
   createdAt?: string
   updatedAt?: string
 }

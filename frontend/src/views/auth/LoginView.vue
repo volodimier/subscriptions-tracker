@@ -51,8 +51,17 @@ async function handleSubmit() {
       showTwoFactorStep.value = true
     }
   } catch (err: unknown) {
-    const axiosError = err as { response?: { data?: { message?: string } } }
-    error.value = axiosError.response?.data?.message || 'Login failed. Please try again.'
+    const axiosError = err as { response?: { data?: { message?: string; code?: string } } }
+    const errorCode = axiosError.response?.data?.code
+
+    // Handle email verification errors
+    if (errorCode === 'EMAIL_NOT_VERIFIED') {
+      error.value = 'Your email address has not been verified. Please check your inbox for the verification email.'
+    } else if (errorCode === 'EMAIL_GRACE_PERIOD_EXPIRED') {
+      error.value = 'Your account has been deactivated because the email was not verified within the grace period. Please contact support.'
+    } else {
+      error.value = axiosError.response?.data?.message || 'Login failed. Please try again.'
+    }
   }
 }
 

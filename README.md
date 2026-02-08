@@ -10,6 +10,7 @@ A full-stack application for tracking personal subscriptions with multi-currency
 - **Dashboard & Statistics**: Visual spending analytics with charts and projections
 - **Service Catalog**: Manage your personal catalog of subscription services
 - **Two-Factor Authentication**: Optional TOTP-based 2FA with authenticator apps (Google Authenticator, Authy, etc.) and recovery codes
+- **Email Verification**: New accounts require email verification with a 7-day grace period
 
 ## Tech Stack
 

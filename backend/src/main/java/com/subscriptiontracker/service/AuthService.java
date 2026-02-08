@@ -1,10 +1,12 @@
 package com.subscriptiontracker.service;
 
 import com.subscriptiontracker.config.AuthConfig;
+import com.subscriptiontracker.config.EmailConfig;
 import com.subscriptiontracker.config.JwtConfig;
 import com.subscriptiontracker.config.TotpConfig;
 import com.subscriptiontracker.constant.DomainConstants;
 import com.subscriptiontracker.constant.ErrorMessages;
+import com.subscriptiontracker.exception.EmailNotVerifiedException;
 import com.subscriptiontracker.exception.RegistrationDisabledException;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RefreshTokenRequest;
@@ -61,9 +63,11 @@ public class AuthService {
     private final JwtConfig jwtConfig;
     private final TotpConfig totpConfig;
     private final AuthConfig authConfig;
+    private final EmailConfig emailConfig;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final RefreshTokenService refreshTokenService;
+    private final EmailVerificationService emailVerificationService;
 
     /**
      * Registers a new user account.
@@ -97,6 +101,15 @@ public class AuthService {
 
         user = userRepository.save(user);
 
+        // Send verification email asynchronously (don't block registration)
+        try {
+            emailVerificationService.sendVerificationEmail(user);
+        } catch (Exception e) {
+            log.warn("Failed to send verification email during registration for user: {}. Error: {}",
+                    user.getEmail(), e.getMessage());
+            // Don't fail registration if email fails - user can request resend later
+        }
+
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String accessToken = jwtService.generateToken(userDetails);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
@@ -104,7 +117,7 @@ public class AuthService {
         log.info("User registered successfully: {}", user.getEmail());
 
         return AuthResponse.builder()
-                .user(UserResponse.fromEntity(user))
+                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays()))
                 .token(accessToken)
                 .refreshToken(refreshToken.getToken())
                 .tokenType("Bearer")
@@ -136,6 +149,12 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow();
 
+        // Check email verification status
+        if (!user.canLogin(emailConfig.getGracePeriodDays())) {
+            log.warn("Login blocked for user {} - email not verified and grace period expired", user.getEmail());
+            throw new EmailNotVerifiedException(ErrorMessages.EMAIL_GRACE_PERIOD_EXPIRED);
+        }
+
         // Check if 2FA is enabled
         if (user.isTwoFactorEnabled()) {
             String partialToken = jwtService.generatePartialToken(
@@ -161,7 +180,7 @@ public class AuthService {
         log.info("User logged in successfully: {}", user.getEmail());
 
         return AuthResponse.builder()
-                .user(UserResponse.fromEntity(user))
+                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays()))
                 .token(accessToken)
                 .refreshToken(refreshToken.getToken())
                 .tokenType("Bearer")
@@ -203,7 +222,7 @@ public class AuthService {
         log.info("2FA verification successful for user: {}", user.getEmail());
 
         return AuthResponse.builder()
-                .user(UserResponse.fromEntity(user))
+                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays()))
                 .token(accessToken)
                 .refreshToken(refreshToken.getToken())
                 .tokenType("Bearer")
@@ -238,7 +257,7 @@ public class AuthService {
         log.debug("Token refreshed for user: {}", user.getEmail());
 
         return AuthResponse.builder()
-                .user(UserResponse.fromEntity(user))
+                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays()))
                 .token(newAccessToken)
                 .refreshToken(newRefreshToken.getToken())
                 .tokenType("Bearer")
