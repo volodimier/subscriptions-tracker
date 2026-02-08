@@ -5,7 +5,10 @@ import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import com.subscriptiontracker.config.EmailConfig;
+import com.subscriptiontracker.service.EmailService;
 
 /**
  * Test configuration for integration tests that configures RestTemplateBuilder
@@ -35,5 +38,19 @@ public class IntegrationTestConfig {
         HttpComponentsClientHttpRequestFactory factory =
                 new HttpComponentsClientHttpRequestFactory(httpClient);
         return new RestTemplateBuilder().requestFactory(() -> factory);
+    }
+
+    /**
+     * Disable external email sending during integration tests.
+     */
+    @Bean
+    @Primary
+    public EmailService emailService(EmailConfig emailConfig) {
+        return new EmailService(emailConfig) {
+            @Override
+            public void sendVerificationEmail(String toEmail, String verificationLink) {
+                // no-op in integration tests
+            }
+        };
     }
 }

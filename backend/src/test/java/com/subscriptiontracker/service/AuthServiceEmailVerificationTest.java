@@ -7,7 +7,6 @@ import com.subscriptiontracker.config.TotpConfig;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
-import com.subscriptiontracker.entity.RefreshToken;
 import com.subscriptiontracker.entity.Role;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.EmailNotVerifiedException;
@@ -93,7 +92,7 @@ class AuthServiceEmailVerificationTest {
     private User unverifiedUserInGracePeriod;
     private User unverifiedUserAfterGracePeriod;
     private UserDetails userDetails;
-    private RefreshToken refreshToken;
+    private String refreshToken;
 
     @BeforeEach
     void setUp() {
@@ -134,13 +133,7 @@ class AuthServiceEmailVerificationTest {
                 .authorities("ROLE_USER")
                 .build();
 
-        refreshToken = RefreshToken.builder()
-                .id(1L)
-                .token("refresh-token-uuid")
-                .user(verifiedUser)
-                .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS))
-                .revoked(false)
-                .build();
+        refreshToken = "refresh-token-uuid";
 
         lenient().when(emailConfig.getGracePeriodDays()).thenReturn(GRACE_PERIOD_DAYS);
         lenient().when(emailConfig.isVerificationEnabled()).thenReturn(true);

@@ -23,7 +23,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 /**
  * Unit tests for RefreshTokenService.
@@ -54,6 +56,7 @@ class RefreshTokenServiceTest {
     private static final Long USER_ID = 1L;
     private static final String USER_EMAIL = "test@example.com";
     private static final long REFRESH_EXPIRATION = 604800000L; // 7 days
+    private static final String TOKEN_HASH = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
     @BeforeEach
     void setUp() {
@@ -63,6 +66,7 @@ class RefreshTokenServiceTest {
                 .passwordHash("hashedPassword")
                 .baseCurrencyCode("USD")
                 .build();
+        lenient().when(jwtConfig.getRefreshTokenPepper()).thenReturn("test-pepper");
     }
 
     @Nested
@@ -83,19 +87,19 @@ class RefreshTokenServiceTest {
                     });
 
             // Act
-            RefreshToken result = refreshTokenService.createRefreshToken(USER_ID);
+            String result = refreshTokenService.createRefreshToken(USER_ID);
 
             // Assert
             assertThat(result).isNotNull();
-            assertThat(result.getUser()).isEqualTo(testUser);
-            assertThat(result.getToken()).isNotBlank();
-            assertThat(result.isRevoked()).isFalse();
-            assertThat(result.getExpiryDate()).isAfter(Instant.now());
+            assertThat(result).matches("[a-f0-9\\-]{36}"); // UUID pattern
 
             ArgumentCaptor<RefreshToken> tokenCaptor = ArgumentCaptor.forClass(RefreshToken.class);
             verify(refreshTokenRepository).save(tokenCaptor.capture());
             RefreshToken savedToken = tokenCaptor.getValue();
-            assertThat(savedToken.getToken()).matches("[a-f0-9\\-]{36}"); // UUID pattern
+            assertThat(savedToken.getUser()).isEqualTo(testUser);
+            assertThat(savedToken.getTokenHash()).matches("[a-f0-9]{64}");
+            assertThat(savedToken.isRevoked()).isFalse();
+            assertThat(savedToken.getExpiryDate()).isAfter(Instant.now());
         }
 
         @Test
@@ -125,12 +129,15 @@ class RefreshTokenServiceTest {
             Instant beforeCreation = Instant.now();
 
             // Act
-            RefreshToken result = refreshTokenService.createRefreshToken(USER_ID);
+            String result = refreshTokenService.createRefreshToken(USER_ID);
 
             // Assert
             Instant expectedExpiryMin = beforeCreation.plusMillis(customExpiration);
             Instant expectedExpiryMax = Instant.now().plusMillis(customExpiration);
-            assertThat(result.getExpiryDate())
+            ArgumentCaptor<RefreshToken> tokenCaptor = ArgumentCaptor.forClass(RefreshToken.class);
+            verify(refreshTokenRepository).save(tokenCaptor.capture());
+            RefreshToken savedToken = tokenCaptor.getValue();
+            assertThat(savedToken.getExpiryDate())
                     .isAfterOrEqualTo(expectedExpiryMin)
                     .isBeforeOrEqualTo(expectedExpiryMax);
         }
@@ -146,7 +153,7 @@ class RefreshTokenServiceTest {
             // Arrange
             RefreshToken validToken = RefreshToken.builder()
                     .id(1L)
-                    .token("valid-token")
+                    .tokenHash(TOKEN_HASH)
                     .user(testUser)
                     .expiryDate(Instant.now().plus(1, ChronoUnit.DAYS))
                     .revoked(false)
@@ -166,7 +173,7 @@ class RefreshTokenServiceTest {
             // Arrange
             RefreshToken expiredToken = RefreshToken.builder()
                     .id(1L)
-                    .token("expired-token")
+                    .tokenHash(TOKEN_HASH)
                     .user(testUser)
                     .expiryDate(Instant.now().minus(1, ChronoUnit.DAYS))
                     .revoked(false)
@@ -186,7 +193,7 @@ class RefreshTokenServiceTest {
             // Arrange
             RefreshToken revokedToken = RefreshToken.builder()
                     .id(1L)
-                    .token("revoked-token")
+                    .tokenHash(TOKEN_HASH)
                     .user(testUser)
                     .expiryDate(Instant.now().plus(1, ChronoUnit.DAYS))
                     .revoked(true)
@@ -210,12 +217,12 @@ class RefreshTokenServiceTest {
             String tokenString = "valid-token";
             RefreshToken token = RefreshToken.builder()
                     .id(1L)
-                    .token(tokenString)
+                    .tokenHash(TOKEN_HASH)
                     .user(testUser)
                     .expiryDate(Instant.now().plus(1, ChronoUnit.DAYS))
                     .revoked(false)
                     .build();
-            when(refreshTokenRepository.findByToken(tokenString)).thenReturn(Optional.of(token));
+            when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
 
             // Act
             RefreshToken result = refreshTokenService.findByToken(tokenString);
@@ -229,7 +236,7 @@ class RefreshTokenServiceTest {
         void shouldThrowException_WhenTokenNotFound() {
             // Arrange
             String tokenString = "nonexistent-token";
-            when(refreshTokenRepository.findByToken(tokenString)).thenReturn(Optional.empty());
+            when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
 
             // Act & Assert
             assertThatThrownBy(() -> refreshTokenService.findByToken(tokenString))
@@ -249,12 +256,12 @@ class RefreshTokenServiceTest {
             String tokenString = "valid-token";
             RefreshToken token = RefreshToken.builder()
                     .id(1L)
-                    .token(tokenString)
+                    .tokenHash(TOKEN_HASH)
                     .user(testUser)
                     .expiryDate(Instant.now().plus(1, ChronoUnit.DAYS))
                     .revoked(false)
                     .build();
-            when(refreshTokenRepository.findValidToken(eq(tokenString), any(Instant.class)))
+            when(refreshTokenRepository.findValidToken(anyString(), any(Instant.class)))
                     .thenReturn(Optional.of(token));
 
             // Act
@@ -269,7 +276,7 @@ class RefreshTokenServiceTest {
         void shouldThrowException_WhenNoValidTokenFound() {
             // Arrange
             String tokenString = "invalid-token";
-            when(refreshTokenRepository.findValidToken(eq(tokenString), any(Instant.class)))
+            when(refreshTokenRepository.findValidToken(anyString(), any(Instant.class)))
                     .thenReturn(Optional.empty());
 
             // Act & Assert
@@ -288,13 +295,13 @@ class RefreshTokenServiceTest {
         void shouldRevokeToken_Successfully() {
             // Arrange
             String tokenString = "token-to-revoke";
-            when(refreshTokenRepository.revokeByToken(tokenString)).thenReturn(1);
+            when(refreshTokenRepository.revokeByTokenHash(anyString())).thenReturn(1);
 
             // Act
             refreshTokenService.revokeToken(tokenString);
 
             // Assert
-            verify(refreshTokenRepository).revokeByToken(tokenString);
+            verify(refreshTokenRepository).revokeByTokenHash(anyString());
         }
 
         @Test
@@ -302,13 +309,13 @@ class RefreshTokenServiceTest {
         void shouldHandleNonExistentToken_Gracefully() {
             // Arrange
             String tokenString = "nonexistent-token";
-            when(refreshTokenRepository.revokeByToken(tokenString)).thenReturn(0);
+            when(refreshTokenRepository.revokeByTokenHash(anyString())).thenReturn(0);
 
             // Act - should not throw
             refreshTokenService.revokeToken(tokenString);
 
             // Assert
-            verify(refreshTokenRepository).revokeByToken(tokenString);
+            verify(refreshTokenRepository).revokeByTokenHash(anyString());
         }
     }
 

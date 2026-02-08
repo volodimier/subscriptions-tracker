@@ -51,23 +51,26 @@ public class RefreshTokenService {
      * based on the configured refresh token expiration time.</p>
      *
      * @param userId the ID of the user to create a refresh token for
-     * @return the created refresh token entity
+     * @return the plaintext refresh token (store only on client)
      * @throws ResourceNotFoundException if the user is not found
      */
     @Transactional
-    public RefreshToken createRefreshToken(Long userId) {
+    public String createRefreshToken(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
+        String rawToken = UUID.randomUUID().toString();
+
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)
-                .token(UUID.randomUUID().toString())
+                .tokenHash(hashToken(rawToken))
                 .expiryDate(Instant.now().plusMillis(jwtConfig.getRefreshExpiration()))
                 .revoked(false)
                 .build();
 
         log.debug("Creating refresh token for user: {}", user.getEmail());
-        return refreshTokenRepository.save(refreshToken);
+        refreshTokenRepository.save(refreshToken);
+        return rawToken;
     }
 
     /**
@@ -105,7 +108,8 @@ public class RefreshTokenService {
      */
     @Transactional(readOnly = true)
     public RefreshToken findByToken(String token) {
-        return refreshTokenRepository.findByToken(token)
+        String tokenHash = hashToken(token);
+        return refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> new TokenRefreshException("Refresh token not found."));
     }
 
@@ -118,7 +122,8 @@ public class RefreshTokenService {
      */
     @Transactional(readOnly = true)
     public RefreshToken findValidToken(String token) {
-        return refreshTokenRepository.findValidToken(token, Instant.now())
+        String tokenHash = hashToken(token);
+        return refreshTokenRepository.findValidToken(tokenHash, Instant.now())
                 .orElseThrow(() -> new TokenRefreshException("Refresh token is invalid or expired."));
     }
 
@@ -132,7 +137,8 @@ public class RefreshTokenService {
      */
     @Transactional
     public void revokeToken(String token) {
-        int revokedCount = refreshTokenRepository.revokeByToken(token);
+        String tokenHash = hashToken(token);
+        int revokedCount = refreshTokenRepository.revokeByTokenHash(tokenHash);
         if (revokedCount > 0) {
             log.debug("Revoked refresh token: {}", token.substring(0, 8) + "...");
         }
@@ -173,6 +179,29 @@ public class RefreshTokenService {
             log.info("Cleaned up {} expired/revoked refresh tokens", deletedCount);
         }
         return deletedCount;
+    }
+
+    private String hashToken(String token) {
+        try {
+            String pepper = getPepper();
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest((pepper + token).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to hash refresh token", e);
+        }
+    }
+
+    private String getPepper() {
+        String pepper = jwtConfig.getRefreshTokenPepper();
+        if (pepper == null || pepper.isBlank()) {
+            throw new IllegalStateException("JWT_REFRESH_TOKEN_PEPPER must be set");
+        }
+        return pepper.trim();
     }
 
     /**

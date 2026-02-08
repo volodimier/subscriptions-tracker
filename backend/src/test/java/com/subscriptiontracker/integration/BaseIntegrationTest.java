@@ -144,6 +144,8 @@ public abstract class BaseIntegrationTest {
         registry.add("jwt.secret", () -> "test-jwt-secret-key-for-integration-tests-only-32chars");
         registry.add("jwt.expiration", () -> "86400000");
         registry.add("jwt.refresh-expiration", () -> "604800000");
+        registry.add("email.resend-api-key", () -> "test-resend-key");
+        registry.add("email.verification-base-url", () -> "http://localhost:5173");
         registry.add("cors.allowed-origins", () -> "http://localhost:3000");
     }
 

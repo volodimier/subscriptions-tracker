@@ -9,6 +9,7 @@ import com.subscriptiontracker.dto.response.ErrorResponse;
 import com.subscriptiontracker.dto.response.UserResponse;
 import com.subscriptiontracker.entity.RefreshToken;
 import com.subscriptiontracker.entity.User;
+import com.subscriptiontracker.service.RefreshTokenService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,9 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private AuthConfig authConfig;
+
+    @Autowired
+    private RefreshTokenService refreshTokenService;
 
     @Nested
     @DisplayName("User Registration")
@@ -80,10 +84,10 @@ class AuthApiIntegrationTest extends BaseIntegrationTest {
             assertThat(savedUser.get().getPasswordHash()).isNotEqualTo(password); // Password should be hashed
 
             // Verify refresh token is persisted in database
-            Optional<RefreshToken> savedToken = refreshTokenRepository.findByToken(response.getBody().getRefreshToken());
-            assertThat(savedToken).isPresent();
-            assertThat(savedToken.get().getUser().getId()).isEqualTo(savedUser.get().getId());
-            assertThat(savedToken.get().isRevoked()).isFalse();
+            RefreshToken savedToken = refreshTokenService.findByToken(response.getBody().getRefreshToken());
+            assertThat(savedToken).isNotNull();
+            assertThat(savedToken.getUser().getId()).isEqualTo(savedUser.get().getId());
+            assertThat(savedToken.isRevoked()).isFalse();
         }
 
         @Test

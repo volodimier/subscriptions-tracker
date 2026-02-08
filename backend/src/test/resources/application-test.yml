@@ -19,6 +19,10 @@ spring:
 jwt:
   secret: test-jwt-secret-key-for-unit-tests-only-32chars
   expiration: 86400000
+  refresh-token-pepper: test-refresh-token-pepper-32chars!!
+
+totp:
+  enabled: true
 
 cors:
   allowed-origins: http://localhost:3000

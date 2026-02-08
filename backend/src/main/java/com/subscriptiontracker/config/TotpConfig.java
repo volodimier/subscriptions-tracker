@@ -37,6 +37,12 @@ import org.springframework.context.annotation.Configuration;
 public class TotpConfig {
 
     /**
+     * Whether TOTP-based 2FA is enabled.
+     * Default: true.
+     */
+    private boolean enabled;
+
+    /**
      * The encryption key used for encrypting TOTP secrets at rest.
      * Must be exactly 32 characters for AES-256-GCM encryption.
      *
