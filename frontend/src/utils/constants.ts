@@ -14,19 +14,3 @@ export const SELECTABLE_BILLING_CYCLES = [
   { value: 'yearly', label: 'Yearly' },
 ] as const
 
-export const CATEGORY_SUGGESTIONS = [
-  'Entertainment',
-  'Media',
-  'Music',
-  'Streaming',
-  'Fitness',
-  'Health',
-  'Software',
-  'Storage',
-  'News',
-  'Education',
-  'Gaming',
-  'Productivity',
-  'Business',
-  'Other',
-]

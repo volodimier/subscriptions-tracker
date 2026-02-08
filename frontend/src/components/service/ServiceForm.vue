@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import type { Service, CreateServiceRequest, UpdateServiceRequest } from '@/types'
-import { CATEGORY_SUGGESTIONS } from '@/utils/constants'
+import type { Service, CreateServiceRequest, UpdateServiceRequest, Category } from '@/types'
+import { categoryService } from '@/services/categoryService'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,13 +18,20 @@ const emit = defineEmits<{
 }>()
 
 const name = ref('')
-const category = ref('')
+const categoryId = ref<number | undefined>(undefined)
+const categories = ref<Category[]>([])
 const websiteUrl = ref('')
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    categories.value = await categoryService.getCategories()
+  } catch {
+    // Categories will remain empty if the fetch fails
+  }
+
   if (props.service) {
     name.value = props.service.name
-    category.value = props.service.category || ''
+    categoryId.value = props.service.categoryId
     websiteUrl.value = props.service.websiteUrl || ''
   }
 })
@@ -69,7 +76,7 @@ function handleSubmit() {
 
   const data: CreateServiceRequest = {
     name: name.value.trim(),
-    category: category.value || undefined,
+    categoryId: categoryId.value,
     websiteUrl: normalizedUrl || undefined,
   }
 
@@ -101,12 +108,12 @@ const selectClass = "flex h-9 w-full rounded-md border border-input bg-transpare
       <Label for="category">Category</Label>
       <select
         id="category"
-        v-model="category"
+        v-model="categoryId"
         :class="['mt-2', selectClass]"
       >
-        <option value="">Select a category</option>
-        <option v-for="cat in CATEGORY_SUGGESTIONS" :key="cat" :value="cat">
-          {{ cat }}
+        <option :value="undefined">Select a category</option>
+        <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+          {{ cat.name }}
         </option>
       </select>
     </div>

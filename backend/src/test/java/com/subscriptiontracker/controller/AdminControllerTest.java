@@ -5,6 +5,7 @@ import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.entity.JobStatus;
 import com.subscriptiontracker.entity.TriggerType;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
+import com.subscriptiontracker.service.CategoryService;
 import com.subscriptiontracker.service.CurrentUserService;
 import com.subscriptiontracker.service.JobRunService;
 import com.subscriptiontracker.service.JwtService;
@@ -47,6 +48,9 @@ class AdminControllerTest {
 
     @MockBean
     private JobRunService jobRunService;
+
+    @MockBean
+    private CategoryService categoryService;
 
     @MockBean
     private TwoFactorAuthService twoFactorAuthService;

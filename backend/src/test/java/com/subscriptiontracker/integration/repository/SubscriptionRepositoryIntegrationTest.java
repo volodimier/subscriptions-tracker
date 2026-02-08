@@ -1,11 +1,13 @@
 package com.subscriptiontracker.integration.repository;
 
 import com.subscriptiontracker.entity.BillingCycle;
+import com.subscriptiontracker.entity.Category;
 import com.subscriptiontracker.entity.Service;
 import com.subscriptiontracker.entity.Subscription;
 import com.subscriptiontracker.entity.SubscriptionStatus;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.integration.EnabledIfDockerAvailable;
+import com.subscriptiontracker.repository.CategoryRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
 import com.subscriptiontracker.repository.SubscriptionRepository;
 import com.subscriptiontracker.repository.UserRepository;
@@ -78,6 +80,9 @@ class SubscriptionRepositoryIntegrationTest {
     @Autowired
     private ServiceRepository serviceRepository;
 
+    @Autowired
+    private CategoryRepository categoryRepository;
+
     private User testUser;
     private Service testService;
 
@@ -100,9 +105,25 @@ class SubscriptionRepositoryIntegrationTest {
         testService = Service.builder()
                 .user(testUser)
                 .name("Test Service")
-                .category("Entertainment")
+                .category(findSystemCategory("Entertainment"))
                 .build();
         testService = serviceRepository.save(testService);
+    }
+
+    /**
+     * Finds a system category by name from the database.
+     *
+     * @param name the category name
+     * @return the Category entity, or null if not found
+     */
+    private Category findSystemCategory(String name) {
+        if (name == null) {
+            return null;
+        }
+        return categoryRepository.findByUserIsNullOrderByNameAsc().stream()
+                .filter(c -> c.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -150,7 +171,7 @@ class SubscriptionRepositoryIntegrationTest {
         Service service = Service.builder()
                 .user(testUser)
                 .name(serviceName)
-                .category(category)
+                .category(findSystemCategory(category))
                 .build();
         service = serviceRepository.save(service);
 
@@ -554,7 +575,7 @@ class SubscriptionRepositoryIntegrationTest {
             Service service2 = Service.builder()
                     .user(testUser)
                     .name("Service 2")
-                    .category("Music")
+                    .category(findSystemCategory("Music"))
                     .build();
             service2 = serviceRepository.save(service2);
 
@@ -573,7 +594,7 @@ class SubscriptionRepositoryIntegrationTest {
             Service service3 = Service.builder()
                     .user(testUser)
                     .name("Service 3")
-                    .category("Productivity")
+                    .category(findSystemCategory("Productivity"))
                     .build();
             service3 = serviceRepository.save(service3);
 
@@ -643,7 +664,7 @@ class SubscriptionRepositoryIntegrationTest {
             Service service2 = Service.builder()
                     .user(testUser)
                     .name("Active Service")
-                    .category("Entertainment")
+                    .category(findSystemCategory("Entertainment"))
                     .build();
             service2 = serviceRepository.save(service2);
 
@@ -742,7 +763,7 @@ class SubscriptionRepositoryIntegrationTest {
 
             // Assert
             assertThat(result.getContent()).hasSize(1);
-            assertThat(result.getContent().get(0).getService().getCategory()).isEqualTo("Music");
+            assertThat(result.getContent().get(0).getService().getCategory().getName()).isEqualTo("Music");
         }
 
         @Test

@@ -2,6 +2,7 @@ export interface Service {
   id: number
   name: string
   category?: string
+  categoryId?: number
   faviconUrl?: string
   websiteUrl?: string
   subscriptionCount?: number
@@ -11,12 +12,12 @@ export interface Service {
 
 export interface CreateServiceRequest {
   name: string
-  category?: string
+  categoryId?: number
   websiteUrl?: string
 }
 
 export interface UpdateServiceRequest {
   name?: string
-  category?: string
+  categoryId?: number
   websiteUrl?: string
 }

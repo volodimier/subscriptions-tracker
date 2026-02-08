@@ -9,6 +9,7 @@ A full-stack application for tracking personal subscriptions with multi-currency
 - **Payment History**: Automatic payment record generation with manual entry support
 - **Dashboard & Statistics**: Visual spending analytics with charts and projections
 - **Service Catalog**: Manage your personal catalog of subscription services
+- **Managed Categories**: Admin-managed category system for organizing services (replaces free-text categories)
 - **Two-Factor Authentication**: Optional TOTP-based 2FA with authenticator apps (Google Authenticator, Authy, etc.) and recovery codes
 - **Email Verification**: Optional email verification for new accounts with a 7-day grace period (toggle via `EMAIL_VERIFICATION_ENABLED`)
 
@@ -146,7 +147,7 @@ The application supports two user roles:
 | Role | Capabilities |
 |------|--------------|
 | **USER** | Manage personal subscriptions, services, and view statistics |
-| **ADMIN** | All USER capabilities + view job run history, manually trigger FX rate refresh |
+| **ADMIN** | All USER capabilities + manage system categories, view job run history, manually trigger FX rate refresh |
 
 All new users are created with the `USER` role by default.
 

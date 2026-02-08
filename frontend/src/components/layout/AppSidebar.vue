@@ -12,6 +12,7 @@ import {
   BarChart3,
   Settings,
   Shield,
+  Tag,
   X,
   ChevronLeft,
   ChevronRight,
@@ -92,6 +93,7 @@ const navItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { title: 'Job Runs', href: '/admin/job-runs', icon: Shield, adminOnly: true },
+  { title: 'Categories', href: '/admin/categories', icon: Tag, adminOnly: true },
 ]
 
 const filteredNavItems = computed(() => navItems)

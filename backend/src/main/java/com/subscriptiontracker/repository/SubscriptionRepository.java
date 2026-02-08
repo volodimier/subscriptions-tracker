@@ -48,13 +48,13 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
      * @param pageable pagination parameters
      * @return page of matching subscriptions
      */
-    @Query(value = "SELECT s.* FROM subscriptions s JOIN services srv ON s.service_id = srv.id WHERE s.user_id = :userId " +
+    @Query(value = "SELECT s.* FROM subscriptions s JOIN services srv ON s.service_id = srv.id LEFT JOIN categories cat ON srv.category_id = cat.id WHERE s.user_id = :userId " +
            "AND (CAST(:status AS subscription_status) IS NULL OR s.status = CAST(:status AS subscription_status)) " +
-           "AND (:category IS NULL OR srv.category = :category) " +
+           "AND (:category IS NULL OR cat.name = :category) " +
            "AND (:search IS NULL OR :search = '' OR LOWER(srv.name) LIKE LOWER(CONCAT('%', :search, '%')))",
-           countQuery = "SELECT COUNT(*) FROM subscriptions s JOIN services srv ON s.service_id = srv.id WHERE s.user_id = :userId " +
+           countQuery = "SELECT COUNT(*) FROM subscriptions s JOIN services srv ON s.service_id = srv.id LEFT JOIN categories cat ON srv.category_id = cat.id WHERE s.user_id = :userId " +
            "AND (CAST(:status AS subscription_status) IS NULL OR s.status = CAST(:status AS subscription_status)) " +
-           "AND (:category IS NULL OR srv.category = :category) " +
+           "AND (:category IS NULL OR cat.name = :category) " +
            "AND (:search IS NULL OR :search = '' OR LOWER(srv.name) LIKE LOWER(CONCAT('%', :search, '%')))",
            nativeQuery = true)
     Page<Subscription> findByUserIdWithFilters(
@@ -94,7 +94,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     /**
      * Finds all unique categories from a user's subscriptions.
      */
-    @Query("SELECT DISTINCT srv.category FROM Subscription s JOIN s.service srv WHERE s.user.id = :userId AND srv.category IS NOT NULL")
+    @Query("SELECT DISTINCT srv.category.name FROM Subscription s JOIN s.service srv WHERE s.user.id = :userId AND srv.category IS NOT NULL")
     List<String> findDistinctCategoriesByUserId(@Param("userId") Long userId);
 
     /**

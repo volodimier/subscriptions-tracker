@@ -4,11 +4,13 @@ import com.subscriptiontracker.dto.request.CreateServiceRequest;
 import com.subscriptiontracker.dto.request.UpdateServiceRequest;
 import com.subscriptiontracker.dto.response.PaginatedResponse;
 import com.subscriptiontracker.dto.response.ServiceResponse;
+import com.subscriptiontracker.entity.Category;
 import com.subscriptiontracker.entity.Service;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.exception.DuplicateResourceException;
 import com.subscriptiontracker.exception.ResourceNotFoundException;
+import com.subscriptiontracker.repository.CategoryRepository;
 import com.subscriptiontracker.repository.ServiceRepository;
 import com.subscriptiontracker.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +45,9 @@ class ServiceServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private CategoryRepository categoryRepository;
+
+    @Mock
     private FaviconService faviconService;
 
     @InjectMocks
@@ -50,6 +55,7 @@ class ServiceServiceTest {
 
     private User testUser;
     private Service testService;
+    private Category testCategory;
 
     @BeforeEach
     void setUp() {
@@ -59,11 +65,17 @@ class ServiceServiceTest {
                 .baseCurrencyCode("USD")
                 .build();
 
+        testCategory = Category.builder()
+                .id(1L)
+                .name("Entertainment")
+                .user(null)
+                .build();
+
         testService = Service.builder()
                 .id(1L)
                 .user(testUser)
                 .name("Netflix")
-                .category("Entertainment")
+                .category(testCategory)
                 .websiteUrl("https://netflix.com")
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -158,14 +170,16 @@ class ServiceServiceTest {
         @Test
         @DisplayName("should create service successfully")
         void shouldCreateServiceSuccessfully() {
+            Category musicCategory = Category.builder().id(2L).name("Music").build();
             CreateServiceRequest request = CreateServiceRequest.builder()
                     .name("Spotify")
-                    .category("Music")
+                    .categoryId(2L)
                     .websiteUrl("https://spotify.com")
                     .build();
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(serviceRepository.existsByUserIdAndName(1L, "Spotify")).thenReturn(false);
+            when(categoryRepository.findById(2L)).thenReturn(Optional.of(musicCategory));
             when(faviconService.fetchFavicon("https://spotify.com")).thenReturn(Optional.empty());
             when(serviceRepository.save(any(Service.class))).thenReturn(testService);
 
@@ -178,9 +192,10 @@ class ServiceServiceTest {
         @Test
         @DisplayName("should fetch favicon when website URL provided")
         void shouldFetchFaviconWhenWebsiteUrlProvided() {
+            Category musicCategory = Category.builder().id(2L).name("Music").build();
             CreateServiceRequest request = CreateServiceRequest.builder()
                     .name("Spotify")
-                    .category("Music")
+                    .categoryId(2L)
                     .websiteUrl("https://spotify.com")
                     .build();
 
@@ -190,6 +205,7 @@ class ServiceServiceTest {
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(serviceRepository.existsByUserIdAndName(1L, "Spotify")).thenReturn(false);
+            when(categoryRepository.findById(2L)).thenReturn(Optional.of(musicCategory));
             when(faviconService.fetchFavicon("https://spotify.com")).thenReturn(Optional.of(faviconData));
             when(serviceRepository.save(any(Service.class))).thenReturn(testService);
 
@@ -206,7 +222,7 @@ class ServiceServiceTest {
         void shouldThrowExceptionWhenNameAlreadyExists() {
             CreateServiceRequest request = CreateServiceRequest.builder()
                     .name("Netflix")
-                    .category("Entertainment")
+                    .categoryId(1L)
                     .build();
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
@@ -222,7 +238,7 @@ class ServiceServiceTest {
         void shouldThrowExceptionWhenUserNotFound() {
             CreateServiceRequest request = CreateServiceRequest.builder()
                     .name("Spotify")
-                    .category("Music")
+                    .categoryId(2L)
                     .build();
 
             when(userRepository.findById(1L)).thenReturn(Optional.empty());

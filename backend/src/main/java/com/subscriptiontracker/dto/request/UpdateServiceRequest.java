@@ -25,9 +25,8 @@ public class UpdateServiceRequest {
     @Size(max = 255, message = "Service name must not exceed 255 characters")
     private String name;
 
-    /** New category for the service. */
-    @Size(max = 100, message = "Category must not exceed 100 characters")
-    private String category;
+    /** Optional category ID for the service. References a category from the categories table. */
+    private Long categoryId;
 
     /** New website URL. If changed, favicon will be re-fetched. */
     @Size(max = 500, message = "Website URL must not exceed 500 characters")
