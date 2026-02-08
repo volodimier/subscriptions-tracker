@@ -23,7 +23,7 @@ vi.mock('@/components/ui/card', () => ({
 vi.mock('@/components/common/LoadingSpinner.vue', () => ({
   default: defineComponent({
     name: 'MockLoadingSpinner',
-    props: ['size'],
+    props: { size: { type: String, default: undefined } },
     setup() {
       return () => h('div', { 'data-testid': 'loading-spinner' }, 'Loading...')
     },

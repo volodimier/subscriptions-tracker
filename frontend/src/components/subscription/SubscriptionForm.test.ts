@@ -9,7 +9,7 @@ import type { Subscription } from '@/types'
 vi.mock('@/components/service/ServiceSelector.vue', () => ({
   default: defineComponent({
     name: 'MockServiceSelector',
-    props: ['modelValue'],
+    props: { modelValue: { type: [String, Number, Object], default: undefined } },
     emits: ['update:modelValue'],
     setup(props) {
       return () => h('select', { 'data-testid': 'service-selector', value: props.modelValue })
@@ -21,7 +21,7 @@ vi.mock('@/components/service/ServiceSelector.vue', () => ({
 vi.mock('@/components/ui/button', () => ({
   Button: defineComponent({
     name: 'MockButton',
-    props: ['variant', 'type', 'disabled'],
+    props: { variant: { type: String, default: undefined }, type: { type: String, default: undefined }, disabled: { type: Boolean, default: false } },
     emits: ['click'],
     setup(props, { slots, emit }) {
       return () => h('button', {
@@ -36,7 +36,7 @@ vi.mock('@/components/ui/button', () => ({
 vi.mock('@/components/ui/input', () => ({
   Input: defineComponent({
     name: 'MockInput',
-    props: ['modelValue', 'id', 'type', 'step', 'min', 'required', 'placeholder', 'disabled'],
+    props: { modelValue: { type: [String, Number], default: undefined }, id: { type: String, default: undefined }, type: { type: String, default: undefined }, step: { type: String, default: undefined }, min: { type: [String, Number], default: undefined }, required: { type: Boolean, default: false }, placeholder: { type: String, default: undefined }, disabled: { type: Boolean, default: false } },
     emits: ['update:modelValue'],
     setup(props, { emit }) {
       return () => h('input', {
@@ -53,7 +53,7 @@ vi.mock('@/components/ui/input', () => ({
 vi.mock('@/components/ui/label', () => ({
   Label: defineComponent({
     name: 'MockLabel',
-    props: ['for'],
+    props: { for: { type: String, default: undefined } },
     setup(_, { slots }) {
       return () => h('label', slots.default?.())
     },
@@ -63,7 +63,7 @@ vi.mock('@/components/ui/label', () => ({
 vi.mock('@/components/ui/alert', () => ({
   Alert: defineComponent({
     name: 'MockAlert',
-    props: ['variant'],
+    props: { variant: { type: String, default: undefined } },
     setup(_, { slots }) {
       return () => h('div', { class: 'alert' }, slots.default?.())
     },
@@ -79,7 +79,7 @@ vi.mock('@/components/ui/alert', () => ({
 vi.mock('@/components/ui/date-picker', () => ({
   DatePicker: defineComponent({
     name: 'MockDatePicker',
-    props: ['modelValue', 'placeholder', 'disabled'],
+    props: { modelValue: { type: String, default: undefined }, placeholder: { type: String, default: undefined }, disabled: { type: Boolean, default: false } },
     emits: ['update:modelValue'],
     setup(props) {
       return () => h('input', {

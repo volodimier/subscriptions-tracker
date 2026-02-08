@@ -10,7 +10,7 @@ import type { DashboardSummary, Projection } from '@/types'
 vi.mock('@/components/common/LoadingSpinner.vue', () => ({
   default: defineComponent({
     name: 'MockLoadingSpinner',
-    props: ['size'],
+    props: { size: { type: String, default: undefined } },
     setup() {
       return () => h('div', { 'data-testid': 'loading-spinner' }, 'Loading...')
     },
@@ -20,7 +20,7 @@ vi.mock('@/components/common/LoadingSpinner.vue', () => ({
 vi.mock('@/components/dashboard/SummaryCards.vue', () => ({
   default: defineComponent({
     name: 'MockSummaryCards',
-    props: ['summary', 'projection'],
+    props: { summary: { type: Object, default: undefined }, projection: { type: Object, default: undefined } },
     setup() {
       return () => h('div', { 'data-testid': 'summary-cards' }, 'Summary Cards')
     },
@@ -30,7 +30,7 @@ vi.mock('@/components/dashboard/SummaryCards.vue', () => ({
 vi.mock('@/components/dashboard/CategoryChart.vue', () => ({
   default: defineComponent({
     name: 'MockCategoryChart',
-    props: ['data', 'currency'],
+    props: { data: { type: Array, default: undefined }, currency: { type: String, default: undefined } },
     setup() {
       return () => h('div', { 'data-testid': 'category-chart' }, 'Category Chart')
     },
@@ -40,7 +40,7 @@ vi.mock('@/components/dashboard/CategoryChart.vue', () => ({
 vi.mock('@/components/dashboard/SpendingChart.vue', () => ({
   default: defineComponent({
     name: 'MockSpendingChart',
-    props: ['data', 'currency'],
+    props: { data: { type: Array, default: undefined }, currency: { type: String, default: undefined } },
     setup() {
       return () => h('div', { 'data-testid': 'spending-chart' }, 'Spending Chart')
     },
@@ -78,7 +78,7 @@ vi.mock('@/components/ui/card', () => ({
 vi.mock('@/components/ui/button', () => ({
   Button: defineComponent({
     name: 'MockButton',
-    props: ['variant', 'size'],
+    props: { variant: { type: String, default: undefined }, size: { type: String, default: undefined } },
     emits: ['click'],
     setup(_, { slots, emit }) {
       return () =>
@@ -105,7 +105,7 @@ vi.mock('@/components/ui/label', () => ({
 vi.mock('@/components/ui/date-picker', () => ({
   DatePicker: defineComponent({
     name: 'MockDatePicker',
-    props: ['modelValue', 'placeholder'],
+    props: { modelValue: { type: String, default: undefined }, placeholder: { type: String, default: undefined } },
     emits: ['update:modelValue'],
     setup(props) {
       return () =>
