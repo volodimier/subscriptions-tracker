@@ -101,13 +101,19 @@ public class AuthService {
 
         user = userRepository.save(user);
 
-        // Send verification email asynchronously (don't block registration)
-        try {
-            emailVerificationService.sendVerificationEmail(user);
-        } catch (Exception e) {
-            log.warn("Failed to send verification email during registration for user: {}. Error: {}",
-                    user.getEmail(), e.getMessage());
-            // Don't fail registration if email fails - user can request resend later
+        if (emailConfig.isVerificationEnabled()) {
+            // Send verification email asynchronously (don't block registration)
+            try {
+                emailVerificationService.sendVerificationEmail(user);
+            } catch (Exception e) {
+                log.warn("Failed to send verification email during registration for user: {}. Error: {}",
+                        user.getEmail(), e.getMessage());
+                // Don't fail registration if email fails - user can request resend later
+            }
+        } else {
+            // Auto-verify user when email verification is disabled
+            user.markEmailAsVerified();
+            user = userRepository.save(user);
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
@@ -117,7 +123,7 @@ public class AuthService {
         log.info("User registered successfully: {}", user.getEmail());
 
         return AuthResponse.builder()
-                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays()))
+                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()))
                 .token(accessToken)
                 .refreshToken(refreshToken.getToken())
                 .tokenType("Bearer")
@@ -150,7 +156,7 @@ public class AuthService {
                 .orElseThrow();
 
         // Check email verification status
-        if (!user.canLogin(emailConfig.getGracePeriodDays())) {
+        if (emailConfig.isVerificationEnabled() && !user.canLogin(emailConfig.getGracePeriodDays())) {
             log.warn("Login blocked for user {} - email not verified and grace period expired", user.getEmail());
             throw new EmailNotVerifiedException(ErrorMessages.EMAIL_GRACE_PERIOD_EXPIRED);
         }
@@ -180,7 +186,7 @@ public class AuthService {
         log.info("User logged in successfully: {}", user.getEmail());
 
         return AuthResponse.builder()
-                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays()))
+                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()))
                 .token(accessToken)
                 .refreshToken(refreshToken.getToken())
                 .tokenType("Bearer")
@@ -222,7 +228,7 @@ public class AuthService {
         log.info("2FA verification successful for user: {}", user.getEmail());
 
         return AuthResponse.builder()
-                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays()))
+                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()))
                 .token(accessToken)
                 .refreshToken(refreshToken.getToken())
                 .tokenType("Bearer")
@@ -257,7 +263,7 @@ public class AuthService {
         log.debug("Token refreshed for user: {}", user.getEmail());
 
         return AuthResponse.builder()
-                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays()))
+                .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()))
                 .token(newAccessToken)
                 .refreshToken(newRefreshToken.getToken())
                 .tokenType("Bearer")

@@ -143,6 +143,7 @@ class AuthServiceEmailVerificationTest {
                 .build();
 
         lenient().when(emailConfig.getGracePeriodDays()).thenReturn(GRACE_PERIOD_DAYS);
+        lenient().when(emailConfig.isVerificationEnabled()).thenReturn(true);
     }
 
     @Nested
@@ -289,6 +290,92 @@ class AuthServiceEmailVerificationTest {
 
             assertNotNull(response);
             assertEquals("jwt-token", response.getToken());
+        }
+    }
+
+    @Nested
+    @DisplayName("email verification disabled")
+    class EmailVerificationDisabled {
+
+        @BeforeEach
+        void setUp() {
+            when(emailConfig.isVerificationEnabled()).thenReturn(false);
+        }
+
+        @Test
+        @DisplayName("should auto-verify user on registration when verification is disabled")
+        void shouldAutoVerifyUserOnRegistration() {
+            RegisterRequest request = RegisterRequest.builder()
+                    .email("new@example.com")
+                    .password("Password123")
+                    .build();
+
+            User newUser = User.builder()
+                    .id(4L)
+                    .email("new@example.com")
+                    .passwordHash("encodedPassword")
+                    .baseCurrencyCode("USD")
+                    .role(Role.USER)
+                    .emailVerified(false)
+                    .createdAt(LocalDateTime.now(ZoneOffset.UTC))
+                    .build();
+
+            when(authConfig.isRegistrationEnabled()).thenReturn(true);
+            when(userRepository.existsByEmail(anyString())).thenReturn(false);
+            when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+            when(userRepository.save(any(User.class))).thenReturn(newUser);
+            when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
+            when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
+
+            authService.register(request);
+
+            verify(emailVerificationService, never()).sendVerificationEmail(any(User.class));
+            // Verify user was saved twice (initial + auto-verify)
+            verify(userRepository, times(2)).save(any(User.class));
+        }
+
+        @Test
+        @DisplayName("should not block login for unverified user after grace period when verification is disabled")
+        void shouldNotBlockLoginWhenVerificationDisabled() {
+            LoginRequest request = LoginRequest.builder()
+                    .email("expired@example.com")
+                    .password("Password123")
+                    .build();
+
+            when(userRepository.findByEmail("expired@example.com"))
+                    .thenReturn(Optional.of(unverifiedUserAfterGracePeriod));
+            when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
+            when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
+
+            AuthResponse response = authService.login(request);
+
+            assertNotNull(response);
+            assertEquals("jwt-token", response.getToken());
+        }
+
+        @Test
+        @DisplayName("should set emailVerificationEnabled to false in response when disabled")
+        void shouldSetEmailVerificationEnabledToFalseInResponse() {
+            LoginRequest request = LoginRequest.builder()
+                    .email("verified@example.com")
+                    .password("Password123")
+                    .build();
+
+            when(userRepository.findByEmail("verified@example.com"))
+                    .thenReturn(Optional.of(verifiedUser));
+            when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
+            when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
+
+            AuthResponse response = authService.login(request);
+
+            assertNotNull(response.getUser());
+            assertFalse(response.getUser().getEmailVerificationEnabled());
         }
     }
 

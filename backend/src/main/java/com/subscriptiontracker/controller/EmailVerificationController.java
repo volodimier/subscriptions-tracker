@@ -64,7 +64,7 @@ public class EmailVerificationController {
             @RequestParam String token
     ) {
         User user = emailVerificationService.verifyEmail(token);
-        return ResponseEntity.ok(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays()));
+        return ResponseEntity.ok(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()));
     }
 
     /**
@@ -90,6 +90,9 @@ public class EmailVerificationController {
     public ResponseEntity<Void> resendVerificationEmail(
             @AuthenticationPrincipal UserDetails userDetails
     ) {
+        if (!emailConfig.isVerificationEnabled()) {
+            return ResponseEntity.noContent().build();
+        }
         User user = currentUserService.getCurrentUser(userDetails);
         emailVerificationService.resendVerificationEmail(user);
         return ResponseEntity.noContent().build();
@@ -117,6 +120,13 @@ public class EmailVerificationController {
     public ResponseEntity<EmailVerificationStatusResponse> getVerificationStatus(
             @AuthenticationPrincipal UserDetails userDetails
     ) {
+        if (!emailConfig.isVerificationEnabled()) {
+            return ResponseEntity.ok(EmailVerificationStatusResponse.builder()
+                    .verified(true)
+                    .canResend(false)
+                    .resendAvailableInSeconds(0)
+                    .build());
+        }
         User user = currentUserService.getCurrentUser(userDetails);
         EmailVerificationStatusResponse status = emailVerificationService.getStatus(user);
         return ResponseEntity.ok(status);

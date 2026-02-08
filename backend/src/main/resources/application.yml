@@ -68,6 +68,7 @@ email:
   resend-rate-limit-seconds: 120
   verification-base-url: ${EMAIL_VERIFICATION_BASE_URL:http://localhost:5173}
   grace-period-days: 7
+  verification-enabled: ${EMAIL_VERIFICATION_ENABLED:false}
 
 fx-rate:
   api-key: ${FX_RATE_API_KEY:}

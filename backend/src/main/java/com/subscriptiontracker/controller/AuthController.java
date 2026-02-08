@@ -1,5 +1,6 @@
 package com.subscriptiontracker.controller;
 
+import com.subscriptiontracker.config.EmailConfig;
 import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
@@ -37,6 +38,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final CurrentUserService currentUserService;
+    private final EmailConfig emailConfig;
 
     /**
      * Registers a new user account.
@@ -119,7 +121,7 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
         User user = currentUserService.getCurrentUser(userDetails);
-        return ResponseEntity.ok(UserResponse.fromEntity(user));
+        return ResponseEntity.ok(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()));
     }
 
     /**

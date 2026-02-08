@@ -9,6 +9,7 @@ export interface User {
   emailVerified?: boolean
   emailVerifiedAt?: string
   withinGracePeriod?: boolean
+  emailVerificationEnabled?: boolean
   createdAt?: string
   updatedAt?: string
 }

@@ -58,6 +58,10 @@ public class UserResponse {
     @Schema(description = "Whether the user is within the grace period", example = "true")
     private Boolean withinGracePeriod;
 
+    /** Whether email verification is enabled on the server. */
+    @Schema(description = "Whether email verification is enabled on the server", example = "false")
+    private Boolean emailVerificationEnabled;
+
     /**
      * Creates a UserResponse from a User entity.
      *
@@ -76,6 +80,18 @@ public class UserResponse {
      * @return the response DTO
      */
     public static UserResponse fromEntity(User user, int gracePeriodDays) {
+        return fromEntity(user, gracePeriodDays, true);
+    }
+
+    /**
+     * Creates a UserResponse from a User entity with configurable grace period and verification flag.
+     *
+     * @param user                      the user entity
+     * @param gracePeriodDays            the number of days for the grace period
+     * @param emailVerificationEnabled   whether email verification is enabled on the server
+     * @return the response DTO
+     */
+    public static UserResponse fromEntity(User user, int gracePeriodDays, boolean emailVerificationEnabled) {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -85,6 +101,7 @@ public class UserResponse {
                 .twoFactorEnabled(user.isTwoFactorEnabled())
                 .emailVerified(user.isEmailVerified())
                 .withinGracePeriod(user.isWithinGracePeriod(gracePeriodDays))
+                .emailVerificationEnabled(emailVerificationEnabled)
                 .build();
     }
 }

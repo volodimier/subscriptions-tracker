@@ -80,6 +80,7 @@ class EmailVerificationControllerTest {
                 .build();
 
         when(emailConfig.getGracePeriodDays()).thenReturn(7);
+        when(emailConfig.isVerificationEnabled()).thenReturn(true);
         // Mock currentUserService for all authenticated endpoints
         when(currentUserService.getCurrentUser(any())).thenReturn(testUser);
     }
@@ -262,6 +263,36 @@ class EmailVerificationControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.canResend").value(false))
                     .andExpect(jsonPath("$.resendAvailableInSeconds").value(90));
+        }
+    }
+
+    @Nested
+    @DisplayName("Email verification disabled")
+    class EmailVerificationDisabled {
+
+        @BeforeEach
+        void setUp() {
+            when(emailConfig.isVerificationEnabled()).thenReturn(false);
+        }
+
+        @Test
+        @DisplayName("POST /auth/email/resend should return 204 without sending email when disabled")
+        void resendShouldReturnNoContentWhenDisabled() throws Exception {
+            mockMvc.perform(post("/auth/email/resend"))
+                    .andExpect(status().isNoContent());
+
+            verify(emailVerificationService, never()).resendVerificationEmail(any(User.class));
+        }
+
+        @Test
+        @DisplayName("GET /auth/email/status should return verified=true when disabled")
+        void statusShouldReturnVerifiedWhenDisabled() throws Exception {
+            mockMvc.perform(get("/auth/email/status"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.verified").value(true))
+                    .andExpect(jsonPath("$.canResend").value(false));
+
+            verify(emailVerificationService, never()).getStatus(any(User.class));
         }
     }
 }

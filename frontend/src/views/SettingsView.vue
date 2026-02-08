@@ -154,7 +154,7 @@ function closeDeleteDialog() {
           </div>
 
           <!-- Email Verification Section -->
-          <EmailVerificationSection />
+          <EmailVerificationSection v-if="authStore.user?.emailVerificationEnabled" />
 
           <!-- Two-Factor Authentication Section -->
           <TwoFaSection />

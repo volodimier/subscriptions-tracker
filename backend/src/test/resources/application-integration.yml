@@ -5,6 +5,10 @@
 rate-limiting:
   enabled: false
 
+# Enable email verification for integration tests
+email:
+  verification-enabled: true
+
 server:
   servlet:
     context-path: ""

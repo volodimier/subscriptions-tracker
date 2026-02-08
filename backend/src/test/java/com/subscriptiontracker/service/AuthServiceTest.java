@@ -127,8 +127,9 @@ class AuthServiceTest {
                 .revoked(false)
                 .build();
 
-        // Setup email config mock for grace period
+        // Setup email config mock for grace period and verification
         lenient().when(emailConfig.getGracePeriodDays()).thenReturn(7);
+        lenient().when(emailConfig.isVerificationEnabled()).thenReturn(true);
     }
 
     @Nested

@@ -10,7 +10,7 @@ A full-stack application for tracking personal subscriptions with multi-currency
 - **Dashboard & Statistics**: Visual spending analytics with charts and projections
 - **Service Catalog**: Manage your personal catalog of subscription services
 - **Two-Factor Authentication**: Optional TOTP-based 2FA with authenticator apps (Google Authenticator, Authy, etc.) and recovery codes
-- **Email Verification**: New accounts require email verification with a 7-day grace period
+- **Email Verification**: Optional email verification for new accounts with a 7-day grace period (toggle via `EMAIL_VERIFICATION_ENABLED`)
 
 ## Tech Stack
 
@@ -60,6 +60,7 @@ The backend uses a single `application.yml` with environment variable overrides 
 | `LOG_LEVEL_APP` | `INFO` | App logging level |
 | `DEVTOOLS_ENABLED` | `false` | Spring DevTools (hot reload) |
 | `TOTP_ENCRYPTION_KEY` | *(dev default)* | 2FA secret encryption key (32+ chars, required in production) |
+| `EMAIL_VERIFICATION_ENABLED` | `false` | Set `true` to require email verification for new registrations |
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for full configuration reference.
 

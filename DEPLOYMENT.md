@@ -128,6 +128,7 @@ open https://your-frontend.up.railway.app
 | `EMAIL_FROM_ADDRESS` | No | Sender email address (default: `noreply@pennywise.app`). Must be a verified domain in Resend. |
 | `EMAIL_FROM_NAME` | No | Sender display name (default: `PennyWise`). |
 | `EMAIL_VERIFICATION_BASE_URL` | **Yes (prod)** | Frontend URL for verification links (e.g., `https://your-frontend.up.railway.app`). |
+| `EMAIL_VERIFICATION_ENABLED` | No | Set `true` to require email verification for new registrations (default: `false`). When disabled, new users are auto-verified. |
 
 **Note:** Use `${{Postgres.VARIABLE}}` syntax to reference the PostgreSQL service variables. Additional debug variables (logging levels, JPA settings) are available in `application.yml` but rarely need overriding.
 
@@ -233,7 +234,7 @@ If a user loses access to their authenticator app, they can use one of their 10 
 
 ## Email Verification
 
-New user registrations require email verification. The application uses [Resend](https://resend.com) as the email provider.
+Email verification for new registrations is controlled by the `EMAIL_VERIFICATION_ENABLED` environment variable (default: `false`). When disabled, new users are auto-verified at registration. The application uses [Resend](https://resend.com) as the email provider.
 
 ### Behavior
 

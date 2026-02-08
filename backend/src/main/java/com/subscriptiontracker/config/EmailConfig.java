@@ -75,6 +75,14 @@ public class EmailConfig {
     private int gracePeriodDays = 7;
 
     /**
+     * Whether email verification is enabled.
+     * When disabled, new users are auto-verified at registration,
+     * no verification emails are sent, and grace period enforcement is skipped.
+     * Defaults to false.
+     */
+    private boolean verificationEnabled = false;
+
+    /**
      * Checks if the email service is configured with a valid API key.
      *
      * @return true if Resend API key is configured, false otherwise

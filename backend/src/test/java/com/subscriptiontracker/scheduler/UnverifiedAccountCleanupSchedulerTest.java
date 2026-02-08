@@ -53,6 +53,7 @@ class UnverifiedAccountCleanupSchedulerTest {
     @BeforeEach
     void setUp() {
         lenient().when(emailConfig.getGracePeriodDays()).thenReturn(GRACE_PERIOD_DAYS);
+        lenient().when(emailConfig.isVerificationEnabled()).thenReturn(true);
     }
 
     @Nested
@@ -174,6 +175,17 @@ class UnverifiedAccountCleanupSchedulerTest {
             verify(userRepository).delete(user1);
             verify(userRepository).delete(user2);
             verify(userRepository).delete(user3);
+        }
+
+        @Test
+        @DisplayName("should skip cleanup when email verification is disabled")
+        void shouldSkipCleanupWhenVerificationDisabled() {
+            when(emailConfig.isVerificationEnabled()).thenReturn(false);
+
+            cleanupScheduler.cleanupUnverifiedAccounts();
+
+            verify(userRepository, never()).findUnverifiedUsersOlderThan(any(LocalDateTime.class));
+            verify(userRepository, never()).delete(any(User.class));
         }
 
         @Test

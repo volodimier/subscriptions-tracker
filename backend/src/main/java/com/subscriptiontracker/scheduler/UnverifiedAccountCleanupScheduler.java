@@ -60,6 +60,10 @@ public class UnverifiedAccountCleanupScheduler {
     @Scheduled(cron = "0 0 3 * * *") // Run at 3:00 AM UTC daily
     @Transactional
     public void cleanupUnverifiedAccounts() {
+        if (!emailConfig.isVerificationEnabled()) {
+            log.debug("Email verification disabled - skipping unverified account cleanup");
+            return;
+        }
         log.info("Starting unverified account cleanup job");
 
         LocalDateTime cutoffDate = LocalDateTime.now(ZoneOffset.UTC)
