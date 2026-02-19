@@ -11,8 +11,8 @@ Backend foundations are already in place (rule IDs, error codes, recurrence vali
 
 ## Inputs / Contracts To Reuse
 
-- Spec: `to_implement/subscription-recurrence-spec-v5.md`
-- Shared matrix: `to_implement/subscription-recurrence-validation-matrix-v1.md`
+- Spec: `docs/subscription-recurrence-spec-v5.md`
+- Shared matrix: `docs/subscription-recurrence-validation-matrix-v1.md`
 - Backend rule/code constants: `backend/src/main/java/com/subscriptiontracker/constant/RecurrenceValidation.java`
 - Backend recurrence error envelope:
   - `error = BAD_REQUEST`

@@ -609,6 +609,68 @@ class SubscriptionServiceTest {
         }
 
         @Test
+        @DisplayName("should auto-calculate anchor-aware startDate for monthly Feb-28 with anchor day 31")
+        void shouldAutoCalculateAnchorAwareStartDateForMonthlyFeb28WithAnchor31() {
+            LocalDate nextBillingDate = LocalDate.of(2026, 2, 28);
+            LocalDate expectedStartDate = LocalDate.of(2026, 1, 31);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .nextBillingDate(nextBillingDate)
+                    .anchorDay(31)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
+                Subscription sub = invocation.getArgument(0);
+                sub.setId(1L);
+                return sub;
+            });
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+            assertEquals(31, captor.getValue().getAnchorDay());
+        }
+
+        @Test
+        @DisplayName("should auto-calculate anchor-aware startDate for monthly day-30 with anchor day 31")
+        void shouldAutoCalculateAnchorAwareStartDateForMonthlyDay30WithAnchor31() {
+            LocalDate nextBillingDate = LocalDate.of(2026, 4, 30);
+            LocalDate expectedStartDate = LocalDate.of(2026, 3, 31);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .nextBillingDate(nextBillingDate)
+                    .anchorDay(31)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
+                Subscription sub = invocation.getArgument(0);
+                sub.setId(1L);
+                return sub;
+            });
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+            assertEquals(31, captor.getValue().getAnchorDay());
+        }
+
+        @Test
         @DisplayName("should reject bi-annual billing cycle")
         void shouldRejectBiAnnualBillingCycle() {
             LocalDate nextBillingDate = LocalDate.of(2024, 7, 15);

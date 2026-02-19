@@ -200,10 +200,7 @@ public class SubscriptionService {
 
         ResolvedRecurrence resolvedRecurrence = resolveRecurrence(user, request);
 
-        BillingPeriod billingPeriod = BillingPeriod.of(request.getBillingCycle(), null);
-        LocalDate startDate = resolvedRecurrence.startDate() != null
-                ? resolvedRecurrence.startDate()
-                : billingPeriod.calculateStartDate(resolvedRecurrence.nextBillingDate());
+        LocalDate startDate = calculateStartDate(request.getBillingCycle(), resolvedRecurrence);
 
         Subscription subscription = Subscription.builder()
                 .user(user)
@@ -236,6 +233,25 @@ public class SubscriptionService {
                 subscription.getCurrencyCode()));
 
         return SubscriptionResponse.fromEntity(subscription);
+    }
+
+    private LocalDate calculateStartDate(BillingCycle billingCycle, ResolvedRecurrence resolvedRecurrence) {
+        if (resolvedRecurrence.startDate() != null) {
+            return resolvedRecurrence.startDate();
+        }
+
+        Integer anchorDay = resolvedRecurrence.anchorDay();
+        if (anchorDay != null && (billingCycle == BillingCycle.monthly || billingCycle == BillingCycle.yearly)) {
+            return rewindWithAnchor(
+                    resolvedRecurrence.nextBillingDate(),
+                    billingCycle,
+                    anchorDay,
+                    resolvedRecurrence.anchorMonth()
+            );
+        }
+
+        BillingPeriod billingPeriod = BillingPeriod.of(billingCycle, null);
+        return billingPeriod.calculateStartDate(resolvedRecurrence.nextBillingDate());
     }
 
     private record ResolvedRecurrence(
@@ -519,6 +535,32 @@ public class SubscriptionService {
         if (billingCycle == BillingCycle.yearly) {
             int year = currentDate.getYear() + 1;
             YearMonth targetMonth = YearMonth.of(year, anchorMonth);
+            int day = Math.min(anchorDay, targetMonth.lengthOfMonth());
+            return targetMonth.atDay(day);
+        }
+        throw recurrenceBadRequest(
+                "Billing cycle is not supported. Only monthly and yearly billing cycles are allowed.",
+                RecurrenceValidation.RULE_VAL_REC_005,
+                RecurrenceValidation.CODE_CADENCE_NOT_SUPPORTED,
+                "billingCycle"
+        );
+    }
+
+    private LocalDate rewindWithAnchor(
+            LocalDate currentDate,
+            BillingCycle billingCycle,
+            int anchorDay,
+            Integer anchorMonth
+    ) {
+        if (billingCycle == BillingCycle.monthly) {
+            YearMonth targetMonth = YearMonth.from(currentDate).minusMonths(1);
+            int day = Math.min(anchorDay, targetMonth.lengthOfMonth());
+            return targetMonth.atDay(day);
+        }
+        if (billingCycle == BillingCycle.yearly) {
+            int year = currentDate.getYear() - 1;
+            int month = anchorMonth != null ? anchorMonth : currentDate.getMonthValue();
+            YearMonth targetMonth = YearMonth.of(year, month);
             int day = Math.min(anchorDay, targetMonth.lengthOfMonth());
             return targetMonth.atDay(day);
         }
