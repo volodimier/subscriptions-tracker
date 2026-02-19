@@ -27,6 +27,9 @@ public class UserSettingsResponse {
     /** User's preferred base currency (ISO 4217 code). */
     private String baseCurrency;
 
+    /** User's billing timezone (IANA ID). */
+    private String userTimeZone;
+
     /** When FX rates were last refreshed. */
     private LocalDateTime fxRatesLastUpdated;
 

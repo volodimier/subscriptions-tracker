@@ -4,6 +4,7 @@ import com.subscriptiontracker.entity.PaymentRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -92,4 +93,27 @@ public interface PaymentRecordRepository extends JpaRepository<PaymentRecord, Lo
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    /**
+     * Inserts a payment record only if a record for the same subscription/date does not already exist.
+     *
+     * @return 1 if inserted, 0 if skipped due to uniqueness conflict
+     */
+    @Modifying
+    @Query(value = "INSERT INTO payment_records (" +
+            "subscription_id, amount, currency_code, payment_date, fx_rate_to_base, amount_in_base_currency, status, paid_date" +
+            ") VALUES (" +
+            ":subscriptionId, :amount, :currencyCode, :paymentDate, :fxRateToBase, :amountInBaseCurrency, " +
+            "CAST(:status AS payment_status), :paidDate" +
+            ") ON CONFLICT (subscription_id, payment_date) DO NOTHING",
+            nativeQuery = true)
+    int insertIfAbsent(
+            @Param("subscriptionId") Long subscriptionId,
+            @Param("amount") BigDecimal amount,
+            @Param("currencyCode") String currencyCode,
+            @Param("paymentDate") LocalDate paymentDate,
+            @Param("fxRateToBase") BigDecimal fxRateToBase,
+            @Param("amountInBaseCurrency") BigDecimal amountInBaseCurrency,
+            @Param("status") String status,
+            @Param("paidDate") LocalDate paidDate);
 }

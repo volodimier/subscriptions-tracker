@@ -141,6 +141,24 @@ public class Subscription {
     private LocalDate nextBillingDate;
 
     /**
+     * Stable day-of-month anchor for monthly/yearly recurrence (1..31).
+     */
+    @Column(name = "anchor_day")
+    private Integer anchorDay;
+
+    /**
+     * Stable month anchor for yearly recurrence (1..12).
+     */
+    @Column(name = "anchor_month")
+    private Integer anchorMonth;
+
+    /**
+     * User timezone snapshot captured at subscription creation time.
+     */
+    @Column(name = "time_zone_at_creation", length = 64)
+    private String timeZoneAtCreation;
+
+    /**
      * The current status of this subscription (active or cancelled).
      * Defaults to active status.
      */
@@ -201,6 +219,7 @@ public class Subscription {
                         BigDecimal amount, String currencyCode,
                         BillingPeriod billingPeriod, BillingCycle billingCycle, Integer billingCycleDays,
                         String paymentMethod, LocalDate startDate, LocalDate nextBillingDate,
+                        Integer anchorDay, Integer anchorMonth, String timeZoneAtCreation,
                         SubscriptionStatus status, LocalDateTime cancelledAt, String notes,
                         LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
@@ -234,6 +253,9 @@ public class Subscription {
         this.paymentMethod = paymentMethod;
         this.startDate = startDate;
         this.nextBillingDate = nextBillingDate;
+        this.anchorDay = anchorDay;
+        this.anchorMonth = anchorMonth;
+        this.timeZoneAtCreation = timeZoneAtCreation;
         this.status = status != null ? status : SubscriptionStatus.active;
         this.cancelledAt = cancelledAt;
         this.notes = notes;
@@ -512,6 +534,19 @@ public class Subscription {
 
         if (this.billingPeriod == null) {
             throw new IllegalStateException(ErrorMessages.BILLING_PERIOD_NOT_SET);
+        }
+
+        BillingCycle cycle = this.billingPeriod.getCycle();
+        if (cycle == BillingCycle.monthly && this.anchorDay != null) {
+            LocalDate nextMonth = this.nextBillingDate.plusMonths(1);
+            int day = Math.min(this.anchorDay, nextMonth.lengthOfMonth());
+            return nextMonth.withDayOfMonth(day);
+        }
+        if (cycle == BillingCycle.yearly && this.anchorDay != null && this.anchorMonth != null) {
+            int targetYear = this.nextBillingDate.getYear() + 1;
+            LocalDate firstOfMonth = LocalDate.of(targetYear, this.anchorMonth, 1);
+            int day = Math.min(this.anchorDay, firstOfMonth.lengthOfMonth());
+            return firstOfMonth.withDayOfMonth(day);
         }
 
         return this.billingPeriod.calculateNextDate(this.nextBillingDate);

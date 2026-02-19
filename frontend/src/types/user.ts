@@ -47,6 +47,7 @@ export interface DeleteAccountRequest {
 export interface UserSettings {
   email: string
   baseCurrency: string
+  userTimeZone: string
   fxRatesLastUpdated?: string
   currentFxRates?: Record<string, number>
 }

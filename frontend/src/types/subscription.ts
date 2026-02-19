@@ -34,9 +34,11 @@ export interface CreateSubscriptionRequest {
   amount: number
   currencyCode: string
   billingCycle: BillingCycle
-  billingCycleDays?: number
+  firstBillingDate?: string
+  nextBillingDate?: string
+  anchorDay?: number
+  anchorMonthDay?: string
   paymentMethod?: string
-  nextBillingDate: string
   notes?: string
 }
 

@@ -2,6 +2,7 @@ package com.subscriptiontracker.service;
 
 import com.subscriptiontracker.constant.DomainConstants;
 import com.subscriptiontracker.constant.ErrorMessages;
+import com.subscriptiontracker.constant.RecurrenceValidation;
 import com.subscriptiontracker.dto.request.CancelSubscriptionRequest;
 import com.subscriptiontracker.dto.request.CreateSubscriptionRequest;
 import com.subscriptiontracker.dto.request.ReactivateSubscriptionRequest;
@@ -32,10 +33,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -64,6 +71,7 @@ public class SubscriptionService {
     private final ServiceRepository serviceRepository;
     private final UserRepository userRepository;
     private final PaymentRecordRepository paymentRecordRepository;
+    private final FxRateService fxRateService;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -181,13 +189,18 @@ public class SubscriptionService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         ErrorMessages.RESOURCE_SERVICE, DomainConstants.FIELD_ID, request.getServiceId()));
 
-        if (request.getBillingCycle() == BillingCycle.custom && request.getBillingCycleDays() == null) {
-            throw new BadRequestException(ErrorMessages.BILLING_CYCLE_DAYS_REQUIRED);
+        if (request.getBillingCycle() != BillingCycle.monthly && request.getBillingCycle() != BillingCycle.yearly) {
+            throw recurrenceBadRequest(
+                    "Billing cycle is not supported. Only monthly and yearly billing cycles are allowed.",
+                    RecurrenceValidation.RULE_VAL_REC_005,
+                    RecurrenceValidation.CODE_CADENCE_NOT_SUPPORTED,
+                    "billingCycle"
+            );
         }
 
-        // Auto-calculate start date from next billing date and billing cycle
-        BillingPeriod billingPeriod = BillingPeriod.of(request.getBillingCycle(), request.getBillingCycleDays());
-        LocalDate calculatedStartDate = billingPeriod.calculateStartDate(request.getNextBillingDate());
+        ResolvedRecurrence resolvedRecurrence = resolveRecurrence(user, request);
+
+        LocalDate startDate = calculateStartDate(request.getBillingCycle(), resolvedRecurrence);
 
         Subscription subscription = Subscription.builder()
                 .user(user)
@@ -195,15 +208,19 @@ public class SubscriptionService {
                 .amount(request.getAmount())
                 .currencyCode(request.getCurrencyCode())
                 .billingCycle(request.getBillingCycle())
-                .billingCycleDays(request.getBillingCycleDays())
+                .billingCycleDays(null)
                 .paymentMethod(request.getPaymentMethod())
-                .startDate(calculatedStartDate)
-                .nextBillingDate(request.getNextBillingDate())
+                .startDate(startDate)
+                .nextBillingDate(resolvedRecurrence.nextBillingDate())
+                .anchorDay(resolvedRecurrence.anchorDay())
+                .anchorMonth(resolvedRecurrence.anchorMonth())
+                .timeZoneAtCreation(resolvedRecurrence.userTimeZone())
                 .notes(request.getNotes())
                 .status(SubscriptionStatus.active)
                 .build();
 
         subscription = subscriptionRepository.save(subscription);
+        backfillPaymentsIfNeeded(subscription, resolvedRecurrence);
 
         createHistorySnapshot(subscription);
 
@@ -216,6 +233,466 @@ public class SubscriptionService {
                 subscription.getCurrencyCode()));
 
         return SubscriptionResponse.fromEntity(subscription);
+    }
+
+    private LocalDate calculateStartDate(BillingCycle billingCycle, ResolvedRecurrence resolvedRecurrence) {
+        if (resolvedRecurrence.startDate() != null) {
+            return resolvedRecurrence.startDate();
+        }
+
+        Integer anchorDay = resolvedRecurrence.anchorDay();
+        if (anchorDay != null && (billingCycle == BillingCycle.monthly || billingCycle == BillingCycle.yearly)) {
+            return rewindWithAnchor(
+                    resolvedRecurrence.nextBillingDate(),
+                    billingCycle,
+                    anchorDay,
+                    resolvedRecurrence.anchorMonth()
+            );
+        }
+
+        BillingPeriod billingPeriod = BillingPeriod.of(billingCycle, null);
+        return billingPeriod.calculateStartDate(resolvedRecurrence.nextBillingDate());
+    }
+
+    private record ResolvedRecurrence(
+            LocalDate nextBillingDate,
+            LocalDate startDate,
+            Integer anchorDay,
+            Integer anchorMonth,
+            String userTimeZone,
+            LocalDate firstBillingDateForBackfill,
+            LocalDate backfillCutoffDate
+    ) { }
+
+    private ResolvedRecurrence resolveRecurrence(User user, CreateSubscriptionRequest request) {
+        ZoneId userZone = resolveUserZone(user.getUserTimeZone());
+        LocalDate cutoffDate = calculateCutoffDate(userZone);
+
+        LocalDate firstBillingDate = request.getFirstBillingDate();
+        LocalDate nextBillingDate = request.getNextBillingDate();
+        Integer anchorDayInput = request.getAnchorDay();
+        String anchorMonthDayInput = normalizeAnchorMonthDay(request.getAnchorMonthDay());
+
+        if (firstBillingDate == null && nextBillingDate == null) {
+            throw recurrenceBadRequest(
+                    "Either FirstBillDate or NextBillDate is required.",
+                    RecurrenceValidation.RULE_VAL_REC_001,
+                    RecurrenceValidation.CODE_DATE_REQUIRED,
+                    "firstBillDate,nextBillDate"
+            );
+        }
+
+        if (firstBillingDate != null && firstBillingDate.isAfter(cutoffDate)) {
+            throw recurrenceBadRequest(
+                    "FirstBillDate cannot be in the future relative to your local cutoff date.",
+                    RecurrenceValidation.RULE_VAL_REC_002,
+                    RecurrenceValidation.CODE_FIRST_DATE_AFTER_CUTOFF,
+                    "firstBillDate"
+            );
+        }
+
+        if (firstBillingDate != null && nextBillingDate != null && firstBillingDate.isAfter(nextBillingDate)) {
+            throw recurrenceBadRequest(
+                    "FirstBillDate must be less than or equal to NextBillDate.",
+                    RecurrenceValidation.RULE_VAL_REC_003,
+                    RecurrenceValidation.CODE_FIRST_AFTER_NEXT,
+                    "firstBillDate,nextBillDate"
+            );
+        }
+
+        if (firstBillingDate != null) {
+            if (anchorDayInput != null || anchorMonthDayInput != null) {
+                throw recurrenceBadRequest(
+                        "Anchor override is not allowed when FirstBillDate is provided.",
+                        nextBillingDate != null ? RecurrenceValidation.RULE_VAL_REC_007
+                                : RecurrenceValidation.RULE_VAL_REC_008,
+                        RecurrenceValidation.CODE_ANCHOR_OVERRIDE_NOT_ALLOWED,
+                        "anchorDay,anchorMonthDay"
+                );
+            }
+
+            int anchorDay = firstBillingDate.getDayOfMonth();
+            Integer anchorMonth = request.getBillingCycle() == BillingCycle.yearly
+                    ? firstBillingDate.getMonthValue()
+                    : null;
+
+            LocalDate expectedNext = computeExpectedNext(firstBillingDate, cutoffDate, request.getBillingCycle(), anchorDay,
+                    anchorMonth);
+            if (nextBillingDate != null && !nextBillingDate.equals(expectedNext)) {
+                throw recurrenceBadRequest(
+                        "Dates don't match a standard monthly/yearly billing schedule.",
+                        RecurrenceValidation.RULE_VAL_REC_004,
+                        RecurrenceValidation.CODE_NEXT_DATE_MISMATCH,
+                        "nextBillDate"
+                );
+            }
+
+            LocalDate resolvedNext = nextBillingDate != null ? nextBillingDate : expectedNext;
+            return new ResolvedRecurrence(
+                    resolvedNext,
+                    firstBillingDate,
+                    anchorDay,
+                    anchorMonth,
+                    userZone.getId(),
+                    firstBillingDate,
+                    cutoffDate
+            );
+        }
+
+        if (request.getBillingCycle() == BillingCycle.monthly) {
+            return resolveMonthlyNextOnly(nextBillingDate, anchorDayInput, anchorMonthDayInput, userZone.getId());
+        }
+
+        return resolveYearlyNextOnly(nextBillingDate, anchorDayInput, anchorMonthDayInput, userZone.getId());
+    }
+
+    private ResolvedRecurrence resolveMonthlyNextOnly(
+            LocalDate nextBillingDate,
+            Integer anchorDayInput,
+            String anchorMonthDayInput,
+            String userTimeZone
+    ) {
+        if (anchorMonthDayInput != null) {
+            throw recurrenceBadRequest(
+                    "anchorMonthDay is not allowed for monthly cadence.",
+                    RecurrenceValidation.RULE_VAL_REC_011,
+                    RecurrenceValidation.CODE_ANCHOR_NOT_ALLOWED,
+                    "anchorMonthDay"
+            );
+        }
+
+        Set<Integer> allowedAnchors = null;
+        String ruleIdForAmbiguity = null;
+        if (nextBillingDate.getMonthValue() == 2 && nextBillingDate.getDayOfMonth() == 28) {
+            allowedAnchors = Set.of(28, 29, 30, 31);
+            ruleIdForAmbiguity = RecurrenceValidation.RULE_VAL_REC_M_001;
+        } else if (nextBillingDate.getMonthValue() == 2 && nextBillingDate.getDayOfMonth() == 29) {
+            allowedAnchors = Set.of(29, 30, 31);
+            ruleIdForAmbiguity = RecurrenceValidation.RULE_VAL_REC_M_002;
+        } else if (nextBillingDate.getDayOfMonth() == 30) {
+            allowedAnchors = Set.of(30, 31);
+            ruleIdForAmbiguity = RecurrenceValidation.RULE_VAL_REC_M_003;
+        }
+
+        int resolvedAnchorDay;
+        if (allowedAnchors == null) {
+            if (anchorDayInput != null) {
+                throw recurrenceBadRequest(
+                        "anchorDay is only allowed for ambiguous monthly next billing dates.",
+                        RecurrenceValidation.RULE_VAL_REC_011,
+                        RecurrenceValidation.CODE_ANCHOR_NOT_ALLOWED,
+                        "anchorDay"
+                );
+            }
+            resolvedAnchorDay = nextBillingDate.getDayOfMonth();
+        } else {
+            if (anchorDayInput == null) {
+                throw recurrenceBadRequest(
+                        "Monthly anchorDay is required for this next billing date.",
+                        RecurrenceValidation.RULE_VAL_REC_010,
+                        RecurrenceValidation.CODE_MONTHLY_ANCHOR_REQUIRED,
+                        "anchorDay",
+                        allowedAnchors.stream()
+                                .sorted()
+                                .map(String::valueOf)
+                                .collect(Collectors.joining(","))
+                );
+            }
+            if (anchorDayInput < 1 || anchorDayInput > 31) {
+                throw recurrenceBadRequest(
+                        "Monthly anchorDay must be within 1..31.",
+                        RecurrenceValidation.RULE_VAL_REC_M_006,
+                        RecurrenceValidation.CODE_MONTHLY_ANCHOR_OUT_OF_RANGE,
+                        "anchorDay"
+                );
+            }
+            if (!allowedAnchors.contains(anchorDayInput)) {
+                throw recurrenceBadRequest(
+                        "Monthly anchorDay is not valid for this next billing date.",
+                        ruleIdForAmbiguity,
+                        RecurrenceValidation.CODE_MONTHLY_ANCHOR_INVALID,
+                        "anchorDay",
+                        allowedAnchors.stream()
+                                .sorted()
+                                .map(String::valueOf)
+                                .collect(Collectors.joining(","))
+                );
+            }
+            resolvedAnchorDay = anchorDayInput;
+        }
+
+        return new ResolvedRecurrence(
+                nextBillingDate,
+                null,
+                resolvedAnchorDay,
+                null,
+                userTimeZone,
+                null,
+                null
+        );
+    }
+
+    private ResolvedRecurrence resolveYearlyNextOnly(
+            LocalDate nextBillingDate,
+            Integer anchorDayInput,
+            String anchorMonthDayInput,
+            String userTimeZone
+    ) {
+        if (anchorDayInput != null) {
+            throw recurrenceBadRequest(
+                    "anchorDay is not allowed for yearly cadence.",
+                    RecurrenceValidation.RULE_VAL_REC_011,
+                    RecurrenceValidation.CODE_ANCHOR_NOT_ALLOWED,
+                    "anchorDay"
+            );
+        }
+
+        int resolvedAnchorDay;
+        int resolvedAnchorMonth;
+        boolean ambiguous = nextBillingDate.getMonthValue() == 2 && nextBillingDate.getDayOfMonth() == 28;
+        if (!ambiguous) {
+            if (anchorMonthDayInput != null) {
+                throw recurrenceBadRequest(
+                        "anchorMonthDay is only allowed for ambiguous yearly next billing dates.",
+                        RecurrenceValidation.RULE_VAL_REC_011,
+                        RecurrenceValidation.CODE_ANCHOR_NOT_ALLOWED,
+                        "anchorMonthDay"
+                );
+            }
+            resolvedAnchorMonth = nextBillingDate.getMonthValue();
+            resolvedAnchorDay = nextBillingDate.getDayOfMonth();
+        } else {
+            if (anchorMonthDayInput == null) {
+                throw recurrenceBadRequest(
+                        "Yearly anchorMonthDay is required for Feb 28 next billing date.",
+                        RecurrenceValidation.RULE_VAL_REC_010,
+                        RecurrenceValidation.CODE_YEARLY_ANCHOR_REQUIRED,
+                        "anchorMonthDay",
+                        "02-28,02-29"
+                );
+            }
+
+            int[] parsedAnchor = parseYearlyAnchorMonthDay(anchorMonthDayInput);
+            if (parsedAnchor == null) {
+                throw recurrenceBadRequest(
+                        "Yearly anchorMonthDay must have MM-dd format and a valid calendar day.",
+                        RecurrenceValidation.RULE_VAL_REC_Y_004,
+                        RecurrenceValidation.CODE_YEARLY_ANCHOR_FORMAT_INVALID,
+                        "anchorMonthDay"
+                );
+            }
+
+            if (!(parsedAnchor[0] == 2 && (parsedAnchor[1] == 28 || parsedAnchor[1] == 29))) {
+                throw recurrenceBadRequest(
+                        "Yearly anchorMonthDay is not valid for this next billing date.",
+                        RecurrenceValidation.RULE_VAL_REC_Y_001,
+                        RecurrenceValidation.CODE_YEARLY_ANCHOR_INVALID,
+                        "anchorMonthDay",
+                        "02-28,02-29"
+                );
+            }
+
+            resolvedAnchorMonth = parsedAnchor[0];
+            resolvedAnchorDay = parsedAnchor[1];
+        }
+
+        return new ResolvedRecurrence(
+                nextBillingDate,
+                null,
+                resolvedAnchorDay,
+                resolvedAnchorMonth,
+                userTimeZone,
+                null,
+                null
+        );
+    }
+
+    private LocalDate computeExpectedNext(
+            LocalDate firstBillingDate,
+            LocalDate cutoffDate,
+            BillingCycle billingCycle,
+            int anchorDay,
+            Integer anchorMonth
+    ) {
+        LocalDate occurrence = firstBillingDate;
+        while (!occurrence.isAfter(cutoffDate)) {
+            occurrence = advanceWithAnchor(occurrence, billingCycle, anchorDay, anchorMonth);
+        }
+        return occurrence;
+    }
+
+    private LocalDate advanceWithAnchor(
+            LocalDate currentDate,
+            BillingCycle billingCycle,
+            int anchorDay,
+            Integer anchorMonth
+    ) {
+        if (billingCycle == BillingCycle.monthly) {
+            YearMonth targetMonth = YearMonth.from(currentDate).plusMonths(1);
+            int day = Math.min(anchorDay, targetMonth.lengthOfMonth());
+            return targetMonth.atDay(day);
+        }
+        if (billingCycle == BillingCycle.yearly) {
+            int year = currentDate.getYear() + 1;
+            YearMonth targetMonth = YearMonth.of(year, anchorMonth);
+            int day = Math.min(anchorDay, targetMonth.lengthOfMonth());
+            return targetMonth.atDay(day);
+        }
+        throw recurrenceBadRequest(
+                "Billing cycle is not supported. Only monthly and yearly billing cycles are allowed.",
+                RecurrenceValidation.RULE_VAL_REC_005,
+                RecurrenceValidation.CODE_CADENCE_NOT_SUPPORTED,
+                "billingCycle"
+        );
+    }
+
+    private LocalDate rewindWithAnchor(
+            LocalDate currentDate,
+            BillingCycle billingCycle,
+            int anchorDay,
+            Integer anchorMonth
+    ) {
+        if (billingCycle == BillingCycle.monthly) {
+            YearMonth targetMonth = YearMonth.from(currentDate).minusMonths(1);
+            int day = Math.min(anchorDay, targetMonth.lengthOfMonth());
+            return targetMonth.atDay(day);
+        }
+        if (billingCycle == BillingCycle.yearly) {
+            int year = currentDate.getYear() - 1;
+            int month = anchorMonth != null ? anchorMonth : currentDate.getMonthValue();
+            YearMonth targetMonth = YearMonth.of(year, month);
+            int day = Math.min(anchorDay, targetMonth.lengthOfMonth());
+            return targetMonth.atDay(day);
+        }
+        throw recurrenceBadRequest(
+                "Billing cycle is not supported. Only monthly and yearly billing cycles are allowed.",
+                RecurrenceValidation.RULE_VAL_REC_005,
+                RecurrenceValidation.CODE_CADENCE_NOT_SUPPORTED,
+                "billingCycle"
+        );
+    }
+
+    private void backfillPaymentsIfNeeded(Subscription subscription, ResolvedRecurrence resolvedRecurrence) {
+        LocalDate firstBillingDate = resolvedRecurrence.firstBillingDateForBackfill();
+        LocalDate cutoffDate = resolvedRecurrence.backfillCutoffDate();
+        if (firstBillingDate == null || cutoffDate == null) {
+            return;
+        }
+
+        LocalDate chargeDate = firstBillingDate;
+        while (!chargeDate.isAfter(cutoffDate)) {
+            createBackfillPaymentIfAbsent(subscription, chargeDate);
+            chargeDate = advanceWithAnchor(
+                    chargeDate,
+                    subscription.getBillingCycle(),
+                    resolvedRecurrence.anchorDay(),
+                    resolvedRecurrence.anchorMonth()
+            );
+        }
+    }
+
+    private void createBackfillPaymentIfAbsent(Subscription subscription, LocalDate chargeDate) {
+        String subscriptionCurrency = subscription.getCurrencyCode();
+        String baseCurrency = subscription.getUser().getBaseCurrencyCode();
+
+        BigDecimal fxRate = fxRateService.getRate(subscriptionCurrency, baseCurrency, chargeDate);
+        BigDecimal amountInBaseCurrency = subscription.getAmount()
+                .multiply(fxRate)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        paymentRecordRepository.insertIfAbsent(
+                subscription.getId(),
+                subscription.getAmount(),
+                subscriptionCurrency,
+                chargeDate,
+                fxRate,
+                amountInBaseCurrency,
+                PaymentStatus.paid.name(),
+                chargeDate
+        );
+    }
+
+    private ZoneId resolveUserZone(String userTimeZone) {
+        if (userTimeZone == null || userTimeZone.isBlank()) {
+            throw recurrenceBadRequest(
+                    "User timezone must be configured before recurrence processing.",
+                    RecurrenceValidation.RULE_VAL_REC_006,
+                    RecurrenceValidation.CODE_USER_TIMEZONE_INVALID,
+                    "userTimeZone"
+            );
+        }
+        try {
+            return ZoneId.of(userTimeZone);
+        } catch (DateTimeException ex) {
+            throw recurrenceBadRequest(
+                    "User timezone must be a valid IANA timezone ID.",
+                    RecurrenceValidation.RULE_VAL_REC_006,
+                    RecurrenceValidation.CODE_USER_TIMEZONE_INVALID,
+                    "userTimeZone"
+            );
+        }
+    }
+
+    private LocalDate calculateCutoffDate(ZoneId userZone) {
+        ZonedDateTime nowUser = ZonedDateTime.now(userZone);
+        LocalDate todayUser = nowUser.toLocalDate();
+        return nowUser.toLocalTime().isBefore(LocalTime.of(0, 5))
+                ? todayUser.minusDays(1)
+                : todayUser;
+    }
+
+    private String normalizeAnchorMonthDay(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private int[] parseYearlyAnchorMonthDay(String anchorMonthDay) {
+        if (!anchorMonthDay.matches("\\d{2}-\\d{2}")) {
+            return null;
+        }
+
+        int month;
+        int day;
+        try {
+            month = Integer.parseInt(anchorMonthDay.substring(0, 2));
+            day = Integer.parseInt(anchorMonthDay.substring(3, 5));
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+
+        if (month < 1 || month > 12 || day < 1 || day > 31) {
+            return null;
+        }
+
+        YearMonth monthInLeapYear;
+        try {
+            monthInLeapYear = YearMonth.of(2024, month); // allows Feb 29 as valid yearly anchor
+        } catch (DateTimeException ex) {
+            return null;
+        }
+
+        if (day > monthInLeapYear.lengthOfMonth()) {
+            return null;
+        }
+
+        return new int[] {month, day};
+    }
+
+    private BadRequestException recurrenceBadRequest(String message, String ruleId, String code, String field) {
+        return new BadRequestException(message, RecurrenceValidation.details(ruleId, code, field));
+    }
+
+    private BadRequestException recurrenceBadRequest(
+            String message,
+            String ruleId,
+            String code,
+            String field,
+            String allowedValues
+    ) {
+        return new BadRequestException(message, RecurrenceValidation.details(ruleId, code, field, allowedValues));
     }
 
     /**

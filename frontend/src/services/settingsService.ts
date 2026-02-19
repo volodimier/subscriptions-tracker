@@ -1,14 +1,19 @@
 import api from './api'
 import type { UserSettings, ChangePasswordRequest, DeleteAccountRequest } from '@/types'
 
+export interface UpdateSettingsRequest {
+  baseCurrency?: string
+  userTimeZone?: string
+}
+
 export const settingsService = {
   async getSettings(): Promise<UserSettings> {
     const response = await api.get<UserSettings>('/user/settings')
     return response.data
   },
 
-  async updateSettings(baseCurrency: string): Promise<UserSettings> {
-    const response = await api.put<UserSettings>('/user/settings', { baseCurrency })
+  async updateSettings(data: UpdateSettingsRequest): Promise<UserSettings> {
+    const response = await api.put<UserSettings>('/user/settings', data)
     return response.data
   },
 

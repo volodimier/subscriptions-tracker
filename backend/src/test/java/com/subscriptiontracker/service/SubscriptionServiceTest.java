@@ -1,6 +1,7 @@
 package com.subscriptiontracker.service;
 
 import com.subscriptiontracker.constant.ErrorMessages;
+import com.subscriptiontracker.constant.RecurrenceValidation;
 import com.subscriptiontracker.dto.request.CancelSubscriptionRequest;
 import com.subscriptiontracker.dto.request.CreateSubscriptionRequest;
 import com.subscriptiontracker.dto.request.ReactivateSubscriptionRequest;
@@ -62,6 +63,9 @@ class SubscriptionServiceTest {
 
     @Mock
     private PaymentRecordRepository paymentRecordRepository;
+
+    @Mock
+    private FxRateService fxRateService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -198,6 +202,8 @@ class SubscriptionServiceTest {
             assertNotNull(result);
             assertEquals(1L, result.getId());
             verify(subscriptionRepository).save(any(Subscription.class));
+            verify(paymentRecordRepository, never())
+                    .insertIfAbsent(anyLong(), any(), anyString(), any(), any(), any(), anyString(), any());
         }
 
         @Test
@@ -301,8 +307,8 @@ class SubscriptionServiceTest {
         }
 
         @Test
-        @DisplayName("should throw exception when custom billing cycle without days")
-        void shouldThrowExceptionWhenCustomBillingCycleWithoutDays() {
+        @DisplayName("should reject custom billing cycle without days")
+        void shouldRejectCustomBillingCycleWithoutDays() {
             CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
                     .serviceId(1L)
                     .amount(new BigDecimal("15.99"))
@@ -320,12 +326,12 @@ class SubscriptionServiceTest {
                     subscriptionService.createSubscription(1L, request)
             );
 
-            assertEquals("Billing cycle days is required for custom billing cycle", exception.getMessage());
+            assertTrue(exception.getMessage().contains("Only monthly and yearly billing cycles are allowed"));
         }
 
         @Test
-        @DisplayName("should accept custom billing cycle with days")
-        void shouldAcceptCustomBillingCycleWithDays() {
+        @DisplayName("should reject custom billing cycle with days")
+        void shouldRejectCustomBillingCycleWithDays() {
             CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
                     .serviceId(1L)
                     .amount(new BigDecimal("15.99"))
@@ -336,28 +342,180 @@ class SubscriptionServiceTest {
                     .nextBillingDate(LocalDate.now().plusDays(14))
                     .build();
 
-            Subscription customSubscription = Subscription.builder()
-                    .id(2L)
-                    .user(testUser)
-                    .service(testService)
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.createSubscription(1L, request)
+            );
+
+            assertTrue(exception.getMessage().contains("Only monthly and yearly billing cycles are allowed"));
+        }
+
+        @Test
+        @DisplayName("should reject when both first and next billing dates are missing")
+        void shouldRejectWhenBothFirstAndNextBillingDatesAreMissing() {
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
                     .amount(new BigDecimal("15.99"))
                     .currencyCode("USD")
-                    .billingCycle(BillingCycle.custom)
-                    .billingCycleDays(14)
-                    .startDate(LocalDate.now())
-                    .nextBillingDate(LocalDate.now().plusDays(14))
-                    .status(SubscriptionStatus.active)
+                    .billingCycle(BillingCycle.monthly)
                     .build();
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
-            when(subscriptionRepository.save(any(Subscription.class))).thenReturn(customSubscription);
 
-            SubscriptionResponse result = subscriptionService.createSubscription(1L, request);
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.createSubscription(1L, request)
+            );
 
-            assertNotNull(result);
-            assertEquals(BillingCycle.custom, result.getBillingCycle());
-            assertEquals(14, result.getBillingCycleDays());
+            assertEquals(RecurrenceValidation.RULE_VAL_REC_001, exception.getDetails().get("ruleId"));
+            assertEquals(RecurrenceValidation.CODE_DATE_REQUIRED, exception.getDetails().get("code"));
+        }
+
+        @Test
+        @DisplayName("should reject first billing date after cutoff date")
+        void shouldRejectFirstBillingDateAfterCutoffDate() {
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .firstBillingDate(LocalDate.now().plusDays(2))
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.createSubscription(1L, request)
+            );
+
+            assertEquals(RecurrenceValidation.RULE_VAL_REC_002, exception.getDetails().get("ruleId"));
+            assertEquals(RecurrenceValidation.CODE_FIRST_DATE_AFTER_CUTOFF, exception.getDetails().get("code"));
+        }
+
+        @Test
+        @DisplayName("should reject ambiguous monthly next billing date without anchor day")
+        void shouldRejectAmbiguousMonthlyNextBillingDateWithoutAnchorDay() {
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .nextBillingDate(LocalDate.of(2026, 2, 28))
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.createSubscription(1L, request)
+            );
+
+            assertEquals(RecurrenceValidation.RULE_VAL_REC_010, exception.getDetails().get("ruleId"));
+            assertEquals(RecurrenceValidation.CODE_MONTHLY_ANCHOR_REQUIRED, exception.getDetails().get("code"));
+            assertEquals("28,29,30,31", exception.getDetails().get("allowedValues"));
+        }
+
+        @Test
+        @DisplayName("should reject anchor day in non-ambiguous monthly flow")
+        void shouldRejectAnchorDayInNonAmbiguousMonthlyFlow() {
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .nextBillingDate(LocalDate.of(2026, 3, 12))
+                    .anchorDay(31)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.createSubscription(1L, request)
+            );
+
+            assertEquals(RecurrenceValidation.RULE_VAL_REC_011, exception.getDetails().get("ruleId"));
+            assertEquals(RecurrenceValidation.CODE_ANCHOR_NOT_ALLOWED, exception.getDetails().get("code"));
+        }
+
+        @Test
+        @DisplayName("should reject strict both-date mismatch")
+        void shouldRejectStrictBothDateMismatch() {
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .firstBillingDate(LocalDate.of(2020, 1, 31))
+                    .nextBillingDate(LocalDate.of(2020, 2, 1))
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.createSubscription(1L, request)
+            );
+
+            assertEquals(RecurrenceValidation.RULE_VAL_REC_004, exception.getDetails().get("ruleId"));
+            assertEquals(RecurrenceValidation.CODE_NEXT_DATE_MISMATCH, exception.getDetails().get("code"));
+        }
+
+        @Test
+        @DisplayName("should backfill paid payment records when firstBillingDate is provided")
+        void shouldBackfillPaidPaymentRecordsWhenFirstBillingDateIsProvided() {
+            LocalDate firstBillingDate = LocalDate.now().minusMonths(2).withDayOfMonth(15);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .firstBillingDate(firstBillingDate)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
+                Subscription sub = invocation.getArgument(0);
+                sub.setId(1L);
+                return sub;
+            });
+            when(fxRateService.getRate(anyString(), anyString(), any())).thenReturn(BigDecimal.ONE);
+            when(paymentRecordRepository.insertIfAbsent(anyLong(), any(), anyString(), any(), any(), any(), anyString(), any()))
+                    .thenReturn(1);
+
+            subscriptionService.createSubscription(1L, request);
+
+            verify(paymentRecordRepository, atLeastOnce())
+                    .insertIfAbsent(eq(1L), any(), eq("USD"), any(), eq(BigDecimal.ONE), any(), eq("paid"), any());
+        }
+
+        @Test
+        @DisplayName("should reject when user timezone is invalid")
+        void shouldRejectWhenUserTimezoneIsInvalid() {
+            testUser.setUserTimeZone("Invalid/Timezone");
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .nextBillingDate(LocalDate.of(2026, 3, 12))
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.createSubscription(1L, request)
+            );
+
+            assertEquals(RecurrenceValidation.RULE_VAL_REC_006, exception.getDetails().get("ruleId"));
+            assertEquals(RecurrenceValidation.CODE_USER_TIMEZONE_INVALID, exception.getDetails().get("code"));
         }
 
         @Test
@@ -451,17 +609,18 @@ class SubscriptionServiceTest {
         }
 
         @Test
-        @DisplayName("should auto-calculate startDate for bi-annual billing")
-        void shouldAutoCalculateStartDateForBiAnnualBilling() {
-            LocalDate nextBillingDate = LocalDate.of(2024, 7, 15);
-            LocalDate expectedStartDate = LocalDate.of(2024, 1, 15);
+        @DisplayName("should auto-calculate anchor-aware startDate for monthly Feb-28 with anchor day 31")
+        void shouldAutoCalculateAnchorAwareStartDateForMonthlyFeb28WithAnchor31() {
+            LocalDate nextBillingDate = LocalDate.of(2026, 2, 28);
+            LocalDate expectedStartDate = LocalDate.of(2026, 1, 31);
 
             CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
                     .serviceId(1L)
-                    .amount(new BigDecimal("49.99"))
+                    .amount(new BigDecimal("15.99"))
                     .currencyCode("USD")
-                    .billingCycle(BillingCycle.bi_annual)
+                    .billingCycle(BillingCycle.monthly)
                     .nextBillingDate(nextBillingDate)
+                    .anchorDay(31)
                     .build();
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
@@ -477,13 +636,67 @@ class SubscriptionServiceTest {
             ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
             verify(subscriptionRepository).save(captor.capture());
             assertEquals(expectedStartDate, captor.getValue().getStartDate());
+            assertEquals(31, captor.getValue().getAnchorDay());
         }
 
         @Test
-        @DisplayName("should auto-calculate startDate for custom billing cycle")
-        void shouldAutoCalculateStartDateForCustomBillingCycle() {
+        @DisplayName("should auto-calculate anchor-aware startDate for monthly day-30 with anchor day 31")
+        void shouldAutoCalculateAnchorAwareStartDateForMonthlyDay30WithAnchor31() {
+            LocalDate nextBillingDate = LocalDate.of(2026, 4, 30);
+            LocalDate expectedStartDate = LocalDate.of(2026, 3, 31);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("15.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.monthly)
+                    .nextBillingDate(nextBillingDate)
+                    .anchorDay(31)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
+                Subscription sub = invocation.getArgument(0);
+                sub.setId(1L);
+                return sub;
+            });
+
+            subscriptionService.createSubscription(1L, request);
+
+            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+            verify(subscriptionRepository).save(captor.capture());
+            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+            assertEquals(31, captor.getValue().getAnchorDay());
+        }
+
+        @Test
+        @DisplayName("should reject bi-annual billing cycle")
+        void shouldRejectBiAnnualBillingCycle() {
+            LocalDate nextBillingDate = LocalDate.of(2024, 7, 15);
+
+            CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
+                    .serviceId(1L)
+                    .amount(new BigDecimal("49.99"))
+                    .currencyCode("USD")
+                    .billingCycle(BillingCycle.bi_annual)
+                    .nextBillingDate(nextBillingDate)
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
+
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.createSubscription(1L, request)
+            );
+
+            assertTrue(exception.getMessage().contains("Only monthly and yearly billing cycles are allowed"));
+        }
+
+        @Test
+        @DisplayName("should reject custom billing cycle for startDate calculation")
+        void shouldRejectCustomBillingCycleForStartDateCalculation() {
             LocalDate nextBillingDate = LocalDate.of(2024, 2, 14);
-            LocalDate expectedStartDate = LocalDate.of(2024, 1, 15);
 
             CreateSubscriptionRequest request = CreateSubscriptionRequest.builder()
                     .serviceId(1L)
@@ -496,17 +709,12 @@ class SubscriptionServiceTest {
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(serviceRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(testService));
-            when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> {
-                Subscription sub = invocation.getArgument(0);
-                sub.setId(1L);
-                return sub;
-            });
 
-            subscriptionService.createSubscription(1L, request);
+            BadRequestException exception = assertThrows(BadRequestException.class, () ->
+                    subscriptionService.createSubscription(1L, request)
+            );
 
-            ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
-            verify(subscriptionRepository).save(captor.capture());
-            assertEquals(expectedStartDate, captor.getValue().getStartDate());
+            assertTrue(exception.getMessage().contains("Only monthly and yearly billing cycles are allowed"));
         }
     }
 

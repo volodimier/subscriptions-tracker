@@ -2,6 +2,7 @@ package com.subscriptiontracker.service;
 
 import com.subscriptiontracker.constant.DomainConstants;
 import com.subscriptiontracker.constant.ErrorMessages;
+import com.subscriptiontracker.constant.RecurrenceValidation;
 import com.subscriptiontracker.dto.request.ChangePasswordRequest;
 import com.subscriptiontracker.dto.request.DeleteAccountRequest;
 import com.subscriptiontracker.dto.request.UpdateUserSettingsRequest;
@@ -16,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.DateTimeException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 
 /**
@@ -59,6 +62,7 @@ public class UserService {
         return UserSettingsResponse.builder()
                 .email(user.getEmail())
                 .baseCurrency(user.getBaseCurrencyCode())
+                .userTimeZone(user.getUserTimeZone())
                 .fxRatesLastUpdated(lastUpdate)
                 .currentFxRates(currentRates)
                 .build();
@@ -80,6 +84,30 @@ public class UserService {
 
         if (request.getBaseCurrency() != null) {
             user.setBaseCurrencyCode(request.getBaseCurrency().toUpperCase());
+        }
+        if (request.getUserTimeZone() != null) {
+            String normalizedZone = request.getUserTimeZone().trim();
+            if (normalizedZone.isEmpty()) {
+                throw new BadRequestException(
+                        "User timezone cannot be blank.",
+                        RecurrenceValidation.details(
+                                RecurrenceValidation.RULE_VAL_REC_006,
+                                RecurrenceValidation.CODE_USER_TIMEZONE_INVALID,
+                                "userTimeZone")
+                );
+            }
+            try {
+                ZoneId.of(normalizedZone);
+            } catch (DateTimeException ex) {
+                throw new BadRequestException(
+                        "User timezone must be a valid IANA timezone ID.",
+                        RecurrenceValidation.details(
+                                RecurrenceValidation.RULE_VAL_REC_006,
+                                RecurrenceValidation.CODE_USER_TIMEZONE_INVALID,
+                                "userTimeZone")
+                );
+            }
+            user.setUserTimeZone(normalizedZone);
         }
 
         user = userRepository.save(user);

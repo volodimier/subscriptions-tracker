@@ -25,6 +25,7 @@ const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
 
 const selectedCurrency = ref('')
+const selectedTimeZone = ref('')
 const showPasswordDialog = ref(false)
 const showDeleteDialog = ref(false)
 const currentPassword = ref('')
@@ -40,6 +41,7 @@ onMounted(async () => {
   await settingsStore.fetchSettings()
   if (settingsStore.settings) {
     selectedCurrency.value = settingsStore.settings.baseCurrency
+    selectedTimeZone.value = settingsStore.settings.userTimeZone
   }
 })
 
@@ -47,6 +49,16 @@ async function updateCurrency() {
   try {
     await settingsStore.updateBaseCurrency(selectedCurrency.value)
     successMessage.value = 'Base currency updated successfully'
+    setTimeout(() => successMessage.value = '', 3000)
+  } catch {
+    // Error handled in store
+  }
+}
+
+async function updateTimeZone() {
+  try {
+    await settingsStore.updateUserTimeZone(selectedTimeZone.value.trim())
+    successMessage.value = 'Timezone updated successfully'
     setTimeout(() => successMessage.value = '', 3000)
   } catch {
     // Error handled in store
@@ -199,6 +211,27 @@ function closeDeleteDialog() {
             </div>
             <p class="text-sm text-muted-foreground mt-2">
               Changing base currency will affect how statistics are calculated
+            </p>
+          </div>
+          <div>
+            <Label for="userTimeZone">Billing Timezone (IANA)</Label>
+            <div class="flex items-center space-x-3 mt-2">
+              <Input
+                id="userTimeZone"
+                v-model="selectedTimeZone"
+                type="text"
+                placeholder="e.g., UTC or Europe/Warsaw"
+                class="max-w-md"
+              />
+              <Button
+                :disabled="selectedTimeZone.trim() === settingsStore.settings.userTimeZone"
+                @click="updateTimeZone"
+              >
+                Save
+              </Button>
+            </div>
+            <p class="text-sm text-muted-foreground mt-2">
+              Timezone is used for recurrence cutoff and payment due processing.
             </p>
           </div>
         </CardContent>

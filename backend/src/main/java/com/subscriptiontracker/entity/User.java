@@ -82,6 +82,13 @@ public class User {
     private String baseCurrencyCode = DomainConstants.DEFAULT_CURRENCY;
 
     /**
+     * IANA timezone ID used for user-local billing cutoff and due-date evaluation.
+     */
+    @Column(name = "user_time_zone", nullable = false, length = 64)
+    @Builder.Default
+    private String userTimeZone = "UTC";
+
+    /**
      * The user's role determining their access level.
      * Defaults to {@link Role#USER}.
      */

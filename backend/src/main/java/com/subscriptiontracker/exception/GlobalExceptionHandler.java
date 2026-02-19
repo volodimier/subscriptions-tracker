@@ -72,6 +72,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = ErrorResponse.builder()
                 .error("BAD_REQUEST")
                 .message(ex.getMessage())
+                .details(ex.getDetails())
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
