@@ -111,43 +111,51 @@ open https://your-frontend.up.railway.app
 
 ### Backend Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SPRING_DATASOURCE_URL` | Yes | `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
-| `SPRING_DATASOURCE_USERNAME` | Yes | `${{Postgres.PGUSER}}` |
-| `SPRING_DATASOURCE_PASSWORD` | Yes | `${{Postgres.PGPASSWORD}}` |
-| `JWT_SECRET` | Yes | Secret for JWT signing (generate with `openssl rand -base64 32`) |
-| `JWT_REFRESH_TOKEN_PEPPER` | Yes | Server-side pepper used when hashing refresh tokens (generate with `openssl rand -base64 32`) |
-| `RAILPACK_JDK_VERSION` | Yes | `17` (project requires Java 17) |
-| `CORS_ALLOWED_ORIGINS` | Yes | Frontend URL - must include `https://` (e.g., `https://your-frontend.up.railway.app`) |
-| `SWAGGER_ENABLED` | No | Enable/disable Swagger UI (default: `true`) |
-| `REGISTRATION_ENABLED` | No | Enable/disable user registration (default: `true`). Set to `false` to prevent new user registrations. |
-| `FX_RATE_API_KEY` | No | API key for exchange rates |
-| `TOTP_ENCRYPTION_KEY` | **Yes (prod)** | Encryption key for 2FA secrets. Generate with `openssl rand -base64 32`. Must be at least 32 characters. |
-| `TOTP_ENABLED` | No | Enable/disable TOTP-based 2FA (default: `true`). Set to `false` to disable all 2FA endpoints. |
-| `TOTP_ISSUER` | No | Name shown in authenticator apps (default: `Subscription Tracker`). Use different values for staging/prod. |
-| `RESEND_API_KEY` | **Yes (prod)** | API key from [resend.com](https://resend.com) for sending verification emails. |
-| `EMAIL_FROM_ADDRESS` | No | Sender email address (default: `noreply@pennywise.app`). Must be a verified domain in Resend. |
-| `EMAIL_FROM_NAME` | No | Sender display name (default: `PennyWise`). |
-| `EMAIL_VERIFICATION_BASE_URL` | **Yes (prod)** | Frontend URL for verification links (e.g., `https://your-frontend.up.railway.app`). |
-| `EMAIL_VERIFICATION_ENABLED` | No | Set `true` to require email verification for new registrations (default: `false`). When disabled, new users are auto-verified. |
-| `DEVTOOLS_ENABLED` | No | Enable/disable Spring DevTools (default: `false`). |
-| `JPA_SHOW_SQL` | No | Enable Hibernate SQL logging (default: `false`). |
-| `LOG_LEVEL_APP` | No | App log level (default: `INFO`). |
-| `LOG_LEVEL_ROOT` | No | Root log level (default: `WARN`). |
-| `LOG_LEVEL_SPRING` | No | Spring log level (default: `WARN`). |
-| `LOG_LEVEL_SECURITY` | No | Spring Security log level (default: `WARN`). |
-| `LOG_LEVEL_HIBERNATE` | No | Hibernate log level (default: `WARN`). |
-| `LOG_LEVEL_SQL` | No | SQL log level (default: `WARN`). |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SPRING_DATASOURCE_URL` | Yes | `jdbc:postgresql://localhost:5432/subscription_tracker` | On Railway use `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
+| `SPRING_DATASOURCE_USERNAME` | Yes | `postgres` | On Railway use `${{Postgres.PGUSER}}` |
+| `SPRING_DATASOURCE_PASSWORD` | Yes | `postgres` | On Railway use `${{Postgres.PGPASSWORD}}` |
+| `JWT_SECRET` | Yes | none | Secret for JWT signing (generate with `openssl rand -base64 32`) |
+| `JWT_REFRESH_TOKEN_PEPPER` | Yes | none | Server-side pepper used when hashing refresh tokens (generate with `openssl rand -base64 32`) |
+| `RAILPACK_JDK_VERSION` | Yes | none | Set to `17` (project requires Java 17) |
+| `CORS_ALLOWED_ORIGINS` | Yes | `http://localhost:3000,http://localhost:5173` | Frontend URL(s), comma-separated, must include `https://` in prod |
+| `SWAGGER_ENABLED` | No | `true` | Enable/disable Swagger UI and OpenAPI endpoint |
+| `REGISTRATION_ENABLED` | No | `true` | Enable/disable user registration |
+| `FX_RATE_API_KEY` | No | *(empty)* | API key for exchange rates |
+| `RATE_LIMITING_ENABLED` | No | `true` | Enable/disable auth endpoint rate limiting |
+| `RATE_LIMITING_AUTH_REQUESTS_PER_MINUTE` | No | `10` | Per-IP limit for `/auth/login` and `/auth/register` |
+| `RATE_LIMITING_EMAIL_REQUESTS_PER_MINUTE` | No | `10` | Per-email limit for `/auth/login` and `/auth/register` |
+| `RATE_LIMITING_TRUST_FORWARDED_HEADERS` | No | `false` | Trust `X-Forwarded-For`/`X-Real-IP` only when request comes from a trusted proxy |
+| `RATE_LIMITING_TRUSTED_PROXIES` | No | `127.0.0.1/32,::1/128` | Comma-separated trusted proxy IP/CIDR list for forwarded header processing |
+| `RATE_LIMITING_CLEANUP_INTERVAL_REQUESTS` | No | `100` | Number of requests between in-memory bucket cleanup runs |
+| `RATE_LIMITING_MAX_BUCKET_ENTRIES` | No | `10000` | Maximum number of in-memory auth rate-limit buckets |
+| `RATE_LIMITING_BUCKET_IDLE_TIMEOUT_MINUTES` | No | `30` | Idle minutes before a bucket entry is evicted |
+| `TOTP_ENCRYPTION_KEY` | **Yes (prod)** | `default-dev-key-change-in-prod!!` | Encryption key for 2FA secrets. Set a strong unique value in production |
+| `TOTP_ENABLED` | No | `true` | Enable/disable TOTP-based 2FA |
+| `TOTP_ISSUER` | No | `PennyWise` | Name shown in authenticator apps |
+| `RESEND_API_KEY` | **Yes (prod)** | *(empty)* | API key from [resend.com](https://resend.com) for sending verification emails |
+| `EMAIL_FROM_ADDRESS` | No | `noreply@pennywise.app` | Sender email address (must be verified in Resend) |
+| `EMAIL_FROM_NAME` | No | `PennyWise` | Sender display name |
+| `EMAIL_VERIFICATION_BASE_URL` | **Yes (prod)** | `http://localhost:5173` | Frontend URL for verification links |
+| `EMAIL_VERIFICATION_ENABLED` | No | `false` | Require email verification for new registrations |
+| `DEVTOOLS_ENABLED` | No | `false` | Enable/disable Spring DevTools |
+| `JPA_SHOW_SQL` | No | `false` | Enable Hibernate SQL logging |
+| `LOG_LEVEL_APP` | No | `INFO` | App log level (`com.subscriptiontracker`) |
+| `LOG_LEVEL_ROOT` | No | `WARN` | Root log level |
+| `LOG_LEVEL_SPRING` | No | `WARN` | Spring framework log level |
+| `LOG_LEVEL_SECURITY` | No | `WARN` | Spring Security log level |
+| `LOG_LEVEL_HIBERNATE` | No | `WARN` | Hibernate log level |
+| `LOG_LEVEL_SQL` | No | `WARN` | SQL log level (`org.hibernate.SQL`) |
 
 **Note:** Use `${{Postgres.VARIABLE}}` syntax to reference the PostgreSQL service variables. Most other settings have safe defaults in `application.yml` and only need overrides for diagnostics.
 
 ### Frontend Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `VITE_API_BASE_URL` | Yes | Backend URL - must include `https://` and `/api/v1` (e.g., `https://your-backend.up.railway.app/api/v1`) |
-| `PORT` | Yes | `80` (Caddy static server port) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_BASE_URL` | Yes | `/api/v1` | Backend URL (recommended on Railway: `https://your-backend.up.railway.app/api/v1`) |
+| `PORT` | Yes | none | Service port (set to `80` on Railway for static frontend service) |
 
 ---
 

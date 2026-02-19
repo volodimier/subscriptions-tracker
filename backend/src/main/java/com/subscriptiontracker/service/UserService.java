@@ -42,6 +42,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final FxRateService fxRateService;
     private final JobRunService jobRunService;
+    private final RefreshTokenService refreshTokenService;
 
     /**
      * Retrieves user settings including preferences and FX rate information.
@@ -118,7 +119,8 @@ public class UserService {
      * Changes the user's password.
      *
      * <p>Requires the current password for verification before
-     * updating to the new password.</p>
+     * updating to the new password. All existing refresh tokens are
+     * revoked after a successful password change.</p>
      *
      * @param userId  the ID of the user
      * @param request the password change request containing current and new passwords
@@ -137,6 +139,7 @@ public class UserService {
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        refreshTokenService.revokeAllUserTokens(userId);
     }
 
     /**
