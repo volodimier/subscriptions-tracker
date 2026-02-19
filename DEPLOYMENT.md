@@ -131,8 +131,16 @@ open https://your-frontend.up.railway.app
 | `EMAIL_FROM_NAME` | No | Sender display name (default: `PennyWise`). |
 | `EMAIL_VERIFICATION_BASE_URL` | **Yes (prod)** | Frontend URL for verification links (e.g., `https://your-frontend.up.railway.app`). |
 | `EMAIL_VERIFICATION_ENABLED` | No | Set `true` to require email verification for new registrations (default: `false`). When disabled, new users are auto-verified. |
+| `DEVTOOLS_ENABLED` | No | Enable/disable Spring DevTools (default: `false`). |
+| `JPA_SHOW_SQL` | No | Enable Hibernate SQL logging (default: `false`). |
+| `LOG_LEVEL_APP` | No | App log level (default: `INFO`). |
+| `LOG_LEVEL_ROOT` | No | Root log level (default: `WARN`). |
+| `LOG_LEVEL_SPRING` | No | Spring log level (default: `WARN`). |
+| `LOG_LEVEL_SECURITY` | No | Spring Security log level (default: `WARN`). |
+| `LOG_LEVEL_HIBERNATE` | No | Hibernate log level (default: `WARN`). |
+| `LOG_LEVEL_SQL` | No | SQL log level (default: `WARN`). |
 
-**Note:** Use `${{Postgres.VARIABLE}}` syntax to reference the PostgreSQL service variables. Additional debug variables (logging levels, JPA settings) are available in `application.yml` but rarely need overriding.
+**Note:** Use `${{Postgres.VARIABLE}}` syntax to reference the PostgreSQL service variables. Most other settings have safe defaults in `application.yml` and only need overrides for diagnostics.
 
 ### Frontend Variables
 
