@@ -1,7 +1,15 @@
+export interface RecurrenceErrorDetails {
+  ruleId?: string
+  code?: string
+  field?: string
+  allowedValues?: string
+  [key: string]: string | undefined
+}
+
 export interface ApiError {
   error: string
   message: string
-  details?: Record<string, string>
+  details?: RecurrenceErrorDetails
 }
 
 export interface PaginatedResponse<T> {

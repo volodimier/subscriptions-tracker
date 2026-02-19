@@ -17,7 +17,9 @@ async function handleSave(data: CreateSubscriptionRequest) {
     router.push('/subscriptions')
   } catch (err: unknown) {
     const axiosError = err as { response?: { data?: { message?: string } } }
-    formError.value = axiosError.response?.data?.message || 'Failed to create subscription'
+    formError.value = axiosError.response?.data?.message
+      || subscriptionsStore.error
+      || 'Failed to create subscription'
   }
 }
 
@@ -41,6 +43,7 @@ function handleCancel() {
       <CardContent>
         <SubscriptionForm
           :error="formError"
+          :recurrence-error="subscriptionsStore.createErrorDetails"
           @save="handleSave"
           @cancel="handleCancel"
         />

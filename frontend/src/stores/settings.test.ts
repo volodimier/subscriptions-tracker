@@ -34,13 +34,15 @@ vi.mock('@/router', () => ({
 }))
 
 const createMockSettings = (overrides: Partial<UserSettings> = {}): UserSettings => ({
-  baseCurrencyCode: 'USD',
-  fxRates: {
+  email: 'test@example.com',
+  baseCurrency: 'USD',
+  userTimeZone: 'UTC',
+  currentFxRates: {
     EUR: 0.92,
     GBP: 0.79,
     PLN: 4.05,
   },
-  fxRatesUpdatedAt: '2025-01-15T10:00:00Z',
+  fxRatesLastUpdated: '2025-01-15T10:00:00Z',
   ...overrides,
 })
 
@@ -136,18 +138,18 @@ describe('Settings Store', () => {
 
   describe('updateBaseCurrency', () => {
     it('should update settings with new currency', async () => {
-      const updatedSettings = createMockSettings({ baseCurrencyCode: 'EUR' })
+      const updatedSettings = createMockSettings({ baseCurrency: 'EUR' })
       vi.mocked(settingsService.updateSettings).mockResolvedValue(updatedSettings)
 
       const store = useSettingsStore()
       await store.updateBaseCurrency('EUR')
 
       expect(store.settings).toEqual(updatedSettings)
-      expect(settingsService.updateSettings).toHaveBeenCalledWith('EUR')
+      expect(settingsService.updateSettings).toHaveBeenCalledWith({ baseCurrency: 'EUR' })
     })
 
     it('should update auth store user with new currency', async () => {
-      const updatedSettings = createMockSettings({ baseCurrencyCode: 'EUR' })
+      const updatedSettings = createMockSettings({ baseCurrency: 'EUR' })
       vi.mocked(settingsService.updateSettings).mockResolvedValue(updatedSettings)
 
       const authStore = useAuthStore()
@@ -160,7 +162,7 @@ describe('Settings Store', () => {
     })
 
     it('should not fail if auth store user is null', async () => {
-      const updatedSettings = createMockSettings({ baseCurrencyCode: 'EUR' })
+      const updatedSettings = createMockSettings({ baseCurrency: 'EUR' })
       vi.mocked(settingsService.updateSettings).mockResolvedValue(updatedSettings)
 
       const authStore = useAuthStore()
@@ -197,6 +199,19 @@ describe('Settings Store', () => {
 
       expect(loadingDuringCall).toBe(true)
       expect(store.loading).toBe(false)
+    })
+  })
+
+  describe('updateUserTimeZone', () => {
+    it('should update settings with new timezone', async () => {
+      const updatedSettings = createMockSettings({ userTimeZone: 'Europe/Warsaw' })
+      vi.mocked(settingsService.updateSettings).mockResolvedValue(updatedSettings)
+
+      const store = useSettingsStore()
+      await store.updateUserTimeZone('Europe/Warsaw')
+
+      expect(store.settings).toEqual(updatedSettings)
+      expect(settingsService.updateSettings).toHaveBeenCalledWith({ userTimeZone: 'Europe/Warsaw' })
     })
   })
 
@@ -307,8 +322,8 @@ describe('Settings Store', () => {
   describe('refreshFxRates', () => {
     it('should refresh FX rates and refetch settings', async () => {
       const updatedSettings = createMockSettings({
-        fxRates: { EUR: 0.93, GBP: 0.80, PLN: 4.10 },
-        fxRatesUpdatedAt: '2025-01-16T10:00:00Z',
+        currentFxRates: { EUR: 0.93, GBP: 0.80, PLN: 4.10 },
+        fxRatesLastUpdated: '2025-01-16T10:00:00Z',
       })
 
       vi.mocked(paymentService.refreshFxRates).mockResolvedValue(undefined)

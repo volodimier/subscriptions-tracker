@@ -291,6 +291,7 @@ describe('Subscriptions Store', () => {
 
       expect(result).toEqual(mockSubscription)
       expect(subscriptionService.getSubscriptions).toHaveBeenCalled()
+      expect(store.createErrorDetails).toBeNull()
     })
 
     it('should set error on failure', async () => {
@@ -303,6 +304,53 @@ describe('Subscriptions Store', () => {
       await expect(store.createSubscription(mockRequest)).rejects.toBeDefined()
 
       expect(store.error).toBe('Validation error')
+      expect(store.createErrorDetails).toBeNull()
+    })
+
+    it('should preserve recurrence details on create failure', async () => {
+      vi.mocked(subscriptionService.createSubscription).mockRejectedValue({
+        response: {
+          data: {
+            message: 'Either FirstBillDate or NextBillDate is required.',
+            details: {
+              ruleId: 'VAL_REC_001',
+              code: 'RECURRENCE_DATE_REQUIRED',
+              field: 'firstBillDate,nextBillDate',
+            },
+          },
+        },
+      })
+
+      const store = useSubscriptionsStore()
+
+      await expect(store.createSubscription(mockRequest)).rejects.toBeDefined()
+
+      expect(store.error).toBe('Either FirstBillDate or NextBillDate is required.')
+      expect(store.createErrorDetails).toEqual({
+        ruleId: 'VAL_REC_001',
+        code: 'RECURRENCE_DATE_REQUIRED',
+        field: 'firstBillDate,nextBillDate',
+      })
+    })
+
+    it('should clear stale recurrence details before create', async () => {
+      const mockSubscription = createMockSubscription()
+      vi.mocked(subscriptionService.createSubscription).mockResolvedValue(mockSubscription)
+      vi.mocked(subscriptionService.getSubscriptions).mockResolvedValue({
+        data: [mockSubscription],
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      })
+
+      const store = useSubscriptionsStore()
+      store.createErrorDetails = {
+        ruleId: 'VAL_REC_001',
+        code: 'RECURRENCE_DATE_REQUIRED',
+        field: 'firstBillDate,nextBillDate',
+      }
+
+      await store.createSubscription(mockRequest)
+
+      expect(store.createErrorDetails).toBeNull()
     })
   })
 

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { settingsService } from '@/services/settingsService'
+import { settingsService, type UpdateSettingsRequest } from '@/services/settingsService'
 import { paymentService } from '@/services/paymentService'
 import type { UserSettings, ChangePasswordRequest, DeleteAccountRequest } from '@/types'
 import { useAuthStore } from './auth'
@@ -25,14 +25,22 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   async function updateBaseCurrency(currency: string) {
+    await updateSettings({ baseCurrency: currency })
+    const authStore = useAuthStore()
+    if (authStore.user) {
+      authStore.updateUser({ ...authStore.user, baseCurrencyCode: currency })
+    }
+  }
+
+  async function updateUserTimeZone(userTimeZone: string) {
+    await updateSettings({ userTimeZone })
+  }
+
+  async function updateSettings(data: UpdateSettingsRequest) {
     loading.value = true
     error.value = null
     try {
-      settings.value = await settingsService.updateSettings(currency)
-      const authStore = useAuthStore()
-      if (authStore.user) {
-        authStore.updateUser({ ...authStore.user, baseCurrencyCode: currency })
-      }
+      settings.value = await settingsService.updateSettings(data)
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } }
       error.value = axiosError.response?.data?.message || 'Failed to update settings'
@@ -93,6 +101,7 @@ export const useSettingsStore = defineStore('settings', () => {
     error,
     fetchSettings,
     updateBaseCurrency,
+    updateUserTimeZone,
     changePassword,
     deleteAccount,
     refreshFxRates,

@@ -9,6 +9,7 @@ A full-stack application for tracking personal subscriptions with multi-currency
 - **Payment History**: Automatic payment record generation with manual entry support
 - **Recurrence Engine**: Monthly/yearly anchor-based recurrence with clamp-to-end-of-month behavior
 - **Timezone-Aware Billing**: Per-user billing timezone with local `00:05` cutoff for due-payment processing
+- **Recurrence-Aware Add Form**: Create subscriptions with `firstBillingDate` and/or `nextBillingDate`, ambiguity anchor prompts (Feb 28/29, day 30), strict schedule prechecks, and next-3 occurrence preview
 - **Dashboard & Statistics**: Visual spending analytics with charts and projections
 - **Service Catalog**: Manage your personal catalog of subscription services
 - **Managed Categories**: Admin-managed category system for organizing services (replaces free-text categories)
