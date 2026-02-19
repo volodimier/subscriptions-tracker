@@ -81,9 +81,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             }
             enforceMaxEntries();
 
-            boolean ipAllowed = ipBucketState != null && ipBucketState.tryConsume(1, now);
-            boolean emailAllowed = emailBucketState == null || emailBucketState.tryConsume(1, now);
-            if (ipAllowed && emailAllowed) {
+            boolean allowed = ipBucketState != null
+                    && ipBucketState.tryConsume(1, now)
+                    && (emailBucketState == null || emailBucketState.tryConsume(1, now));
+            if (allowed) {
                 filterChain.doFilter(effectiveRequest, response);
             } else {
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());

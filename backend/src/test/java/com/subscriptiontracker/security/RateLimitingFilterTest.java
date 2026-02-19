@@ -108,6 +108,42 @@ class RateLimitingFilterTest {
         assertEquals(429, secondResponse.getStatus());
     }
 
+    @Test
+    @DisplayName("should not consume email bucket when request is blocked by ip limiter")
+    void shouldNotConsumeEmailBucketWhenIpLimitExceeded() throws Exception {
+        filter = createFilter(1, 2, 10);
+
+        MockHttpServletRequest firstRequest = new MockHttpServletRequest("POST", "/auth/login");
+        firstRequest.setRemoteAddr("198.51.100.20");
+        firstRequest.setContentType("application/json");
+        firstRequest.setContent("""
+                {"email":"isolation@example.com","password":"SecurePass123"}
+                """.getBytes());
+        MockHttpServletResponse firstResponse = new MockHttpServletResponse();
+        filter.doFilter(firstRequest, firstResponse, new MockFilterChain());
+        assertEquals(200, firstResponse.getStatus());
+
+        MockHttpServletRequest blockedByIpRequest = new MockHttpServletRequest("POST", "/auth/login");
+        blockedByIpRequest.setRemoteAddr("198.51.100.20");
+        blockedByIpRequest.setContentType("application/json");
+        blockedByIpRequest.setContent("""
+                {"email":"isolation@example.com","password":"SecurePass123"}
+                """.getBytes());
+        MockHttpServletResponse blockedByIpResponse = new MockHttpServletResponse();
+        filter.doFilter(blockedByIpRequest, blockedByIpResponse, new MockFilterChain());
+        assertEquals(429, blockedByIpResponse.getStatus());
+
+        MockHttpServletRequest differentIpRequest = new MockHttpServletRequest("POST", "/auth/login");
+        differentIpRequest.setRemoteAddr("198.51.100.21");
+        differentIpRequest.setContentType("application/json");
+        differentIpRequest.setContent("""
+                {"email":"isolation@example.com","password":"SecurePass123"}
+                """.getBytes());
+        MockHttpServletResponse differentIpResponse = new MockHttpServletResponse();
+        filter.doFilter(differentIpRequest, differentIpResponse, new MockFilterChain());
+        assertEquals(200, differentIpResponse.getStatus());
+    }
+
     private RateLimitingFilter createFilter(int ipRequestsPerMinute, int emailRequestsPerMinute, int maxEntries) {
         RateLimitingConfig config = new RateLimitingConfig();
         config.setEnabled(true);
