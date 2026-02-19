@@ -7,6 +7,8 @@ A full-stack application for tracking personal subscriptions with multi-currency
 - **Subscription Management**: Track Netflix, Spotify, gym memberships, and any recurring services
 - **Multi-Currency Support**: Handle subscriptions in USD, EUR, GBP, PLN with automatic FX rate updates
 - **Payment History**: Automatic payment record generation with manual entry support
+- **Recurrence Engine**: Monthly/yearly anchor-based recurrence with clamp-to-end-of-month behavior
+- **Timezone-Aware Billing**: Per-user billing timezone with local `00:05` cutoff for due-payment processing
 - **Dashboard & Statistics**: Visual spending analytics with charts and projections
 - **Service Catalog**: Manage your personal catalog of subscription services
 - **Managed Categories**: Admin-managed category system for organizing services (replaces free-text categories)
@@ -138,7 +140,7 @@ After running `verify.sh`, coverage reports are available at:
 
 ## Scheduled Jobs
 
-- **Payment Generator** (Daily 1:00 AM): Creates payment records for due subscriptions
+- **Payment Generator** (Every 15 minutes): Creates due payment records using user-local timezone/cutoff logic and catch-up processing
 - **FX Rate Refresh** (Daily midnight): Updates exchange rates
 
 ## User Roles

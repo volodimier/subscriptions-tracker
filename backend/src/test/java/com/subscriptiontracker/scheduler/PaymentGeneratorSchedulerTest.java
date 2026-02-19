@@ -14,12 +14,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +52,20 @@ class PaymentGeneratorSchedulerTest {
      */
     private static LocalDate utcToday() {
         return LocalDate.now(ZoneOffset.UTC);
+    }
+
+    private static String findTimeZoneBeforeCutoff() {
+        return ZoneId.getAvailableZoneIds().stream()
+                .filter(zone -> ZonedDateTime.now(ZoneId.of(zone)).toLocalTime().isBefore(LocalTime.of(0, 5)))
+                .findFirst()
+                .orElse("Pacific/Kiritimati");
+    }
+
+    private static String findTimeZoneAfterCutoff() {
+        return ZoneId.getAvailableZoneIds().stream()
+                .filter(zone -> !ZonedDateTime.now(ZoneId.of(zone)).toLocalTime().isBefore(LocalTime.of(0, 5)))
+                .findFirst()
+                .orElse("UTC");
     }
 
     @Mock
@@ -116,14 +134,14 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate("USD", "USD", today))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             paymentGeneratorScheduler.generatePaymentRecords();
 
-            verify(paymentRecordRepository).save(any(PaymentRecord.class));
+            verify(paymentRecordRepository).saveAndFlush(any(PaymentRecord.class));
             verify(subscriptionRepository).save(any(Subscription.class));
         }
 
@@ -144,7 +162,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate("EUR", "USD", today))
                     .thenReturn(fxRate);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -152,7 +170,7 @@ class PaymentGeneratorSchedulerTest {
             paymentGeneratorScheduler.generatePaymentRecords();
 
             ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
-            verify(paymentRecordRepository).save(paymentCaptor.capture());
+            verify(paymentRecordRepository).saveAndFlush(paymentCaptor.capture());
 
             PaymentRecord capturedPayment = paymentCaptor.getValue();
             assertEquals(testSubscription, capturedPayment.getSubscription());
@@ -173,7 +191,7 @@ class PaymentGeneratorSchedulerTest {
 
             paymentGeneratorScheduler.generatePaymentRecords();
 
-            verify(paymentRecordRepository, never()).save(any(PaymentRecord.class));
+            verify(paymentRecordRepository, never()).saveAndFlush(any(PaymentRecord.class));
             verify(subscriptionRepository, never()).save(any(Subscription.class));
         }
 
@@ -224,7 +242,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenThrow(new RuntimeException("FX rate service unavailable"))
                     .thenReturn(BigDecimal.ONE);
 
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -232,7 +250,7 @@ class PaymentGeneratorSchedulerTest {
             paymentGeneratorScheduler.generatePaymentRecords();
 
             // Should have saved 2 payment records (subscription1 and subscription3)
-            verify(paymentRecordRepository, times(2)).save(any(PaymentRecord.class));
+            verify(paymentRecordRepository, times(2)).saveAndFlush(any(PaymentRecord.class));
             verify(subscriptionRepository, times(2)).save(any(Subscription.class));
         }
 
@@ -267,15 +285,81 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(subscription1, subscription2));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             paymentGeneratorScheduler.generatePaymentRecords();
 
-            verify(paymentRecordRepository, times(2)).save(any(PaymentRecord.class));
+            verify(paymentRecordRepository, times(2)).saveAndFlush(any(PaymentRecord.class));
             verify(subscriptionRepository, times(2)).save(any(Subscription.class));
+        }
+
+        @Test
+        @DisplayName("should process catch-up payments for missed billing cycles")
+        void shouldProcessCatchUpPaymentsForMissedBillingCycles() {
+            LocalDate today = utcToday();
+            testUser.setUserTimeZone(findTimeZoneAfterCutoff());
+            testSubscription.setBillingCycle(BillingCycle.monthly);
+            testSubscription.setNextBillingDate(today.minusMonths(2));
+
+            when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
+                    .thenReturn(List.of(testSubscription));
+            when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
+                    .thenReturn(BigDecimal.ONE);
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            when(subscriptionRepository.save(any(Subscription.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            paymentGeneratorScheduler.generatePaymentRecords();
+
+            verify(paymentRecordRepository, atLeast(2)).saveAndFlush(any(PaymentRecord.class));
+            assertTrue(testSubscription.getNextBillingDate().isAfter(ZonedDateTime.now(
+                    ZoneId.of(testUser.getUserTimeZone())).toLocalDate()));
+        }
+
+        @Test
+        @DisplayName("should skip user processing before local cutoff time")
+        void shouldSkipUserProcessingBeforeLocalCutoffTime() {
+            LocalDate today = utcToday();
+            testUser.setUserTimeZone(findTimeZoneBeforeCutoff());
+            testSubscription.setNextBillingDate(today);
+
+            when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
+                    .thenReturn(List.of(testSubscription));
+
+            paymentGeneratorScheduler.generatePaymentRecords();
+
+            verify(paymentRecordRepository, never()).saveAndFlush(any(PaymentRecord.class));
+            verify(subscriptionRepository, never()).save(any(Subscription.class));
+        }
+
+        @Test
+        @DisplayName("should advance next billing date when duplicate payment insert occurs")
+        void shouldAdvanceNextBillingDateWhenDuplicatePaymentInsertOccurs() {
+            LocalDate today = utcToday();
+            testUser.setUserTimeZone(findTimeZoneAfterCutoff());
+            testSubscription.setBillingCycle(BillingCycle.monthly);
+            testSubscription.setNextBillingDate(today);
+
+            when(subscriptionRepository.findActiveSubscriptionsDueBefore(today.plusDays(1)))
+                    .thenReturn(List.of(testSubscription));
+            when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
+                    .thenReturn(BigDecimal.ONE);
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
+                    .thenThrow(new DataIntegrityViolationException("duplicate key value violates unique constraint"));
+            when(subscriptionRepository.save(any(Subscription.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            LocalDate originalDate = testSubscription.getNextBillingDate();
+
+            paymentGeneratorScheduler.generatePaymentRecords();
+
+            verify(subscriptionRepository).save(any(Subscription.class));
+            verify(eventPublisher, never()).publishEvent(any(PaymentRecordCreatedEvent.class));
+            assertTrue(testSubscription.getNextBillingDate().isAfter(originalDate));
         }
     }
 
@@ -295,7 +379,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -320,7 +404,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -345,7 +429,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -372,7 +456,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -398,7 +482,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -425,7 +509,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -455,7 +539,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate("USD", "USD", today))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -463,7 +547,7 @@ class PaymentGeneratorSchedulerTest {
             paymentGeneratorScheduler.generatePaymentRecords();
 
             ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
-            verify(paymentRecordRepository).save(paymentCaptor.capture());
+            verify(paymentRecordRepository).saveAndFlush(paymentCaptor.capture());
 
             assertEquals(BigDecimal.ONE, paymentCaptor.getValue().getFxRateToBase());
             assertEquals(
@@ -489,7 +573,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate("GBP", "USD", today))
                     .thenReturn(fxRate);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -497,7 +581,7 @@ class PaymentGeneratorSchedulerTest {
             paymentGeneratorScheduler.generatePaymentRecords();
 
             ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
-            verify(paymentRecordRepository).save(paymentCaptor.capture());
+            verify(paymentRecordRepository).saveAndFlush(paymentCaptor.capture());
 
             assertEquals(fxRate, paymentCaptor.getValue().getFxRateToBase());
             assertEquals(expectedAmountInBase, paymentCaptor.getValue().getAmountInBaseCurrency());
@@ -520,7 +604,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate("EUR", "USD", today))
                     .thenReturn(fxRate);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -528,7 +612,7 @@ class PaymentGeneratorSchedulerTest {
             paymentGeneratorScheduler.generatePaymentRecords();
 
             ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
-            verify(paymentRecordRepository).save(paymentCaptor.capture());
+            verify(paymentRecordRepository).saveAndFlush(paymentCaptor.capture());
 
             assertEquals(expectedAmountInBase, paymentCaptor.getValue().getAmountInBaseCurrency());
         }
@@ -551,7 +635,7 @@ class PaymentGeneratorSchedulerTest {
 
             assertDoesNotThrow(() -> paymentGeneratorScheduler.generatePaymentRecords());
 
-            verify(paymentRecordRepository, never()).save(any(PaymentRecord.class));
+            verify(paymentRecordRepository, never()).saveAndFlush(any(PaymentRecord.class));
         }
 
         @Test
@@ -564,7 +648,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenThrow(new RuntimeException("Database error"));
 
             assertDoesNotThrow(() -> paymentGeneratorScheduler.generatePaymentRecords());
@@ -612,7 +696,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenThrow(new RuntimeException("Service unavailable"));
             when(fxRateService.getRate("EUR", "EUR", today))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -620,7 +704,7 @@ class PaymentGeneratorSchedulerTest {
             paymentGeneratorScheduler.generatePaymentRecords();
 
             // Only the second subscription should have been processed
-            verify(paymentRecordRepository, times(1)).save(any(PaymentRecord.class));
+            verify(paymentRecordRepository, times(1)).saveAndFlush(any(PaymentRecord.class));
             verify(subscriptionRepository, times(1)).save(any(Subscription.class));
         }
     }
@@ -640,7 +724,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -653,7 +737,7 @@ class PaymentGeneratorSchedulerTest {
 
             // Verify payment record is created with the UTC date
             ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
-            verify(paymentRecordRepository).save(paymentCaptor.capture());
+            verify(paymentRecordRepository).saveAndFlush(paymentCaptor.capture());
             assertEquals(utcToday, paymentCaptor.getValue().getPaymentDate());
         }
     }
@@ -672,7 +756,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -680,7 +764,7 @@ class PaymentGeneratorSchedulerTest {
             paymentGeneratorScheduler.generatePaymentRecords();
 
             ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
-            verify(paymentRecordRepository).save(paymentCaptor.capture());
+            verify(paymentRecordRepository).saveAndFlush(paymentCaptor.capture());
 
             assertSame(testSubscription, paymentCaptor.getValue().getSubscription());
         }
@@ -697,7 +781,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(new BigDecimal("1.25"));
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -705,7 +789,7 @@ class PaymentGeneratorSchedulerTest {
             paymentGeneratorScheduler.generatePaymentRecords();
 
             ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
-            verify(paymentRecordRepository).save(paymentCaptor.capture());
+            verify(paymentRecordRepository).saveAndFlush(paymentCaptor.capture());
 
             assertEquals(new BigDecimal("49.99"), paymentCaptor.getValue().getAmount());
             assertEquals("GBP", paymentCaptor.getValue().getCurrencyCode());
@@ -721,7 +805,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
@@ -729,7 +813,7 @@ class PaymentGeneratorSchedulerTest {
             paymentGeneratorScheduler.generatePaymentRecords();
 
             ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
-            verify(paymentRecordRepository).save(paymentCaptor.capture());
+            verify(paymentRecordRepository).saveAndFlush(paymentCaptor.capture());
 
             assertEquals(today, paymentCaptor.getValue().getPaymentDate());
         }
@@ -754,7 +838,7 @@ class PaymentGeneratorSchedulerTest {
                     .thenReturn(List.of(testSubscription));
             when(fxRateService.getRate(anyString(), anyString(), any(LocalDate.class)))
                     .thenReturn(BigDecimal.ONE);
-            when(paymentRecordRepository.save(any(PaymentRecord.class)))
+            when(paymentRecordRepository.saveAndFlush(any(PaymentRecord.class)))
                     .thenReturn(savedPayment);
             when(subscriptionRepository.save(any(Subscription.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));

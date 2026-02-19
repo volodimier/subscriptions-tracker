@@ -24,4 +24,10 @@ public class UpdateUserSettingsRequest {
      */
     @Size(min = 3, max = 3, message = "Currency code must be 3 characters")
     private String baseCurrency;
+
+    /**
+     * User-local IANA timezone ID (for example: UTC, Europe/Warsaw).
+     */
+    @Size(min = 1, max = 64, message = "Timezone must be between 1 and 64 characters")
+    private String userTimeZone;
 }

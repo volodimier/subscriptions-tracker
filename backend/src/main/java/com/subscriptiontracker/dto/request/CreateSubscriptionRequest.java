@@ -3,6 +3,7 @@ package com.subscriptiontracker.dto.request;
 import com.subscriptiontracker.constant.ErrorMessages;
 import com.subscriptiontracker.entity.BillingCycle;
 import com.subscriptiontracker.validation.AllowedBillingCycle;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -91,11 +92,33 @@ public class CreateSubscriptionRequest {
     private LocalDate startDate;
 
     /**
-     * The next billing date.
+     * Optional first paid billing date used for history import.
      */
-    @Schema(description = "Next billing date", example = "2024-02-15", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull(message = "Next billing date is required")
+    @Schema(description = "First paid billing date (optional)", example = "2024-01-15")
+    @JsonAlias("firstBillDate")
+    private LocalDate firstBillingDate;
+
+    /**
+     * Optional next scheduled billing date.
+     */
+    @Schema(description = "Next scheduled billing date (optional when firstBillingDate is provided)",
+            example = "2024-02-15")
+    @JsonAlias("nextBillDate")
     private LocalDate nextBillingDate;
+
+    /**
+     * Optional monthly anchor day used only when nextBillingDate-only flow is ambiguous.
+     */
+    @Schema(description = "Monthly anchor day (used only for ambiguous next-date-only monthly flow)",
+            example = "31")
+    private Integer anchorDay;
+
+    /**
+     * Optional yearly anchor in MM-dd format used only for ambiguous next-date-only yearly flow.
+     */
+    @Schema(description = "Yearly anchor month/day in MM-dd format (for ambiguous yearly flow)",
+            example = "02-29")
+    private String anchorMonthDay;
 
     /**
      * Optional notes about the subscription.
