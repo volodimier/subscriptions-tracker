@@ -47,11 +47,13 @@ jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
   refresh-expiration: 604800000
+  refresh-token-pepper: ${JWT_REFRESH_TOKEN_PEPPER}
 
 auth:
   registration-enabled: ${REGISTRATION_ENABLED:true}
 
 totp:
+  enabled: ${TOTP_ENABLED:true}
   encryption-key: ${TOTP_ENCRYPTION_KEY:default-dev-key-change-in-prod!!}
   setup-token-expiration-seconds: 600
   partial-token-expiration-ms: 300000

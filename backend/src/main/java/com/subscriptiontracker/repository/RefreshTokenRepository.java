@@ -24,12 +24,13 @@ import java.util.Optional;
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
     /**
-     * Finds a refresh token by its token string.
+     * Finds a refresh token by its token hash.
      *
-     * @param token the token string to search for
+     * @param tokenHash the SHA-256 hash of the token to search for
      * @return optional containing the refresh token if found
      */
-    Optional<RefreshToken> findByToken(String token);
+    Optional<RefreshToken> findByTokenHash(String tokenHash);
+
 
     /**
      * Finds a valid (non-revoked, non-expired) refresh token by its token string.
@@ -38,8 +39,9 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
      * @param now the current timestamp for expiry comparison
      * @return optional containing the valid refresh token if found
      */
-    @Query("SELECT rt FROM RefreshToken rt WHERE rt.token = :token AND rt.revoked = false AND rt.expiryDate > :now")
-    Optional<RefreshToken> findValidToken(@Param("token") String token, @Param("now") Instant now);
+    @Query("SELECT rt FROM RefreshToken rt WHERE rt.tokenHash = :tokenHash AND rt.revoked = false AND rt.expiryDate > :now")
+    Optional<RefreshToken> findValidToken(@Param("tokenHash") String tokenHash, @Param("now") Instant now);
+
 
     /**
      * Revokes all refresh tokens for a specific user.
@@ -58,8 +60,9 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
      * @return the number of tokens revoked (0 or 1)
      */
     @Modifying
-    @Query("UPDATE RefreshToken rt SET rt.revoked = true WHERE rt.token = :token AND rt.revoked = false")
-    int revokeByToken(@Param("token") String token);
+    @Query("UPDATE RefreshToken rt SET rt.revoked = true WHERE rt.tokenHash = :tokenHash AND rt.revoked = false")
+    int revokeByTokenHash(@Param("tokenHash") String tokenHash);
+
 
     /**
      * Deletes all expired or revoked tokens to clean up the database.

@@ -62,6 +62,7 @@ The backend uses a single `application.yml` with environment variable overrides 
 | `DEVTOOLS_ENABLED` | `false` | Spring DevTools (hot reload) |
 | `TOTP_ENCRYPTION_KEY` | *(dev default)* | 2FA secret encryption key (32+ chars, required in production) |
 | `EMAIL_VERIFICATION_ENABLED` | `false` | Set `true` to require email verification for new registrations |
+| `JWT_REFRESH_TOKEN_PEPPER` | *(required)* | Server-side pepper used when hashing refresh tokens |
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for full configuration reference.
 

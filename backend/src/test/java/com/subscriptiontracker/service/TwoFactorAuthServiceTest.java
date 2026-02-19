@@ -72,6 +72,7 @@ class TwoFactorAuthServiceTest {
                 .passwordHash("hashed-password")
                 .twoFactorEnabled(false)
                 .build();
+        lenient().when(totpConfig.isEnabled()).thenReturn(true);
     }
 
     @Nested

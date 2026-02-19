@@ -117,12 +117,14 @@ open https://your-frontend.up.railway.app
 | `SPRING_DATASOURCE_USERNAME` | Yes | `${{Postgres.PGUSER}}` |
 | `SPRING_DATASOURCE_PASSWORD` | Yes | `${{Postgres.PGPASSWORD}}` |
 | `JWT_SECRET` | Yes | Secret for JWT signing (generate with `openssl rand -base64 32`) |
+| `JWT_REFRESH_TOKEN_PEPPER` | Yes | Server-side pepper used when hashing refresh tokens (generate with `openssl rand -base64 32`) |
 | `RAILPACK_JDK_VERSION` | Yes | `17` (project requires Java 17) |
 | `CORS_ALLOWED_ORIGINS` | Yes | Frontend URL - must include `https://` (e.g., `https://your-frontend.up.railway.app`) |
 | `SWAGGER_ENABLED` | No | Enable/disable Swagger UI (default: `true`) |
 | `REGISTRATION_ENABLED` | No | Enable/disable user registration (default: `true`). Set to `false` to prevent new user registrations. |
 | `FX_RATE_API_KEY` | No | API key for exchange rates |
 | `TOTP_ENCRYPTION_KEY` | **Yes (prod)** | Encryption key for 2FA secrets. Generate with `openssl rand -base64 32`. Must be at least 32 characters. |
+| `TOTP_ENABLED` | No | Enable/disable TOTP-based 2FA (default: `true`). Set to `false` to disable all 2FA endpoints. |
 | `TOTP_ISSUER` | No | Name shown in authenticator apps (default: `Subscription Tracker`). Use different values for staging/prod. |
 | `RESEND_API_KEY` | **Yes (prod)** | API key from [resend.com](https://resend.com) for sending verification emails. |
 | `EMAIL_FROM_ADDRESS` | No | Sender email address (default: `noreply@pennywise.app`). Must be a verified domain in Resend. |

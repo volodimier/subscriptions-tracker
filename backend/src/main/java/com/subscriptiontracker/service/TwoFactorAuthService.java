@@ -76,6 +76,7 @@ public class TwoFactorAuthService {
      */
     @Transactional(readOnly = true)
     public TotpSetupResponse initiateSetup(User user) {
+        ensureEnabled();
         if (user.isTwoFactorEnabled()) {
             throw new BadRequestException("Two-factor authentication is already enabled");
         }
@@ -110,6 +111,7 @@ public class TwoFactorAuthService {
      */
     @Transactional
     public TotpSetupCompleteResponse completeSetup(User user, String code) {
+        ensureEnabled();
         if (user.isTwoFactorEnabled()) {
             throw new BadRequestException("Two-factor authentication is already enabled");
         }
@@ -163,6 +165,7 @@ public class TwoFactorAuthService {
      */
     @Transactional
     public boolean verifyCode(User user, String code, String ipAddress) {
+        ensureEnabled();
         if (!user.isTwoFactorEnabled()) {
             throw new TotpException("Two-factor authentication is not enabled for this account");
         }
@@ -200,6 +203,7 @@ public class TwoFactorAuthService {
      */
     @Transactional
     public boolean verifyRecoveryCode(User user, String recoveryCode, String ipAddress) {
+        ensureEnabled();
         if (!user.isTwoFactorEnabled()) {
             throw new TotpException("Two-factor authentication is not enabled for this account");
         }
@@ -233,6 +237,7 @@ public class TwoFactorAuthService {
      */
     @Transactional
     public void disable(User user, String password, String code) {
+        ensureEnabled();
         if (!user.isTwoFactorEnabled()) {
             throw new TotpException("Two-factor authentication is not enabled for this account");
         }
@@ -269,6 +274,7 @@ public class TwoFactorAuthService {
      */
     @Transactional(readOnly = true)
     public TotpStatusResponse getStatus(User user) {
+        ensureEnabled();
         return TotpStatusResponse.builder()
                 .enabled(user.isTwoFactorEnabled())
                 .enabledAt(user.getTwoFactorEnabledAt())
@@ -292,6 +298,7 @@ public class TwoFactorAuthService {
      */
     @Transactional
     public List<String> regenerateRecoveryCodes(User user, String code) {
+        ensureEnabled();
         if (!user.isTwoFactorEnabled()) {
             throw new TotpException("Two-factor authentication is not enabled for this account");
         }
@@ -312,8 +319,15 @@ public class TwoFactorAuthService {
      * @param userId the user's ID
      */
     public void cancelSetup(Long userId) {
+        ensureEnabled();
         pendingSetups.remove(userId);
         log.debug("Cancelled pending 2FA setup for user ID: {}", userId);
+    }
+
+    private void ensureEnabled() {
+        if (!totpConfig.isEnabled()) {
+            throw new TotpException("Two-factor authentication is disabled");
+        }
     }
 
     /**

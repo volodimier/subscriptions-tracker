@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
  *   <li>Tokens can be revoked individually or all tokens for a user can be revoked at once</li>
  *   <li>Token rotation is implemented - each refresh generates a new refresh token</li>
  *   <li>Revoked tokens cannot be used even if not yet expired</li>
+ *   <li>Only a hash of the token is stored (no plaintext)</li>
  * </ul>
  *
  * @author Generated
@@ -45,11 +46,11 @@ public class RefreshToken {
     private Long id;
 
     /**
-     * The unique token string used for authentication.
-     * Generated as a secure random UUID.
+     * SHA-256 hash of the refresh token (with server-side pepper).
+     * Stored instead of the raw token for security.
      */
-    @Column(nullable = false, unique = true)
-    private String token;
+    @Column(name = "token_hash", length = 64, unique = true)
+    private String tokenHash;
 
     /**
      * The user associated with this refresh token.

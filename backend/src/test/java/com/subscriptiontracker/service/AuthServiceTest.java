@@ -8,7 +8,6 @@ import com.subscriptiontracker.dto.request.LoginRequest;
 import com.subscriptiontracker.dto.request.RefreshTokenRequest;
 import com.subscriptiontracker.dto.request.RegisterRequest;
 import com.subscriptiontracker.dto.response.AuthResponse;
-import com.subscriptiontracker.entity.RefreshToken;
 import com.subscriptiontracker.entity.Role;
 import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.BadRequestException;
@@ -32,8 +31,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -87,7 +84,7 @@ class AuthServiceTest {
     private LoginRequest loginRequest;
     private User testUser;
     private UserDetails userDetails;
-    private RefreshToken refreshToken;
+    private String refreshToken;
 
     private static final long ACCESS_TOKEN_EXPIRATION = 86400000L;
 
@@ -119,17 +116,12 @@ class AuthServiceTest {
                 .authorities("ROLE_USER")
                 .build();
 
-        refreshToken = RefreshToken.builder()
-                .id(1L)
-                .token("refresh-token-uuid")
-                .user(testUser)
-                .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS))
-                .revoked(false)
-                .build();
+        refreshToken = "refresh-token-uuid";
 
         // Setup email config mock for grace period and verification
         lenient().when(emailConfig.getGracePeriodDays()).thenReturn(7);
         lenient().when(emailConfig.isVerificationEnabled()).thenReturn(true);
+        lenient().when(totpConfig.isEnabled()).thenReturn(true);
     }
 
     @Nested
@@ -279,16 +271,18 @@ class AuthServiceTest {
             RefreshTokenRequest request = RefreshTokenRequest.builder()
                     .refreshToken("valid-refresh-token")
                     .build();
-            RefreshToken newRefreshToken = RefreshToken.builder()
-                    .id(2L)
-                    .token("new-refresh-token-uuid")
-                    .user(testUser)
-                    .expiryDate(Instant.now().plus(7, ChronoUnit.DAYS))
-                    .revoked(false)
-                    .build();
+            com.subscriptiontracker.entity.RefreshToken refreshTokenEntity =
+                    com.subscriptiontracker.entity.RefreshToken.builder()
+                            .id(1L)
+                            .tokenHash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                            .user(testUser)
+                            .expiryDate(java.time.Instant.now().plusSeconds(3600))
+                            .revoked(false)
+                            .build();
+            String newRefreshToken = "new-refresh-token-uuid";
 
-            when(refreshTokenService.findByToken("valid-refresh-token")).thenReturn(refreshToken);
-            when(refreshTokenService.verifyExpiration(refreshToken)).thenReturn(refreshToken);
+            when(refreshTokenService.findByToken("valid-refresh-token")).thenReturn(refreshTokenEntity);
+            when(refreshTokenService.verifyExpiration(refreshTokenEntity)).thenReturn(refreshTokenEntity);
             when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
             when(jwtService.generateToken(any(UserDetails.class))).thenReturn("new-jwt-token");
             when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(newRefreshToken);
@@ -358,6 +352,7 @@ class AuthServiceTest {
         @Test
         @DisplayName("should return partial token when 2FA is enabled")
         void shouldReturnPartialTokenWhen2FAIsEnabled() {
+            when(totpConfig.isEnabled()).thenReturn(true);
             User userWith2FA = User.builder()
                     .id(1L)
                     .email("test@example.com")
@@ -381,6 +376,35 @@ class AuthServiceTest {
             assertNull(response.getToken());
             assertNull(response.getRefreshToken());
             assertEquals(300L, response.getExpiresIn()); // 300000ms / 1000 = 300s
+        }
+
+        @Test
+        @DisplayName("should skip 2FA when disabled even if user has 2FA enabled")
+        void shouldSkipTwoFactorWhenDisabled() {
+            when(totpConfig.isEnabled()).thenReturn(false);
+            User userWith2FA = User.builder()
+                    .id(1L)
+                    .email("test@example.com")
+                    .passwordHash("encodedPassword")
+                    .baseCurrencyCode("USD")
+                    .role(Role.USER)
+                    .twoFactorEnabled(true)
+                    .twoFactorSecret("encrypted-secret")
+                    .build();
+
+            when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(userWith2FA));
+            when(userDetailsService.loadUserByUsername(anyString())).thenReturn(userDetails);
+            when(jwtService.generateToken(any(UserDetails.class))).thenReturn("jwt-token");
+            when(refreshTokenService.createRefreshToken(anyLong())).thenReturn(refreshToken);
+            when(jwtConfig.getExpiration()).thenReturn(ACCESS_TOKEN_EXPIRATION);
+
+            AuthResponse response = authService.login(loginRequest);
+
+            assertNotNull(response);
+            assertFalse(response.getTwoFactorRequired());
+            assertNull(response.getPartialToken());
+            assertEquals("jwt-token", response.getToken());
+            assertEquals("refresh-token-uuid", response.getRefreshToken());
         }
 
         @Test

@@ -118,14 +118,14 @@ public class AuthService {
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String accessToken = jwtService.generateToken(userDetails);
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getId());
 
         log.info("User registered successfully: {}", user.getEmail());
 
         return AuthResponse.builder()
                 .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()))
                 .token(accessToken)
-                .refreshToken(refreshToken.getToken())
+                .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(jwtConfig.getExpiration() / 1000)
                 .build();
@@ -162,7 +162,7 @@ public class AuthService {
         }
 
         // Check if 2FA is enabled
-        if (user.isTwoFactorEnabled()) {
+        if (user.isTwoFactorEnabled() && totpConfig.isEnabled()) {
             String partialToken = jwtService.generatePartialToken(
                     user.getId(),
                     user.getEmail(),
@@ -181,14 +181,14 @@ public class AuthService {
         // Standard login without 2FA
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String accessToken = jwtService.generateToken(userDetails);
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getId());
 
         log.info("User logged in successfully: {}", user.getEmail());
 
         return AuthResponse.builder()
                 .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()))
                 .token(accessToken)
-                .refreshToken(refreshToken.getToken())
+                .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(jwtConfig.getExpiration() / 1000)
                 .twoFactorRequired(false)
@@ -223,14 +223,14 @@ public class AuthService {
         // Generate full tokens
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String accessToken = jwtService.generateToken(userDetails);
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+        String refreshToken = refreshTokenService.createRefreshToken(user.getId());
 
         log.info("2FA verification successful for user: {}", user.getEmail());
 
         return AuthResponse.builder()
                 .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()))
                 .token(accessToken)
-                .refreshToken(refreshToken.getToken())
+                .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(jwtConfig.getExpiration() / 1000)
                 .twoFactorRequired(false)
@@ -258,14 +258,14 @@ public class AuthService {
 
         // Token rotation: revoke old token and create new one
         refreshTokenService.revokeToken(request.getRefreshToken());
-        RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(user.getId());
+        String newRefreshToken = refreshTokenService.createRefreshToken(user.getId());
 
         log.debug("Token refreshed for user: {}", user.getEmail());
 
         return AuthResponse.builder()
                 .user(UserResponse.fromEntity(user, emailConfig.getGracePeriodDays(), emailConfig.isVerificationEnabled()))
                 .token(newAccessToken)
-                .refreshToken(newRefreshToken.getToken())
+                .refreshToken(newRefreshToken)
                 .tokenType("Bearer")
                 .expiresIn(jwtConfig.getExpiration() / 1000)
                 .build();
