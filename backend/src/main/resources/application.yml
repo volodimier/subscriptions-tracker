@@ -52,6 +52,16 @@ jwt:
 auth:
   registration-enabled: ${REGISTRATION_ENABLED:true}
 
+rate-limiting:
+  enabled: ${RATE_LIMITING_ENABLED:true}
+  auth-requests-per-minute: ${RATE_LIMITING_AUTH_REQUESTS_PER_MINUTE:10}
+  email-requests-per-minute: ${RATE_LIMITING_EMAIL_REQUESTS_PER_MINUTE:10}
+  trust-forwarded-headers: ${RATE_LIMITING_TRUST_FORWARDED_HEADERS:false}
+  trusted-proxies: ${RATE_LIMITING_TRUSTED_PROXIES:127.0.0.1/32,::1/128}
+  cleanup-interval-requests: ${RATE_LIMITING_CLEANUP_INTERVAL_REQUESTS:100}
+  max-bucket-entries: ${RATE_LIMITING_MAX_BUCKET_ENTRIES:10000}
+  bucket-idle-timeout-minutes: ${RATE_LIMITING_BUCKET_IDLE_TIMEOUT_MINUTES:30}
+
 totp:
   enabled: ${TOTP_ENABLED:true}
   encryption-key: ${TOTP_ENCRYPTION_KEY:default-dev-key-change-in-prod!!}

@@ -45,6 +45,9 @@ class UserServiceTest {
     @Mock
     private JobRunService jobRunService;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
     private UserService userService;
 
@@ -186,6 +189,7 @@ class UserServiceTest {
 
             ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(captor.capture());
+            verify(refreshTokenService).revokeAllUserTokens(1L);
             assertEquals("newHashedPassword", captor.getValue().getPasswordHash());
         }
 
@@ -207,6 +211,7 @@ class UserServiceTest {
 
             assertEquals("Current password is incorrect", exception.getMessage());
             verify(userRepository, never()).save(any());
+            verify(refreshTokenService, never()).revokeAllUserTokens(anyLong());
         }
 
         @Test
@@ -223,6 +228,7 @@ class UserServiceTest {
             assertThrows(ResourceNotFoundException.class, () ->
                     userService.changePassword(1L, request)
             );
+            verify(refreshTokenService, never()).revokeAllUserTokens(anyLong());
         }
     }
 

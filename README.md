@@ -43,32 +43,6 @@ docker compose -f docker-compose.dev.yml up -d
 # Access at http://localhost:8889
 ```
 
-### Environment Variables
-
-The backend uses a single `application.yml` with environment variable overrides (no Spring profiles).
-
-**Required:**
-
-| Variable | Description |
-|----------|-------------|
-| `POSTGRES_PASSWORD` | Database password |
-| `JWT_SECRET` | JWT signing secret (min 32 chars) |
-
-**Optional:**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `FX_RATE_API_KEY` | *(empty)* | Exchange rate API key |
-| `CORS_ALLOWED_ORIGINS` | `localhost:3000,5173` | Allowed CORS origins |
-| `SWAGGER_ENABLED` | `true` | Set `false` in production |
-| `LOG_LEVEL_APP` | `INFO` | App logging level |
-| `DEVTOOLS_ENABLED` | `false` | Spring DevTools (hot reload) |
-| `TOTP_ENCRYPTION_KEY` | *(dev default)* | 2FA secret encryption key (32+ chars, required in production) |
-| `EMAIL_VERIFICATION_ENABLED` | `false` | Set `true` to require email verification for new registrations |
-| `JWT_REFRESH_TOKEN_PEPPER` | *(required)* | Server-side pepper used when hashing refresh tokens |
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for full configuration reference.
-
 ## Development
 
 ### Project Structure

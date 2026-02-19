@@ -12,6 +12,7 @@ import com.subscriptiontracker.entity.User;
 import com.subscriptiontracker.exception.BadRequestException;
 import com.subscriptiontracker.exception.UnauthorizedException;
 import com.subscriptiontracker.repository.UserRepository;
+import com.subscriptiontracker.security.ClientIpResolver;
 import com.subscriptiontracker.security.JwtAuthenticationFilter.TwoFactorPendingPrincipal;
 import com.subscriptiontracker.service.AuthService;
 import com.subscriptiontracker.service.CurrentUserService;
@@ -58,6 +59,7 @@ public class TotpController {
     private final AuthService authService;
     private final CurrentUserService currentUserService;
     private final UserRepository userRepository;
+    private final ClientIpResolver clientIpResolver;
 
     /**
      * Initiates 2FA setup for the current user.
@@ -151,7 +153,7 @@ public class TotpController {
             HttpServletRequest httpRequest
     ) {
         TwoFactorPendingPrincipal principal = (TwoFactorPendingPrincipal) authentication.getPrincipal();
-        String ipAddress = getClientIpAddress(httpRequest);
+        String ipAddress = clientIpResolver.resolveClientIp(httpRequest);
 
         User user = userRepository.findById(principal.userId())
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
@@ -196,7 +198,7 @@ public class TotpController {
             HttpServletRequest httpRequest
     ) {
         TwoFactorPendingPrincipal principal = (TwoFactorPendingPrincipal) authentication.getPrincipal();
-        String ipAddress = getClientIpAddress(httpRequest);
+        String ipAddress = clientIpResolver.resolveClientIp(httpRequest);
 
         User user = userRepository.findById(principal.userId())
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
@@ -295,19 +297,4 @@ public class TotpController {
         return ResponseEntity.ok(Map.of("recoveryCodes", codes));
     }
 
-    /**
-     * Extracts the client IP address from the HTTP request.
-     *
-     * <p>Checks for X-Forwarded-For header for proxied requests.</p>
-     *
-     * @param request the HTTP request
-     * @return the client IP address
-     */
-    private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
 }

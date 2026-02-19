@@ -1,5 +1,8 @@
 package com.subscriptiontracker.security;
 
+import com.subscriptiontracker.config.RateLimitingConfig;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
@@ -7,27 +10,33 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 
 @Component
+@RequiredArgsConstructor
 public class RateLimitingFilter extends OncePerRequestFilter {
 
-    private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
+    private final Map<String, BucketState> buckets = new ConcurrentHashMap<>();
+    private final AtomicLong requestCounter = new AtomicLong(0);
+    private final RateLimitingConfig rateLimitingConfig;
+    private final ClientIpResolver clientIpResolver;
+    private final ObjectMapper objectMapper;
 
-    // Rate limit: 10 requests per minute for auth endpoints
-    private static final int AUTH_REQUESTS_PER_MINUTE = 10;
-
-    @Value("${rate-limiting.enabled:true}")
-    private boolean rateLimitingEnabled;
 
     @Override
     protected void doFilterInternal(
@@ -36,7 +45,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         // Skip rate limiting if disabled (e.g., for integration tests)
-        if (!rateLimitingEnabled) {
+        if (!rateLimitingConfig.isEnabled()) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -45,11 +54,38 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
         // Only rate limit auth endpoints
         if (path.contains("/auth/login") || path.contains("/auth/register")) {
-            String clientIp = getClientIP(request);
-            Bucket bucket = buckets.computeIfAbsent(clientIp, this::createNewBucket);
+            HttpServletRequest effectiveRequest = wrapRequestIfNeeded(request);
+            cleanupBucketsIfNeeded();
+            String clientIp = clientIpResolver.resolveClientIp(effectiveRequest);
+            long now = System.currentTimeMillis();
 
-            if (bucket.tryConsume(1)) {
-                filterChain.doFilter(request, response);
+            BucketState ipBucketState = buckets.compute("ip:" + clientIp, (key, existing) -> {
+                if (existing == null) {
+                    return new BucketState(createNewBucket(rateLimitingConfig.getAuthRequestsPerMinute()), now);
+                }
+                existing.touch(now);
+                return existing;
+            });
+
+            String emailIdentifier = extractEmailIdentifier(effectiveRequest);
+            BucketState emailBucketState = null;
+            if (emailIdentifier != null) {
+                String emailKey = "email:" + emailIdentifier;
+                emailBucketState = buckets.compute(emailKey, (key, existing) -> {
+                    if (existing == null) {
+                        return new BucketState(createNewBucket(rateLimitingConfig.getEmailRequestsPerMinute()), now);
+                    }
+                    existing.touch(now);
+                    return existing;
+                });
+            }
+            enforceMaxEntries();
+
+            boolean allowed = ipBucketState != null
+                    && ipBucketState.tryConsume(1, now)
+                    && (emailBucketState == null || emailBucketState.tryConsume(1, now));
+            if (allowed) {
+                filterChain.doFilter(effectiveRequest, response);
             } else {
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
                 response.setContentType("application/json");
@@ -60,19 +96,114 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
     }
 
-    private Bucket createNewBucket(String key) {
+    private HttpServletRequest wrapRequestIfNeeded(HttpServletRequest request) throws IOException {
+        if (request instanceof CachedBodyHttpServletRequest) {
+            return request;
+        }
+        return new CachedBodyHttpServletRequest(request);
+    }
+
+    private Bucket createNewBucket(int requestsPerMinute) {
+        int safeRequestsPerMinute = Math.max(1, requestsPerMinute);
         Bandwidth limit = Bandwidth.classic(
-                AUTH_REQUESTS_PER_MINUTE,
-                Refill.greedy(AUTH_REQUESTS_PER_MINUTE, Duration.ofMinutes(1))
+                safeRequestsPerMinute,
+                Refill.greedy(safeRequestsPerMinute, Duration.ofMinutes(1))
         );
         return Bucket.builder().addLimit(limit).build();
     }
 
-    private String getClientIP(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
+    private String extractEmailIdentifier(HttpServletRequest request) {
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+            return null;
         }
-        return request.getRemoteAddr();
+
+        String contentType = request.getContentType();
+        if (contentType == null || !contentType.toLowerCase().contains(MediaType.APPLICATION_JSON_VALUE)) {
+            return null;
+        }
+
+        if (!(request instanceof CachedBodyHttpServletRequest cachedRequest)) {
+            return null;
+        }
+
+        byte[] body = cachedRequest.getCachedBody();
+        if (body.length == 0) {
+            return null;
+        }
+
+        try {
+            JsonNode root = objectMapper.readTree(body);
+            JsonNode emailNode = root.get("email");
+            if (emailNode == null || !emailNode.isTextual()) {
+                return null;
+            }
+            String email = emailNode.asText().trim().toLowerCase();
+            return email.isEmpty() ? null : email;
+        } catch (IOException ex) {
+            return null;
+        }
+    }
+
+    private void cleanupBucketsIfNeeded() {
+        int cleanupInterval = Math.max(1, rateLimitingConfig.getCleanupIntervalRequests());
+        if (requestCounter.incrementAndGet() % cleanupInterval != 0) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        removeIdleBuckets(now);
+        enforceMaxEntries();
+    }
+
+    private void removeIdleBuckets(long nowMillis) {
+        long idleTimeoutMillis = Duration.ofMinutes(
+                Math.max(1, rateLimitingConfig.getBucketIdleTimeoutMinutes())
+        ).toMillis();
+        long cutoff = nowMillis - idleTimeoutMillis;
+        buckets.entrySet().removeIf(entry -> entry.getValue().getLastAccessMillis() < cutoff);
+    }
+
+    private void enforceMaxEntries() {
+        int maxEntries = Math.max(1, rateLimitingConfig.getMaxBucketEntries());
+        int currentSize = buckets.size();
+        if (currentSize <= maxEntries) {
+            return;
+        }
+
+        List<Map.Entry<String, BucketState>> entries = new ArrayList<>(buckets.entrySet());
+        entries.sort(Comparator.comparingLong(entry -> entry.getValue().getLastAccessMillis()));
+
+        int toRemove = currentSize - maxEntries;
+        for (int i = 0; i < toRemove && i < entries.size(); i++) {
+            Map.Entry<String, BucketState> entry = entries.get(i);
+            buckets.remove(entry.getKey(), entry.getValue());
+        }
+    }
+
+    int getTrackedBucketCount() {
+        return buckets.size();
+    }
+
+    private static final class BucketState {
+        private final Bucket bucket;
+        private volatile long lastAccessMillis;
+
+        private BucketState(Bucket bucket, long lastAccessMillis) {
+            this.bucket = bucket;
+            this.lastAccessMillis = lastAccessMillis;
+        }
+
+        private void touch(long nowMillis) {
+            this.lastAccessMillis = nowMillis;
+        }
+
+        private boolean tryConsume(long tokens, long nowMillis) {
+            this.lastAccessMillis = nowMillis;
+            return bucket.tryConsume(tokens);
+        }
+
+        private long getLastAccessMillis() {
+            return lastAccessMillis;
+        }
     }
 }
