@@ -3,7 +3,7 @@
 # Contains: PostgreSQL 15, Spring Boot (with hot reload), Vue.js (Vite dev server)
 # ============================================================
 
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
